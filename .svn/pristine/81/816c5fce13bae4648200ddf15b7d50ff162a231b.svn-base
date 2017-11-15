@@ -1,0 +1,26 @@
+//
+//  IYCCurrentBookState.h
+//  IYangCongReader
+//
+//  Created by she-mac on 5/19/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCCurrentBookState : NSObject
+
+@property (nonatomic,retain) NSString *lastOprationTime;
+@property (nonatomic) long bookId;
+@property (nonatomic, retain) NSString *accountId;
+@property (nonatomic) int chapterNo;
+@property (nonatomic) int paragraphNo;
+@property (nonatomic,assign) float readSchedule;
+@property (nonatomic) int languageType;  //1: Chinese  2:English
+@property (nonatomic) int lineNo;  //in which line of this paragraph
+@property (nonatomic) int pageNumber;
+@property (nonatomic) int changeTimes; //how many times it changed
+@property (nonatomic, retain) NSString *lastReadTime;
+@property (nonatomic) long serverBookId;
+@property (nonatomic,assign) float paragraphSchedule;
+@end

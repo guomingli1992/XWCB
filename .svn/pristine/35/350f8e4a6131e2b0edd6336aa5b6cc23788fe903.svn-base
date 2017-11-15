@@ -1,0 +1,13 @@
+//
+//  JsonRT.h
+//  xingxuntong
+//  把Json字符串转换成实体bean的工具类
+//  Created by  on 12-1-12.
+//  Copyright (c) 2012 NEWCOM Technology Co.,Ltd. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface JsonRT : NSObject
++(id)diction2Bean:(NSDictionary*)dic bean:(id)abean; //传入json树和目标bean
+@end

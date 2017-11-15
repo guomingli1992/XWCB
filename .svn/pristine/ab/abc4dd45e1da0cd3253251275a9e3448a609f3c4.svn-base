@@ -1,0 +1,218 @@
+//
+//  IYCDBAction.h
+//  IYangCongReader
+//
+//  Created by Bella on 4/3/13.
+//  Copyright (c) 2013 Bella. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCBook.h"
+#import "IYCBookDownload.h"
+#import "IYCTag.h"
+#import "IYCBookMark.h"
+#import "IYCAccount.h"
+#import "IYCCurrentBookState.h"
+#import "IYCUpdateBook.h"
+#import "IYCPage.h"
+#import "IYCParseBook.h"
+
+#import "IYCNote.h"
+
+@class IYCBookState;
+@interface IYCDBAction : NSObject
+{
+    NSUserDefaults *userManager;
+    
+    
+}
+
++ (IYCDBAction *)sharedDBAction;
+
+//-------
+// IYCBook
+//-------
+- (NSArray *)queryAllBook;
+- (IYCBook *)queryBookByID:(long)bookId;
+- (IYCBook *)queryBookByServerID:(long)bookServerId  withBookType:(int)bookType;
+- (int)deleteBookByID:(long)bookId;
+// update field: downloadSize,downloadState, bookSize
+- (int)updateBook:(IYCBook*)book;
+//"download" action: save book information
+- (int)saveBook:(IYCBook *)book;
+- (NSMutableArray *)queryBooks:(int)fromNum to:(int)toNum;
+//set bookThumbnialURl = @""
+- (int)updateBookThumbnailURL:(long)bookId;
+- (NSArray*)queryBooksSetCover;
+
+- (IYCBook *)queryTopDownloadingTask;
+- (IYCBook *)queryTopWaitingTask;
+- (int)updateBookDownloadState:(long)bookId state:(IYCDownloadStateType)type;
+- (int)updateBookSize:(long)bookId size:(double)size;
+- (int)updateBookDownloadSize:(long)bookId size:(double)size;
+- (int)updateBookDownloadFinish:(long)bookId downloadSize:(double)size;
+- (long)getMaxBookID;
+- (int)queryBooks;
+- (IYCBook *)queryBookByServerID:(long)bookServerId;
+- (int)updateBookTimeByBookId:(long)bookID;  //初始书时间为1971年
+- (NSArray *)queryAllUnzipedBook;
+//-------
+// IYCTag
+//-------
+- (int)deleteAllTag;
+- (int)saveTag:(IYCTag *)tag;
+- (NSArray*)queryAllTag;
+
+- (NSMutableArray *)queryBookStateByBookserverId:(long)bookServerId;
+
+- (int) updatebookstateByBookServerId:(int)bookServerId toBookId:(long)bookId;
+
+//-------
+// IYCBookmark
+//-------
+- (NSMutableArray *)queryBookMark:(long)BookId andMarkServerId:(long)markServerId;
+- (int)saveBookmark:(IYCBookMark *)bookmark;
+//condition: (bookID && accountID)
+- (NSMutableArray*)queryBookmark:(long)bookID accountID:(NSString *)ID edition:(int)edition;
+- (int)getMaxBookMark;
+- (NSMutableArray *)queryBookmarkBy:(int)pagraphID andBookID:(long)bookID andAccountID:(NSString *)ID andedition:(int)edition;
+
+-(int)deleteBookmarkByAccount:(NSString *)accountId andPargraphId:(int)pargraphId;
+- (int)deleteBookmarkByBookId:(long)bookID;
+- (int)deleteServerBookStateByBookId:(long)bookID;
+- (int)updataBookmark:(IYCBookMark *)bookmark;
+
+//查询用户所有正式版本图书
+- (NSArray *)queryBookByAccountId:(NSString *)accountId andBookType:(int)bookType;
+//-------
+// IYCDictionary
+//-------
+- (NSString *)translateWords:(NSString *)string;
+
+- (int)saveAccount:(IYCAccount *)account;
+- (IYCAccount *)queryAccountByAccountID:(NSString *)accountID;
+//--------
+//IYCBookState
+//------
+- (NSArray *)queryBookByAccountId:(NSString *)accountId;
+- (int)saveServerBookState:(IYCBookState *)bookState;
+- (int)deleteBookStateByBookId:(long)bookId;
+- (int)saveBookMarkFromNet:(NSDictionary *)dict;
+//--------
+//IYCCurrentBookState
+//------
+- (IYCCurrentBookState *)queryBookState:(long)bookID accountID:(NSString *)ID;
+- (int)saveCurrentState:(IYCCurrentBookState *)bookstate;
+- (IYCUpdateBook *)queryServerBookStartByBookID:(long)bookid accountId:(NSString *)acountid;
+- (BOOL)updateLocalBookState:(IYCUpdateBook *)updateBook;
+- (IYCBook *)queryBookStateByBookID:(long)bookId;
+- (IYCBook *)queryBookStateByBookserverID:(long)bookserverId;
+
+//设置图书为正式版本
+- (int)updateBookStateByBookserverID:(long)bookserverId andBookID:(int)bookID;
+//-------
+// IYCParseBook
+//-------
+- (NSMutableArray *)queryBookStateByBookserverID:(long)bookserverId andBookType:(int)bookType;
+- (int)saveParseBook:(IYCParseBook *)parseBook;
+- (BOOL)isParseBookExist:(long)bookid  withFontSize:(float)fontSize  andEdition:(int)edition;
+- (IYCParseBook *)getParseBook:(long)bookid  withFontSize:(float)fontSize  andEdition:(int)edition;
+- (int)updateParseBookFinished:(IYCParseBook *)parseBook;
+
+//-------
+// IYCParsePage
+//-------
+- (int)savePageInfo:(IYCPage *)page withParseId:(int)parseId;
+- (NSMutableArray *)getParsePageWithParseId:(int)parseId;
+
+#pragma mark -
+#pragma mark Note
+- (int)getMaxBookNote;
+- (NSMutableArray *)queryBookNote:(long)BookId andNoteServerId:(long)NoteServerId;
+//查找未上传的note
+- (NSArray *)selectNotesByBookID:(long)bookId AccountId:(long)accountId ChapterIndex:(int)chapterIndex noteStatus:(NOTESTATUES_TYPE)noteType;
+- (int)saveBookNoteFromNet:(NSDictionary *)dict;
+//通过id查找某一条note
+- (NSArray *)selectNoteById:(int)noteId;
+- (int)getbookIdByServerId:(int)bookServerId andBookType:(int)BookType;
+//查找含有noteServerId的
+- (NSArray *)selectHaveNoteServerIdNoteById:(int)noteId;
+
+//查找删除表中的 所有需要删除的笔记
+- (NSArray *)selectHaveDeleteNoteWithBookId:(long)bookId AccountId:(long)accountId;
+
+//
+/*
+ bookId 为 -1 时查询全部书的笔记，注意：bookId请传图书在服务器的id，不要传本地id，因为本地id有可能重复。
+ chapterIndex 为 -1 时查询全部章节的笔记，bookid不为-1时chapterId才有效，
+ accountId 为 -1 时查询全部用户的笔记，
+ lanType 语言：0 汉语，1英语，只有bookId不为-1时lantype才有效。
+ */
+- (NSArray *)selectNotesByBookID:(long)bookId
+                       AccountId:(long)accountId
+                    ChapterIndex:(int)chapterIndex
+                        language:(IYCLanguageType)lanType;
+//修复chapterindex问题 临时加入
+- (NSArray *)selectWebNotesByBookID:(long)bookId
+                          AccountId:(long)accountId
+                          ChapterId:(int)chapterId
+                           language:(IYCLanguageType)lanType;
+
+//插入数据库一条笔记，失败返回0，成功返回1。
+- (int) insertNote:(IYCNote *)note;
+//插入数据库一条删除的笔记
+- (int) insertDeleteNote:(IYCNote *)note;
+
+//更新一条笔记，只会更新笔记内容及修改时间，数据结构中需装填noteId,noteContent,modifyTime;
+- (int) updateNote:(IYCNote *)note;
+//bookId 为 -1 时删除全部书的笔记，accountId 为 -1 时删除全部用户的笔记
+- (int) deleteNotesWithBookID:(long)bookId accountID:(long)accountId;
+//删除某一条笔记
+- (int) deleteNote:(IYCNote *)note;
+- (int) deleteNoteById:(int)noteId;
+- (int) deleteNoteByServerId:(int)noteServerId;
+- (int) deleteIYCDeleteNoteWithBookId:(long)bookServerId andAccountId:(long)accountId;
+- (int)updateBookPrice:(IYCBook *)book;
+- (IYCBook *)getBookPrice:(IYCBook *)book;
+
+- (int)updatebookstateByDict:(NSDictionary *)dict;
+
+- (int)saveCurrentBookLocation:(float)bookLocation withBookId:(long)bookId;
+
+- (float)queryBookLocationMax;
+
+//保存分组信息
+-(int)saveBookGroupId:(NSString *)bookGroupId;
+
+//获取刚存储的分组信息
+-(NSMutableArray *)getLastBookGroup;
+
+//设置图书所在分组
+-(int) setBookGroupId:(int)bookGroupId byBookId:(long)bookId;
+
+- (NSMutableArray *)getBookGroupNameByGroupId:(int)bookGroupId;
+
+- (NSMutableArray *)getAllBookGroupInfo;
+
+- (NSMutableArray *)queryBooksByGroupId:(int)bookGroupId;
+
+- (int)deleteBookGroupByGroupId:(int)bookGroupId;
+
+- (int)newDeleteBookStateByBookId:(long)bookId;
+
+-(int)updateBookGroupId:(int)bookGroupId bookGroupName:(NSString *)groupName;
+
+
+
+
+//设置洋葱币部分方法
+
+- (int)saveBuyCoinRecord:(NSDictionary *)infoDict;
+
+- (NSMutableArray *)queryBuycoinRecordByUserId:(NSString *)userId;    //查询未上传的用户支付记录
+
+- (int)setBuyCoinRecordStatusByUserId:(NSString *)userId buyTime:(NSString *)buyTime;
+
+- (int)deleteBuyCoinRecordByUserId:(NSString *)userId buyTime:(NSString *)buyTime;
+
+@end

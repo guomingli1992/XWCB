@@ -1,0 +1,46 @@
+//
+//  IYCWord.h
+//  iyangcong
+//
+//  Created by mingli 郭 on 2017/4/8.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+
+typedef enum WORDSTATUES_TYPE
+{
+    WORDSTATUES_TYPE_RECITE = 1,
+    WORDSTATUES_TYPE_GOOVER = 2,
+    WORDSTATUES_TYPE_MASTER = 3,
+//    WORDSTATUES_TYPE_COLLECT = 4
+   
+}WORDSTATUES_TYPE;
+
+@interface IYCWord : NSObject<NSCopying>
+
+@property(nonatomic ,assign)long userID;
+@property (nonatomic, assign)WORDSTATUES_TYPE wordStatus;
+
+@property(nonatomic , assign)long wordID;
+
+@property(nonatomic , retain)NSString *wordString;
+@property(nonatomic , retain)NSString *wordMeaning;
+@property(nonatomic ,retain)NSString *sentenceString;
+@property(nonatomic , retain)NSString *wordlevel;
+@property(nonatomic , assign)int favoriteword;
+@property(nonatomic ,retain)NSString *updatetimestr;
+@property(nonatomic , retain)NSString *locationString;
+@property(nonatomic , retain)NSString *wordDeleteStr;
+@property(nonatomic,retain)NSString *phonetic;
+@property(nonatomic,retain)NSString *bookName;
+@property(nonatomic , assign)long bookId;
+
+@property  long wordServerId;
+
+
+//@property (nonatomic , assign)WORDSTATUES_TYPE wordStatus;
+
+-(id)initWithDict:(NSDictionary *)dic;
+@end

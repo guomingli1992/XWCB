@@ -1,0 +1,23 @@
+//
+//  IYCBookByIdRequest.h
+//  IYangCongReader
+//
+//  Created by Lolo on 13-5-17.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCRequest.h"
+
+@class IYCBook;
+@interface IYCBookByIdRequest : IYCRequest
+{
+    NSNumber *bookId;
+    
+    IYCBook  *book;
+}
+@property (nonatomic, retain) NSNumber *bookId;
+@property (nonatomic, retain) IYCBook  *book;
+
+- (NSString *)getJSONString;
+
+@end

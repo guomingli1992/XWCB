@@ -1,0 +1,1323 @@
+//
+//  IYCWebView.m
+//  IYangCongReader
+//
+//  Created by haley on 4/22/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+#import "UIViewController+LewPopupViewController.h"
+
+#import "LewPopupViewAnimationFade.h"
+#import "IYCWebView.h"
+#import <QuartzCore/QuartzCore.h>
+#import "IYCChapter.h"
+#import "IYCParagraph.h"
+#import "RegexKitLite.h"
+#import "IYCDBAction.h"
+#import "UIColor+Hex.h"
+#import "IYCCheckNetwork.h"
+#define SELECTEDSPAN_ID @"id"
+#define SELECTEDSPAN_X @"x"
+#define SELECTEDSPAN_Y @"y"
+#define SELECTEDSPAN_HEIGHT @"height"
+#import "IYCNetSetting.h"
+#define SELECTEDIMG_ID @"imgid"
+#define SELECTEDIMG_X @"imgx"
+#define SELECTEDIMG_Y @"imgy"
+#import "WordSelectView.h"
+#import "QueryLocalWord.h"
+#import <AVFoundation/AVFoundation.h>
+@interface IYCWebView()
+{
+    BOOL isSelectNote;
+    int  selectedNoteId;
+    
+    CGPoint _holdTapPoint;
+    NSString *newWordStr;
+    int selectTap;
+    
+    NSMutableArray *mUrlArray;
+}
+@property (nonatomic, strong) NSMutableArray *deleteNoteArray;
+
+
+@end
+
+@implementation IYCWebView
+@synthesize menuController;
+@synthesize nChapter;
+@synthesize readingBook;
+@synthesize deleteNoteArray;
+
+- (id) init {
+    if (self = [super init]) {
+        self.delegate = self;
+        selectTap=0;
+        fakeView = [[UIView alloc] init];
+        NSString *nightModeStr=[[NSUserDefaults standardUserDefaults] objectForKey:@"nightMode"];
+        if ([nightModeStr isEqualToString:@"6"]) {
+            fakeView.backgroundColor = NIGHT_COLOR_BACK;
+        }
+        else if ([nightModeStr isEqualToString:@"1"]){
+            fakeView.backgroundColor = DAY_COLOR_BACK1;
+        }
+        else if ([nightModeStr isEqualToString:@"2"]){
+            fakeView.backgroundColor = DAY_COLOR_BACK2;
+        }
+        else if ([nightModeStr isEqualToString:@"3"]){
+            fakeView.backgroundColor = DAY_COLOR_BACK3;
+        }
+        else if ([nightModeStr isEqualToString:@"4"]){
+            fakeView.backgroundColor = DAY_COLOR_BACK4;
+        }
+        else if ([nightModeStr isEqualToString:@"5"]){
+            fakeView.backgroundColor = DAY_COLOR_BACK5;
+        }
+        // 初始化MenuController
+        if (!menuController) {
+            menuController = [UIMenuController sharedMenuController];
+            menuController.arrowDirection = UIMenuControllerArrowDown;
+            
+            [self showSelectMenuController];
+        }
+        
+        NSMutableArray *array = [[NSMutableArray alloc] init];
+        self.deleteNoteArray = array;
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(menuWillShow) name:UIMenuControllerWillShowMenuNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(refreshView) name:NOTIFICATION_REFRESHWEBVIEW object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(menuWillDismiss) name:UIMenuControllerWillHideMenuNotification object:nil];
+        
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(shareSelectedText:) name:@"shareSelectedText" object:nil];
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(searchSelectedText:) name:@"searchSelectedText" object:nil];
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(createNote:) name:@"createNote" object:nil];
+        
+    }
+    return self;
+}
+- (void)menuWillShow
+{
+    //此处刷新menubar是为了判断“批注”按钮是否该显示
+    [menuController update];
+    newWordStr=[self stringByEvaluatingJavaScriptFromString:@"window.getSelection().toString()"];
+    
+    if (newWordStr.length>0||selectTap==1) {
+        NSString * getParagraphId = [NSString stringWithFormat:@"function getParagraphId(){\
+                                     var para = window.getSelection().getRangeAt(0).startContainer.parentNode;\
+                                     while (para.parentNode) {\
+                                     if (para.id && para.tagName!='SPAN')break;\
+                                     para=para.parentNode;}\
+                                     return para.id;\
+                                     }"];
+        [self stringByEvaluatingJavaScriptFromString:getParagraphId];
+        NSString * paraId = [self stringByEvaluatingJavaScriptFromString:@"getParagraphId()"];
+        
+        NSString * getParagraph = [NSString stringWithFormat:@"function getParagraphFun(id) {\
+                                   var p = document.getElementById(id);\
+                                   if(p.tagName=='div'||p.tagName=='DIV'){\
+                                   var elems = p.getElementsByTagName('P');\
+                                   if (elems.length>0) {\
+                                   p=elems[0];\
+                                   }};\
+                                   return p;}"];
+        [self stringByEvaluatingJavaScriptFromString:getParagraph];
+        NSString * getHtml = [NSString stringWithFormat:@"getParagraphFun(%d).innerText",[paraId intValue]];
+        NSString * html123 = [self stringByEvaluatingJavaScriptFromString:getHtml];
+        
+        long chapterId = [[self stringByEvaluatingJavaScriptFromString:@"document.body.id"] longLongValue];
+        NSDictionary *tmpDict=@{@"newWordStr":newWordStr,@"frame":[NSNumber numberWithFloat:menuController.menuFrame.origin.y],@"segmentid":paraId,@"chapterid":[NSString stringWithFormat:@"%li",chapterId],@"paragraphString":html123};
+        selectTap=0;
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"showNewWordView" object:tmpDict];
+    }
+}
+
+
+- (void)menuWillDismiss
+{
+    NSLog(@"2");
+    isSelectNote = NO;
+    NSDictionary *tmpDict=@{@"pointx":[NSString stringWithFormat:@"%f",_holdTapPoint.x],@"pointy":[NSString stringWithFormat:@"%f",_holdTapPoint.y]};
+    NSLog(@"%f",_holdTapPoint.y);
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"missNewWordView" object:tmpDict];
+    
+}
+- (void)refreshView
+{
+    NSLog(@"3");
+    [self removeNotes];
+    [self showNotes];
+    [[NSNotificationCenter defaultCenter]postNotificationName:@"refreshContent" object:nil];
+}
+- (NSDictionary *) parametersWithString:(NSString *)parametersString {
+    NSMutableDictionary *parameters = [NSMutableDictionary dictionary];
+    for (NSString *parameterString in [parametersString componentsSeparatedByString:@"&"]) {
+        NSArray *parameter = [parameterString componentsSeparatedByString:@"="];
+        if ([parameter count] == 2) {
+            [parameters setObject:[parameter objectAtIndex:1] forKey:[parameter objectAtIndex:0]];
+        }
+    }
+    return parameters;
+}
+- (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
+    NSLog(@"req: %@",request.URL);
+    if ([request.URL.scheme isEqualToString:@"image-preview"]) {
+        NSString* path = [request.URL.absoluteString substringFromIndex:[@"image-preview:" length]];
+        path = [path stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+        if ([path hasPrefix:@"audio"]) {
+            NSString *audioUrl=[path substringFromIndex:5];
+            NSLog(@"%@",audioUrl);
+            NSDictionary *dict=@{@"audioUrl":audioUrl};
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"audioPlayByUrl" object:dict];
+
+        }
+        else if([path hasPrefix:@"video"]) {
+            NSString *videoUrl=[path substringFromIndex:5];
+            NSLog(@"%@",videoUrl);
+            NSDictionary *dict=@{@"videoUrl":videoUrl};
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"videoPlayByUrl" object:dict];
+            
+        }
+        else if ([path hasPrefix:@"image"]) {
+            NSString *imageUrl=[path substringFromIndex:5];
+            NSLog(@"%@",imageUrl);
+            NSDictionary *dict=@{@"imageUrl":imageUrl};
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"imagePlayByUrl" object:dict];
+        }
+        else if ([path hasPrefix:@"null"]) {
+            NSString *imageUrl=[path substringFromIndex:4];
+            NSLog(@"%@",imageUrl);
+            NSDictionary *dict=@{@"imageUrl":imageUrl};
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"imagePlayByUrl" object:dict];
+        }
+        //path 就是被点击图片的url
+        return NO;
+    }
+    else {
+        if ([[request.URL.scheme lowercaseString] isEqualToString:@"file"])
+        {
+            NSFileManager * fileMng = [[NSFileManager alloc] init];
+            BOOL isFileExit = [fileMng fileExistsAtPath:[request.URL path]];
+            return isFileExit;
+        }
+        
+        NSString * scheme = [request.URL.scheme lowercaseString];
+        if (([scheme isEqualToString: @"http"] || [scheme isEqualToString:@"https"] || [scheme isEqualToString: @"mailto" ])&& (navigationType == UIWebViewNavigationTypeLinkClicked)) {
+            return NO;
+        }
+        
+        if ([[request.URL.scheme lowercaseString] isEqualToString:@"selectspan"]) {
+            NSString *parametersString = [request.URL.query stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+            NSDictionary * dic = [self parametersWithString:parametersString];
+            [self showSelectMenuController];
+            [self showMenuBarForSpan:dic];
+            
+            return NO;
+        }
+        if ([[request.URL.scheme lowercaseString] isEqualToString:@"tapspan"]) {
+            NSString *parametersString = [request.URL.query stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+            NSDictionary * dic = [self parametersWithString:parametersString];
+            NSLog(@"show note info : %@",dic);
+            int spanX = [[dic objectForKey:SELECTEDSPAN_X] intValue];
+            int spanY = [[dic objectForKey:SELECTEDSPAN_Y] intValue];
+            int spanH = [[dic objectForKey:SELECTEDSPAN_HEIGHT] intValue];
+            int screenH = [UIScreen mainScreen].bounds.size.height - 100;
+            
+            BOOL isDiffPage = spanY/screenH!=(spanY+spanH)/screenH;//笔记开始和结尾不在同一页
+            int i = (self.page.pageOffsetH+0.01)/screenH;
+            int k = spanY/screenH;
+            BOOL isFormerPage = i==k;//当前显示是笔记头部
+            if (isDiffPage && !isFormerPage) {
+                spanY = 3;//3是估值，理论应是0，但离字太远。
+            }
+            
+            if ([self.myDelegate respondsToSelector:@selector(tapSpan:offsetToLeft:offsetToTop:)]) {
+                [self.myDelegate tapSpan:[[dic objectForKey:SELECTEDSPAN_ID] intValue]
+                            offsetToLeft:spanX
+                             offsetToTop:spanY%screenH];
+            }
+            return NO;
+        }
+        if ([[request.URL.scheme lowercaseString] isEqualToString:@"tapother"]) {
+            if ([self.myDelegate respondsToSelector:@selector(revertTapGesture:)]) {
+                [self.myDelegate revertTapGesture:_holdTapPoint];
+            }
+            return NO;
+        }
+        //    if ([[request.URL.scheme lowercaseString] isEqualToString:@"tapimg"]) {
+        //        NSString *parametersString = [request.URL.query stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+        //        NSDictionary * dic = [self parametersWithString:parametersString];
+        //
+        //        return NO;
+        //    }
+        if ([[request.URL.scheme lowercaseString] isEqualToString:@"touchstart"]) {
+            DebugLog(@"webview load request start");
+            isSelectNote = NO;
+            [self showSelectMenuController];
+            [[UIMenuController sharedMenuController] setMenuVisible:NO animated:NO];
+            return NO;
+        }
+        if ([[request.URL.scheme lowercaseString] isEqualToString:@"tapimg"]) {
+            NSLog(@"tapimg");
+            return NO;
+        }
+        fakeView.frame = self.frame;
+        NSString *nightModeStr=[[NSUserDefaults standardUserDefaults] objectForKey:@"nightMode"];
+        if ([nightModeStr isEqualToString:@"6"]) {
+            fakeView.backgroundColor = NIGHT_COLOR_BACK;
+        }
+        else if ([nightModeStr isEqualToString:@"1"]){
+            fakeView.backgroundColor = DAY_COLOR_BACK1;
+        }
+        else if ([nightModeStr isEqualToString:@"2"]){
+            fakeView.backgroundColor = DAY_COLOR_BACK2;
+        }
+        else if ([nightModeStr isEqualToString:@"3"]){
+            fakeView.backgroundColor = DAY_COLOR_BACK3;
+        }
+        else if ([nightModeStr isEqualToString:@"4"]){
+            fakeView.backgroundColor = DAY_COLOR_BACK4;
+        }
+        else if ([nightModeStr isEqualToString:@"5"]){
+            fakeView.backgroundColor = DAY_COLOR_BACK5;
+        }
+        [self.superview addSubview:fakeView];
+        [self.superview bringSubviewToFront:fakeView];
+        
+        [self showSelectMenuController];
+
+    }
+    
+    return YES;
+}
+
+- (void)webViewDidFinishLoad:(UIWebView *)webView
+{
+//    static  NSString * const jsGetImages =
+//    @"function getImages(){\
+//    var objs = document.getElementsByTagName(\"img\");\
+//    var imgScr = '';\
+//    for(var i=0;i<objs.length;i++){\
+//    imgScr = imgScr + objs[i].src + '+';\
+//    };\
+//    return imgScr;\
+//    };";
+    
+//    static  NSString * const jsGetImages =
+//    @"function getImages(){\
+//    var imgarr = document.getElementsByTagName(\"img\");\
+//    for(var i=0;i<imgarr.length;i++){\
+//        
+//    };";
+  
+//    [webView stringByEvaluatingJavaScriptFromString:jsGetImages];//注入js方法
+//    NSString *urlResurlt = [webView stringByEvaluatingJavaScriptFromString:@"getImages()"];
+//    mUrlArray = [NSMutableArray arrayWithArray:[urlResurlt componentsSeparatedByString:@"+"]];
+//    if (mUrlArray.count >= 2) {
+//        [mUrlArray removeLastObject];
+//    }
+    //urlResurlt 就是获取到得所有图片的url的拼接；mUrlArray就是所有Url的数组
+    
+    
+    //添加图片可点击js
+    [self stringByEvaluatingJavaScriptFromString:@"function registerImageClickAction(){\
+     var imgs=document.getElementsByTagName('img');\
+     var length=imgs.length;\
+     for(var i=0;i<length;i++){\
+     img=imgs[i];\
+     img.onclick=function(){\
+     if(this.getAttribute(\"value\")==\"video\"){\
+     window.location.href='image-preview:'+this.getAttribute(\"value\")+this.name;\
+     }\
+     else if(this.getAttribute(\"value\")==\"audio\") {\
+     window.location.href='image-preview:'+this.getAttribute(\"value\")+this.name;\
+     }\
+     else {\
+     window.location.href='image-preview:'+this.getAttribute(\"value\")+this.src;\
+     }\
+     }\
+     }\
+     }"];
+    [self stringByEvaluatingJavaScriptFromString:@"registerImageClickAction();"];
+    
+    
+    
+    NSString *nightModeStr=[[NSUserDefaults standardUserDefaults] objectForKey:@"nightMode"];
+    if ([nightModeStr isEqualToString:@"6"]) {
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#262626'"];
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#8d8d8d'"];
+        fakeView.backgroundColor = NIGHT_COLOR_BACK;
+        DebugLog(@"ON");
+    }
+    else if ([nightModeStr isEqualToString:@"1"]){
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#FAECD1'"];
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#000000'"];
+        fakeView.backgroundColor = DAY_COLOR_BACK1;
+        DebugLog(@"OFF");
+    }
+    else if ([nightModeStr isEqualToString:@"2"]){
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#F9E2DC'"];
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#000000'"];
+        fakeView.backgroundColor = DAY_COLOR_BACK2;
+        DebugLog(@"OFF");
+    }
+    else if ([nightModeStr isEqualToString:@"3"]){
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#E3F4F0'"];
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#000000'"];
+        fakeView.backgroundColor = DAY_COLOR_BACK3;
+        DebugLog(@"OFF");
+    }
+    else if ([nightModeStr isEqualToString:@"4"]){
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#E3EEF5'"];
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#000000'"];
+        fakeView.backgroundColor = DAY_COLOR_BACK4;
+        DebugLog(@"OFF");
+    }
+    else if ([nightModeStr isEqualToString:@"5"]){
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#DCDADB'"];
+        [webView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#000000'"];
+        fakeView.backgroundColor = DAY_COLOR_BACK5;
+        DebugLog(@"OFF");
+    }
+    
+    if (self.nChapter && [self.nChapter.paragraphArray count] == 0) {
+        int pCount = [[webView stringByEvaluatingJavaScriptFromString:@"document.body.children.length"] intValue];
+        
+        for (int i = 0; i<pCount; i++) {
+            IYCParagraph *paragraph = [[IYCParagraph alloc] init];
+            NSString *string1 = [NSString stringWithFormat:@"document.body.children[%d].id",i];
+            paragraph.paragraphId = [[webView stringByEvaluatingJavaScriptFromString:string1] intValue];
+            
+            NSString *string = [NSString stringWithFormat:@"document.body.children[%d].offsetTop",i];
+            paragraph.paragraphStartOffset = [[webView stringByEvaluatingJavaScriptFromString:string] floatValue] ;
+            
+            NSString *stringH = [NSString stringWithFormat:@"document.body.children[%d].offsetHeight",i];
+            paragraph.paragraphEndOffset = paragraph.paragraphStartOffset + [[webView stringByEvaluatingJavaScriptFromString:stringH] floatValue];
+            
+            NSString *stringPa = [NSString stringWithFormat:@"document.body.children[%d].innerText",i];
+            paragraph.paragString = [webView stringByEvaluatingJavaScriptFromString:stringPa];
+            
+            paragraph.stringCount = (int)paragraph.paragString.length;
+            
+            paragraph.paragraphURL = self.nChapter.spinePath;
+            paragraph.langType = self.nChapter.lType;
+            
+            [self.nChapter.paragraphArray addObject:paragraph];
+            
+        }
+        
+        float pageHeight = webView.frame.size.height;
+        
+        IYCParagraph *paragraphOlder1 = nil;
+        for (int i = 0; i < self.nChapter.pageCount;i++) {
+            
+            NSMutableArray *array2 = [NSMutableArray array];
+            
+            IYCPage *page = [self.nChapter.pageArray objectAtIndex:i];
+            for (int j = 0; j < pCount; j++) {
+                IYCParagraph *paragraph = [self.nChapter.paragraphArray objectAtIndex:j];
+                
+                if ((paragraph.paragraphStartOffset > page.pageOffsetH - 1) && (paragraph.paragraphStartOffset < page.pageOffsetH + pageHeight) ) {
+                    paragraphOlder1 = paragraph;
+                    paragraph.paragraphStartPage = i;
+                }
+                
+                if ((paragraph.paragraphEndOffset > page.pageOffsetH) && (paragraph.paragraphEndOffset < page.pageOffsetH + pageHeight + 1)) {
+                    paragraph.paragraphEndPage = i;
+                    [array2 addObject:[NSNumber numberWithInt:paragraph.paragraphId]];
+                }
+            }
+            
+            if (array2.count == 0) {
+                [array2 addObject:[NSNumber numberWithInt:paragraphOlder1.paragraphId]];
+            }
+            
+            [self.nChapter.paragraphEndDict setObject:array2 forKey:[NSString stringWithFormat:@"%d",page.pageId]];
+            
+        }
+    }
+    
+    if (self.page.chapterId == self.changeChapterIndex) {
+        NSString * addDivString = [NSString stringWithFormat:@"var div = document.createElement(\"div\");div.setAttribute(\"id\", \"aaa\");div.style.height = \"%f\";var firstchild=document.body.firstElementChild; document.body.insertBefore(div,firstchild);",self.changeChapterOffset];
+        [webView stringByEvaluatingJavaScriptFromString:addDivString];
+    }
+    
+    float pageOffset = self.page.pageOffset;
+    
+    NSString* goToOffsetFunc = [NSString stringWithFormat:@" function pageScroll(xOffset){window.scroll(xOffset,0); } "];
+    NSString* goTo =[NSString stringWithFormat:@"pageScroll(%f)", pageOffset];
+    [webView stringByEvaluatingJavaScriptFromString:goToOffsetFunc];
+    [webView stringByEvaluatingJavaScriptFromString:goTo];
+    [fakeView removeFromSuperview];
+    [self addEventListener];
+    [self showWebNotes];
+    [self performSelector:@selector(sendMsgToContinuePage) withObject:Nil];
+    [self.myDelegate refreshFinished];
+    [[NSNotificationCenter defaultCenter] postNotificationName:NOTIFICATION_REFRESHWEBVIEW object:nil];
+
+}
+- (void)sendMsgToContinuePage
+{
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"ContinueToPage" object:Nil];
+}
+//--- 拉选时显示小菜单
+- (void)showSelectMenuController {
+    NSMutableArray *menuItemsArray = [[NSMutableArray alloc] init];
+    
+    
+//    if (self.langType ==2) {
+//        UIMenuItem *dictionaryMenuItem = [[UIMenuItem alloc] initWithTitle:@"查词" action:@selector(dictionarySelectedText:)];
+//        [menuItemsArray addObject:dictionaryMenuItem];
+//    }
+    
+    UIMenuItem *markMenuItem = [[UIMenuItem alloc] initWithTitle:@"复制" action:@selector(shareSelectedText:)];
+    [menuItemsArray addObject:markMenuItem];
+    
+//    UIMenuItem *searchMenuItem = [[UIMenuItem alloc] initWithTitle:@"搜索" action:@selector(searchSelectedText:)];
+//    [menuItemsArray addObject:searchMenuItem];
+//    
+//    UIMenuItem *noteMenuItem = [[UIMenuItem alloc] initWithTitle:@"笔记" action:@selector(createNote:)];
+//    [menuItemsArray addObject:noteMenuItem];
+    
+    UIMenuItem *deleteMenuItem = [[UIMenuItem alloc] initWithTitle:@"删除" action:@selector(deleteSelectNote:)];
+    [menuItemsArray addObject:deleteMenuItem];
+    
+    [menuController update];
+    [menuController setMenuItems:menuItemsArray];
+    
+    //    WordSelectView *view = [[WordSelectView alloc] initWithFrame:CGRectMake(0, 0, 300, 150)];
+    //    view.parentVC = self.inputViewController;
+    //
+    //    [self.inputViewController lew_presentPopupView:view animation:[LewPopupViewAnimationFade new] dismissed:^{
+    //    }];
+    
+}
+
+//--- For menuController showing
+- (BOOL)canBecomeFirstResponder {
+    
+    return YES;
+}
+
+//--- For menuController showing
+- (BOOL)canPerformAction:(SEL)action withSender:(id)sender{
+    if (action == @selector(dictionarySelectedText:) ||
+        action == @selector(shareSelectedText:)||
+        action == @selector(searchSelectedText:))
+    {
+        return YES;
+    }
+    if (action==@selector(editSelectNote:))
+    {
+        if (isSelectNote) {
+            //            isSelectNote = NO;
+            return YES;
+        }
+    }
+    if (action==@selector(deleteSelectNote:) && isSelectNote)
+    {
+        return YES;
+    }
+    if (action == @selector(createNote:))//暂时跨段选择不可以添加笔记批注
+    {
+        return [self showAddNoteBtn];
+    }
+    return NO;
+}
+- (BOOL)showAddNoteBtn
+{
+    //getParagraphId(), 1为开始节点id；0为结束节点id；
+    NSString * getParaId = [NSString stringWithFormat:@"function getParagraphId(isStart){\
+                            var para;\
+                            if(isStart){para = window.getSelection().getRangeAt(0).startContainer.parentNode;}\
+                            else{para = window.getSelection().getRangeAt(0).endContainer.parentNode;}\
+                            while (para.parentNode) {\
+                            if (para.id && para.tagName!='SPAN')break;\
+                            para=para.parentNode;}\
+                            return para.id;\
+                            }"];
+    
+    NSString * js = [NSString stringWithFormat:@"function isAddNoteBtnCanShow() {\
+                     var range = window.getSelection().getRangeAt(0);               \
+                     var startP;\
+                     var	endP;\
+                     var startTag = range.startContainer.parentNode.tagName;\
+                     var endTag = range.endContainer.parentNode.tagName;\
+                     if((startTag!='SPAN'&&startTag!='P') || (endTag!='SPAN'&&endTag!='P'))return 0;\
+                     if (startTag=='SPAN' && endTag=='SPAN') {\
+                     startP = range.startContainer.parentNode;\
+                     endP = range.endContainer.parentNode;\
+                     if (startP.id==endP.id) {\
+                     return 0;\
+                     }\
+                     }\
+                     var startId = getParagraphId(1);\
+                     var endId = getParagraphId(0);\
+                     if(startId==endId)return 1;\
+                     return 0;\
+                     }"];
+    [self stringByEvaluatingJavaScriptFromString:getParaId];
+    [self stringByEvaluatingJavaScriptFromString:js];
+    int result = [[self stringByEvaluatingJavaScriptFromString:[NSString stringWithFormat:@"isAddNoteBtnCanShow()"]] intValue];
+    return result;
+}
+- (NSString *)getSelectText
+{
+    if (!isSelectNote)
+    {
+        NSString *string1 = [self stringByEvaluatingJavaScriptFromString:@"window.getSelection().toString()"];
+        if (self.langType == 2) {
+            if ( string1.length <=5) {
+                UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil message:@"对不起，您选中的文字太少了" delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+                [alertView show];
+                return nil;
+            }
+            
+        } else if (self.langType == 1 ){
+            
+            if ( string1.length <=4) {
+                UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil message:@"对不起，您选中的文字太少了" delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+                [alertView show];
+                return nil;
+            }
+            
+        }
+        
+        NSString *jsToGetHTMLSource = @" function subSelection(str){if(str.substr(0,1) == \"。\" || str.substr(0,1) == \"？\" || str.substr(0,1) == \"！\"|| str.substr(0,1) == \".\"|| str.substr(0,1) == \"?\"|| str.substr(0,1) == \"!\"){str = str.substr(1);} else if (str.substr(0,1) == \"…\") {str = str.substr(2);};if(str.substr(-1) == \"。\" || str.substr(-1) == \"？\" || str.substr(-1) == \"！\"|| str.substr(-1) == \".\"|| str.substr(-1) == \"?\"|| str.substr(-1) == \"!\"){str = str.substring(0,str.length - 1);} else if (str.substr(-1) == \"…\") {str = str.substring(0,str.length - 2);};return str;}function getStr(language){var selectedText;var selectedSentence;if(window.getSelection){selectedText = window.getSelection();} else if (document.selection) {selectedText = document.selection.createRange();}if(selectedText.anchorNode){selectedSentence = selectedText.anchorNode.textContent;}selectedText = subSelection(selectedText.toString());if(language == 1) {var r = '([.!?……]|^)([^.!?……]*('+selectedText+')[^.!?……]*[.!?……])';} else if (language == 2) {var r = '([。！？……]|^)([^。！？……]*('+selectedText+')[^。！？……]*[。！？……])';}var reg = new RegExp(r,'g');selectedText = selectedSentence.match(reg);selectedText = selectedText.toString().replace(/^[。？！……\\?\\.\\(\\)\\{\\}\\[\\]\\$\\+\\*\\|\\^\\\\]/,'');return selectedText;} ";
+        
+        
+        NSString *getstr = [NSString stringWithFormat:@"getStr(%d)",self.langType];
+        
+        
+        [self stringByEvaluatingJavaScriptFromString:jsToGetHTMLSource];
+        NSString *text= [self stringByEvaluatingJavaScriptFromString:getstr];
+        return text;
+    }
+    else
+    {
+        NSArray * ar = [[IYCDBAction sharedDBAction] selectNoteById:selectedNoteId];
+        if ([ar count]>0) {
+            IYCNote * note = [ar objectAtIndex:0];
+            NSString * text = [NSString stringWithFormat:@"%@————%@",note.selectString,note.noteContent];
+            return text;
+        }
+    }
+    return nil;
+}
+
+- (void) dimissAlert:(UIAlertView *)alert {
+    if(alert){
+        [alert dismissWithClickedButtonIndex:[alert cancelButtonIndex] animated:YES];
+    }
+}
+
+- (void)shareSelectedText:(id)sender {
+    NSString *string = [self stringByEvaluatingJavaScriptFromString:@"window.getSelection().toString()"];
+    
+    UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+    pasteboard.string = string;
+    
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"已复制到剪切板" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+    [alert show];
+    [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+    
+    
+    //    NSString * text = [self getSelectText];
+    //    if (!text) {
+    //        return;
+    //    }
+    //    DebugLog(@"text==%@",text);
+    //    NSMutableString *String = [[NSMutableString alloc] initWithString:text];
+    //
+    //
+    //    for (int i =0 ; i<text.length; i++) {
+    //        NSString *temp = [text substringWithRange:NSMakeRange(i, 1)];
+    //        if ([temp isEqualToString:@","]||[temp isEqualToString:@"."]||[temp isEqualToString:@"!"]||[temp isEqualToString:@"?"]||[temp isEqualToString:@"……"]||[temp isEqualToString:@"^"]||[temp isEqualToString:@"]"]||[temp isEqualToString:@"*"]||[temp isEqualToString:@")"]||[temp isEqualToString:@"。"]||[temp isEqualToString:@"，"]||[temp isEqualToString:@"！"]||[temp isEqualToString:@"？"]||[temp isEqualToString:@"……"]||[temp isEqualToString:@"］"]||[temp isEqualToString:@"）"]||[temp isEqualToString:@"”"]){
+    //            DebugLog(@"%d",i);
+    //            [String replaceCharactersInRange:NSMakeRange(i, 1) withString:@" "];
+    //
+    //        }else{
+    //            break;
+    //        }
+    //    }
+    //
+    //    NSString *str = nil;
+    //    if (String.length == 0) {
+    //        str =  [self stringByEvaluatingJavaScriptFromString:@"window.getSelection().toString()"];
+    //    } else {
+    //        str = [NSString stringWithString:String];
+    //    }
+    //
+    //    [[NSNotificationCenter defaultCenter] postNotificationName:@"gotoShareView" object:str];
+    //    [self becomeFirstResponder];
+}
+//
+- (void)dictionarySelectedText:(id)sender {
+    NSString *string = [self stringByEvaluatingJavaScriptFromString:@"window.getSelection().toString()"];
+    NSString * getParagraphId = [NSString stringWithFormat:@"function getParagraphId(){\
+                                 var para = window.getSelection().getRangeAt(0).startContainer.parentNode;\
+                                 while (para.parentNode) {\
+                                 if (para.id && para.tagName!='SPAN')break;\
+                                 para=para.parentNode;}\
+                                 return para.id;\
+                                 }"];
+    [self stringByEvaluatingJavaScriptFromString:getParagraphId];
+    NSString * paraId = [self stringByEvaluatingJavaScriptFromString:@"getParagraphId()"];
+    
+    NSDictionary *dict=@{@"string":string,@"paraId":paraId};
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"findExplanation" object:dict];
+}
+
+
+- (void)searchSelectedText:(id)sender {
+    
+    
+    //language ==0 中文 ＝＝＝1 英语
+    
+    //  NSString *subselection=@"function subSelection(str){if(str.substr(0,1)==\".\"||str.substr(0,1)==\"?\"||str.substr(0,1)==\"!\"||str.substr(0,1)==\"。\"||str.substr(0,1)==\"？\"||str.substr(0,1)==\"！\") str - str.substr(1) }"
+    NSString * String = nil;
+    if (isSelectNote) {
+        NSArray * ar = [[IYCDBAction sharedDBAction] selectNoteById:selectedNoteId];
+        if ([ar count]>0) {
+            IYCNote * note = [ar objectAtIndex:0];
+            String = note.selectString;
+        }
+    }
+    else
+    {
+        String = [self stringByEvaluatingJavaScriptFromString:@"window.getSelection().toString()"];
+    }
+    DebugLog(@"String==%@",String);
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"gotoSearchView" object:String];
+    [self becomeFirstResponder];
+    
+}
+
+#pragma mark -
+#pragma mark Note
+- (void)removeNotes
+{
+    NSString * removeFun = [NSString stringWithFormat:@"function removeNotes(element)\
+                            {\
+                            if (element.className == 'IYCNote') {\
+                            var text = element.removeChild(element.firstChild);\
+                            element.parentNode.insertBefore(text,element);\
+                            element.parentNode.removeChild(element);;\
+                            return true;\
+                            }\
+                            }"];
+    [self stringByEvaluatingJavaScriptFromString:removeFun];
+    
+    NSString * js = [NSString stringWithFormat:@"var elements = document.getElementsByClassName('IYCNote');for(var i=elements.length-1;i>=0;i--){removeNotes(elements[i]);}"];
+    [self stringByEvaluatingJavaScriptFromString:js];
+    
+    
+}
+- (void)showNotes
+{
+    //添加下划线并获取点击事件
+    NSArray * notes = [[IYCDBAction sharedDBAction] selectNotesByBookID:readingBook.bookServerId
+                                                              AccountId:[[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] longLongValue]
+                                                           ChapterIndex:self.page.chapterId
+                                                               language:self.langType];
+    if ([notes count]==0) {
+        return;
+    }
+    
+    NSMutableArray * notesInChapter = [NSMutableArray arrayWithArray:notes];
+    
+    NSMutableArray * notesInPara = [[NSMutableArray alloc] init];
+    
+    do {
+        [self getNotesInTheSameParagraph:&notesInPara fromNotes:&notesInChapter];
+        
+        [notesInPara sortUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+            IYCNote * note1 = (IYCNote *)obj1;
+            IYCNote * note2 = (IYCNote *)obj2;
+            
+            if (note1.startOffset>note2.startOffset) {
+                return NSOrderedDescending;
+            }
+            if (note1.startOffset<note2.startOffset) {
+                return NSOrderedAscending;
+            }
+            return NSOrderedSame;
+        }];
+        
+        
+        
+        IYCNote * firstNote = [notesInPara objectAtIndex:0];
+        NSString * getParagraph = [NSString stringWithFormat:@"function getParagraphFun(id) {\
+                                   var p = document.getElementById(id);\
+                                   if(p.tagName=='div'||p.tagName=='DIV'){\
+                                   var elems = p.getElementsByTagName('P');\
+                                   if (elems.length>0) {\
+                                   p=elems[0];\
+                                   }};\
+                                   return p;}"];
+        [self stringByEvaluatingJavaScriptFromString:getParagraph];
+        NSString * getHtml = [NSString stringWithFormat:@"getParagraphFun(%ld).innerText",firstNote.startParagraphId];
+        NSString * html = [self stringByEvaluatingJavaScriptFromString:getHtml];
+        if (nil==html || [html length] == 0) {
+            continue;
+        }
+        html = [html stringByReplacingOccurrencesOfString:@"\n" withString:@" "];
+        
+        html = [self addUnderLineToHtml:html notes:&notesInPara lastNote:nil];
+        
+        NSString * changeHtml = [NSString stringWithFormat:@"var element = getParagraphFun(%ld);var html = \"%@\"; element.innerHTML = html;",firstNote.startParagraphId,html];
+        [self stringByEvaluatingJavaScriptFromString:changeHtml];
+        
+        [notesInPara removeAllObjects];
+        
+    } while ([notesInChapter count]>0);
+    
+}
+- (void)showWebNotes
+{
+    //添加下划线并获取点击事件
+    //    NSArray * notes = [[[IYCDBAction sharedDBAction] selectWebNotesByBookID:readingBook.bookServerId
+    //                                                               AccountId:[[[NSUserDefaults standardUserDefaults] objectForKey:KEY_AccountID] longLongValue]
+    //                                                            ChapterIndex:self.page.chapterId
+    //                                                                language:self.langType] retain];
+    
+    NSArray *notes = [[IYCDBAction sharedDBAction] selectWebNotesByBookID:readingBook.bookServerId AccountId:[[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] longLongValue] ChapterId:self.page.chapterId language:self.langType];
+    
+    if ([notes count]==0) {
+        return;
+    }
+    
+    NSMutableArray * notesInChapter = [NSMutableArray arrayWithArray:notes];
+    
+    NSMutableArray * notesInPara = [[NSMutableArray alloc] init];
+    
+    do {
+        [self getNotesInTheSameParagraph:&notesInPara fromNotes:&notesInChapter];
+        
+        [notesInPara sortUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+            IYCNote * note1 = (IYCNote *)obj1;
+            IYCNote * note2 = (IYCNote *)obj2;
+            
+            if (note1.startOffset>note2.startOffset) {
+                return NSOrderedDescending;
+            }
+            if (note1.startOffset<note2.startOffset) {
+                return NSOrderedAscending;
+            }
+            return NSOrderedSame;
+        }];
+        
+        
+        
+        IYCNote * firstNote = [notesInPara objectAtIndex:0];
+        NSString * getParagraph = [NSString stringWithFormat:@"function getParagraphFun(id) {\
+                                   var p = document.getElementById(id);\
+                                   if(p.tagName=='div'||p.tagName=='DIV'){\
+                                   var elems = p.getElementsByTagName('P');\
+                                   if (elems.length>0) {\
+                                   p=elems[0];\
+                                   }};\
+                                   return p;}"];
+        [self stringByEvaluatingJavaScriptFromString:getParagraph];
+        NSString * getHtml = [NSString stringWithFormat:@"getParagraphFun(%ld).innerText",firstNote.startParagraphId];
+        NSString * html = [self stringByEvaluatingJavaScriptFromString:getHtml];
+        if (nil==html || [html length] == 0) {
+            continue;
+        }
+        html = [html stringByReplacingOccurrencesOfString:@"\n" withString:@" "];
+        
+        html = [self addUnderLineToHtml:html notes:&notesInPara lastNote:nil];
+        
+        NSString * changeHtml = [NSString stringWithFormat:@"var element = getParagraphFun(%ld);var html = \"%@\"; element.innerHTML = html;",firstNote.startParagraphId,html];
+        [self stringByEvaluatingJavaScriptFromString:changeHtml];
+        
+        [notesInPara removeAllObjects];
+        
+    } while ([notesInChapter count]>0);
+    
+}
+
+//为某一段内的批注统一加下划线。
+- (NSString *)addUnderLineToHtml:(NSString *)html notes:(NSMutableArray **)notes lastNote:(IYCNote *)lastNote
+{
+    NSMutableString *str = [[NSMutableString alloc] init];
+    
+    NSMutableArray *array = *notes;
+    
+    NSString *result = nil;
+    int finalEndOffset = 0;
+    
+    NSMutableArray *needRowArray = [self compareListByFirstList:array andSecondList:nil withHTML:html];
+    
+    for (int i = 0;i < needRowArray.count;i++)
+    {
+        [needRowArray sortUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+            IYCNote * note1 = (IYCNote *)obj1;
+            IYCNote * note2 = (IYCNote *)obj2;
+            
+            if (note1.startOffset>note2.startOffset) {
+                return NSOrderedDescending;
+            }
+            if (note1.startOffset<note2.startOffset) {
+                return NSOrderedAscending;
+            }
+            return NSOrderedSame;
+        }];
+        
+        
+        IYCNote *note = [needRowArray objectAtIndex:i];
+        IYCNote *lastNote = nil;
+        if (i-1 >= 0) {
+            lastNote = [needRowArray objectAtIndex:(i-1)];
+        }
+        int startOffset = note.startOffset;
+        int endOffset = note.endOffset;
+        
+        if (i == 0) {
+            [str appendString:[html substringWithRange:NSMakeRange(0, startOffset)]];
+            
+            NSString *noteStr = [html substringWithRange:NSMakeRange(startOffset,endOffset - startOffset)];
+            
+            [str appendString:[NSString stringWithFormat:@"<span class='IYCNote' style='border-bottom:2px solid #87624d;' id='%d'>%@</span>",note.noteID,noteStr]];
+            finalEndOffset = endOffset;
+            
+        }else{
+            NSString * formatStr = [html substringWithRange:NSMakeRange(lastNote.endOffset, startOffset - lastNote.endOffset)];
+            [str appendString:formatStr];
+            
+            NSString *noteStr = [html substringWithRange:NSMakeRange(startOffset, endOffset - startOffset)];
+            [str appendString:[NSString stringWithFormat:@"<span class='IYCNote' style='border-bottom:2px solid #87624d;' id='%d'>%@</span>",note.noteID,noteStr]];
+            
+            //                [str appendString:noteStr];
+            
+            finalEndOffset = endOffset;
+        }
+        
+        
+        
+    }
+    
+    
+    [str appendString:[html substringWithRange:NSMakeRange(finalEndOffset, html.length - finalEndOffset)]];
+    
+    result =str;
+    
+    return result;
+}
+
+- (BOOL) isConncetBetweenFirstNote:(IYCNote *)firstNote andSecondNote:(IYCNote *)secondNote
+{
+    int x1 = firstNote.startOffset;
+    int y1 = firstNote.endOffset;
+    int x2 = secondNote.startOffset;
+    int y2 = secondNote.endOffset;
+    
+    if (x1 <= x2) {
+        if (y1 >= y2) {
+            return YES;
+        } else if (y1 >= x2 && y2 > y1) {
+            return YES;
+        }
+    } else if (x2 <= x1) {
+        if (y2 >= y1) {
+            return YES;
+        } else if (y2 >= x1 && y1 > y2) {
+            return YES;
+        }
+    }
+    return false;
+}
+- (NSMutableArray *) compareListByFirstList:(NSMutableArray *)firstList andSecondList:(NSMutableArray *)secondList withHTML:(NSString *)html
+{
+    NSMutableArray *combineArray = [[NSMutableArray alloc] init];
+    NSMutableArray *needRowArray = [[NSMutableArray alloc] init];
+    
+    
+    if (secondList == nil) {
+        secondList = [[NSMutableArray alloc] init];
+    }
+    if (firstList.count > 1) {
+        for (int i = 0 ; i < firstList.count; i++) {
+            BOOL flag  = NO;
+            
+            IYCNote *note = [firstList objectAtIndex:i];
+            for (int j = i+1; j<firstList.count; j++) {
+                IYCNote *nextNote = [firstList objectAtIndex:j];
+                
+                if ([self isConncetBetweenFirstNote:note andSecondNote:nextNote])
+                {
+                    if (![combineArray containsObject:note]) {
+                        [combineArray addObject:note];
+                        
+                    }
+                    if (![combineArray containsObject:nextNote]) {
+                        [combineArray addObject:nextNote];
+                        
+                    }
+                    
+                    flag = YES;
+                    
+                }
+            }
+            if (!flag) {
+                BOOL flag = NO;
+                for (int k = 0; k<i; k++) {
+                    IYCNote *aloneNote = [firstList objectAtIndex:k];
+                    if ([self isConncetBetweenFirstNote:note andSecondNote:aloneNote])
+                    {
+                        flag = YES;
+                        
+                    }
+                }
+                if (!flag) {
+                    
+                    //不需要合并的笔记
+                    [needRowArray addObject:note];
+                    [secondList addObject:note];
+                    
+                }
+            }
+            
+            
+            
+        }
+        
+        
+        NSMutableArray *partArray = [self partArrayWithArray:combineArray withHTML:html];
+        
+        return [self compareListByFirstList:partArray andSecondList:secondList withHTML:html];
+        
+    }else if(firstList.count == 1){
+        [secondList addObject:[firstList objectAtIndex:0]];
+        [firstList removeObjectAtIndex:0];
+        return [self compareListByFirstList:firstList andSecondList:secondList withHTML:html];
+    }else{
+        return secondList;
+    }
+    
+}
+
+- (NSMutableArray *) partArrayWithArray:(NSMutableArray *)list withHTML:(NSString *)html
+{
+    NSMutableArray *result = [[NSMutableArray alloc] init];
+    
+    int minX = 0;
+    int maxY = 0;
+    
+    for (int i = 0; i+1<list.count; i++) {
+        IYCNote *tempNote = [[IYCNote alloc] init];
+        
+        IYCNote *note = [list objectAtIndex:i];
+        
+        minX = note.startOffset;
+        maxY = note.endOffset;
+        
+        IYCNote *nextNote = [list objectAtIndex:i+1];
+        int x = nextNote.startOffset;
+        int y = nextNote.endOffset;
+        
+        if (maxY < x || minX > y) {
+            maxY = x;
+            minX = y;
+            
+        }else{
+            minX = minX <= x ? minX : x;
+            maxY = maxY >= y ? maxY : y;
+            
+            NSString *comStr = [html substringWithRange:NSMakeRange(minX, maxY-minX)];
+            tempNote.noteID = note.noteID;
+            tempNote.startOffset = minX;
+            tempNote.endOffset = maxY;
+            tempNote.selectString = comStr;
+            [result addObject:tempNote];
+        }
+        
+        
+        
+    }
+    
+    return result;
+}
+//从notesInChapter中选择同一段落的笔记放入notesInPara，方便一段统一加下划线.
+- (void)getNotesInTheSameParagraph:(NSMutableArray **)notesInPara fromNotes:(NSMutableArray **)notesInChapter
+{
+    if ([*notesInChapter count]<2)
+    {
+        [*notesInPara addObjectsFromArray:*notesInChapter];
+        [*notesInChapter removeAllObjects];
+        return;
+    }
+    
+    IYCNote * firstNote = [*notesInChapter objectAtIndex:0];
+    [*notesInPara addObject:firstNote];
+    [*notesInChapter removeObject:firstNote];
+    int notesCount = (int)[*notesInChapter count];
+    int j = 0;
+    for (int i=0; i<notesCount; i++)
+    {
+        IYCNote * tmpNote = [*notesInChapter objectAtIndex:j];
+        if (tmpNote.startParagraphId == firstNote.startParagraphId)
+        {
+            [*notesInPara addObject:tmpNote];
+            [*notesInChapter removeObject:tmpNote];
+        }
+        else
+        {
+            j++;
+        }
+    }
+}
+
+- (void)addEventListener
+{
+    NSString * touchstart = [NSString stringWithFormat:@"var timeOut;var selectSpan;var isTap=0;\
+                             function sendCmdToOC(str) {window.getSelection().removeAllRanges();\
+                             isTap=0;\
+                             var uri = encodeURI(\"selectspan://selectSpan?%@=\"+selectSpan.id+\"&%@=\"+selectSpan.offsetLeft+\"&%@=\"+selectSpan.offsetTop);\
+                             window.location = uri;\
+                             selectSpan=null;\
+                             }\
+                             function touchStart() {\
+                             var uri2 = encodeURI(\"touchstart://touchstart?\");\
+                             window.location = uri2;\
+                             }\
+                             window.addEventListener(\"touchstart\", function(event) {\
+                             isTap=1;\
+                             touchStart();\
+                             var t = event.target;\
+                             if(t.tagName==\"SPAN\")\
+                             {document.documentElement.style.webkitUserSelect='none';\
+                             selectSpan=t;\
+                             timeOut = setTimeout(\"sendCmdToOC()\", 600);}\
+                             else{setTimeout(\"isTap=0;\", 600);}\
+                             })",SELECTEDSPAN_ID,SELECTEDSPAN_X,SELECTEDSPAN_Y];
+    NSString * touchmove = [NSString stringWithFormat:@"window.addEventListener(\"touchmove\", function(event) {\
+                            clearTimeout(timeOut);isTap=0;\
+                            document.documentElement.style.webkitUserSelect=null;\
+                            })"];
+    NSString * touchEnd = [NSString stringWithFormat:@"window.addEventListener(\"touchend\", function(event) {\
+                           clearTimeout(timeOut);\
+                           if(isTap==1){\
+                           var theTagName=event.target.tagName;\
+                           if(event.target.tagName.toLowerCase()=='img') {\
+                           var uri = encodeURI(\"tapimg://tapimg\");\
+                           window.location = uri;\
+                           }\
+                           else if(!selectSpan || selectSpan.tagName!='SPAN'){\
+                           var uri = encodeURI(\"tapother://tapother\"+theTagName);\
+                           window.location = uri;\
+                           }\
+                           else if(selectSpan.tagName==\"SPAN\"){\
+                           var uri = encodeURI(\"tapspan://selectSpan?%@=\"+selectSpan.id+\"&%@=\"+selectSpan.offsetLeft+\"&%@=\"+selectSpan.offsetTop+\"&%@=\"+selectSpan.offsetHeight);\
+                           window.location = uri;selectSpan=null;\
+                           }\
+                           }\
+                           isTap=0;\
+                           document.documentElement.style.webkitUserSelect=null;\
+                           })",SELECTEDSPAN_ID,SELECTEDSPAN_X,SELECTEDSPAN_Y,SELECTEDSPAN_HEIGHT];
+    NSString * touchcancel = [NSString stringWithFormat:@"window.addEventListener(\"touchcancel\", function(event) {\
+                              clearTimeout(timeOut);isTap=0;\
+                              document.documentElement.style.webkitUserSelect=null;\
+                              })"];
+    
+    [self stringByEvaluatingJavaScriptFromString:touchstart];
+    [self stringByEvaluatingJavaScriptFromString:touchmove];
+    [self stringByEvaluatingJavaScriptFromString:touchEnd];
+    [self stringByEvaluatingJavaScriptFromString:touchcancel];
+}
+//- (void)editSelectNote:(id)sender
+- (void)editSelectNote:(id)sender
+{
+    if (-1==selectedNoteId) {
+        return;
+    }
+    NSArray * notes = [[IYCDBAction sharedDBAction] selectNoteById:selectedNoteId];
+    if ([notes count]==0) {
+        return;
+    }
+    IYCNote * note = [notes objectAtIndex:0];
+    BOOL isCreate = NO;
+    NSDictionary * info = [[NSDictionary alloc] initWithObjectsAndKeys:note,@"Note",
+                           [NSNumber numberWithBool:isCreate],@"IsCreate",nil];
+    //暂时先用消息，日后重构时修改。
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"gotoNoteView" object:nil userInfo:info];
+    selectedNoteId = -1;
+}
+//- (void)addNote:(id)sender
+- (void)createNote:(id)sender
+{
+    
+    NSString *String = [self stringByEvaluatingJavaScriptFromString:@"window.getSelection().toString()"];
+    if ([String isEqualToString:@""]) {
+        String=newWordStr;
+    }
+    NSString * getParagraphId = [NSString stringWithFormat:@"function getParagraphId(){\
+                                 var para = window.getSelection().getRangeAt(0).startContainer.parentNode;\
+                                 while (para.parentNode) {\
+                                 if (para.id && para.tagName!='SPAN')break;\
+                                 para=para.parentNode;}\
+                                 return para.id;\
+                                 }"];
+    [self stringByEvaluatingJavaScriptFromString:getParagraphId];
+    NSString * paraId = [self stringByEvaluatingJavaScriptFromString:@"getParagraphId()"];
+    
+    /*
+     段内添加了下划线（span标签）后会出现获取选中文字坐标不准的问题。
+     段内添加标签后，js获取的选中文字的起止位置是从最近的标签开始计算。
+     此处先获取选中文字所在的document，然后计算该document内容在整段内容中得偏移量，用以修正起止位置。
+     */
+    
+    NSString * getSelectOffset = [NSString stringWithFormat:@"function getIndexWithTag(str,isStart) {\
+                                  var a;\
+                                  if(isStart==1)\
+                                  {a = window.getSelection().getRangeAt(0).startContainer;}\
+                                  else{a = window.getSelection().getRangeAt(0).endContainer;}\
+                                  var b =document.createTextNode(str);\
+                                  \
+                                  var span = document.createElement(\"tmpTag\");\
+                                  span.appendChild(b);\
+                                  a.parentNode.insertBefore(span, a);\
+                                  \
+                                  var p = window.getSelection().focusNode.parentNode;\
+                                  if(\"span\"==p.tagName || \"SPAN\"==p.tagName)\
+                                  {p = window.getSelection().focusNode.parentNode.parentNode;}\
+                                  var index = p.textContent.indexOf(str);\
+                                  \
+                                  span.parentNode.removeChild(span);\
+                                  \
+                                  return index;\
+                                  }"];
+    [self stringByEvaluatingJavaScriptFromString:getSelectOffset];
+    
+    
+    NSString * start = [self stringByEvaluatingJavaScriptFromString:@"window.getSelection().getRangeAt(0).startOffset"];
+    NSString * end = [self stringByEvaluatingJavaScriptFromString:@"window.getSelection().getRangeAt(0).endOffset"];
+    
+    long chapterId = [[self stringByEvaluatingJavaScriptFromString:@"document.body.id"] longLongValue];
+    
+    long paragraphId = [paraId intValue];
+    int startOffset = [start intValue];
+    int endOffset = [end intValue];
+    
+    int index = [[self stringByEvaluatingJavaScriptFromString:@"getIndexWithTag(\"*#*IYCReader*#*\",1)"] intValue];
+    startOffset += index;
+    index = [[self stringByEvaluatingJavaScriptFromString:@"getIndexWithTag(\"*#*IYCReader*#*\",0)"] intValue];
+    endOffset += index;
+    
+    IYCNote * note = [[IYCNote alloc] init];
+    note.selectString = String;
+    note.chapterID = chapterId;
+    note.startParagraphId = paragraphId;
+    note.endParagraphId = paragraphId;//暂时只支持段内批注，所以开始结束段相同
+    note.bookID = self.readingBook.bookServerId;
+    note.accountID = [[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] longLongValue];
+    note.startOffset = startOffset;
+    note.endOffset = endOffset;
+    note.chapterIndex = self.page.chapterId;
+    note.language = self.langType;
+    
+    BOOL isCreate = YES;
+    NSDictionary * info = [[NSDictionary alloc] initWithObjectsAndKeys:note,@"Note",
+                           [NSNumber numberWithBool:isCreate],@"IsCreate",nil];
+    //暂时先用消息，日后重构时修改。
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"gotoNoteView" object:nil userInfo:info];
+    
+}
+- (void)showMenuBarForSpan:(NSDictionary *)para
+{
+    [self becomeFirstResponder];
+    int spanId = [[para objectForKey:SELECTEDSPAN_ID] intValue];
+    int spanX = [[para objectForKey:SELECTEDSPAN_X] intValue];
+    int spanY = [[para objectForKey:SELECTEDSPAN_Y] intValue];
+    
+    spanY = spanY-WEBVIEW_HEIGHT*self.page.pageId;
+    
+    isSelectNote = YES;
+    selectedNoteId = spanId;
+    
+    CGRect rect = CGRectMake(spanX, spanY, 80, 80);
+    
+    //    newWordStr=[self stringByEvaluatingJavaScriptFromString:@"window.getSelection().toString()"];
+    //    NSDictionary *tmpDict=@{@"newWordStr":newWordStr,@"frame":[NSNumber numberWithFloat:spanY]};
+    //    [[NSNotificationCenter defaultCenter] postNotificationName:@"showNewWordView" object:tmpDict];
+    
+    NSLog(@"%i %i",spanX,spanY);
+    [menuController setTargetRect:rect inView:self];
+    selectTap=1;
+    [menuController setMenuVisible:YES animated:YES];
+    //    [menuController setMenuVisible:NO animated:NO];
+}
+- (void)deleteSelectNote:(id)sender
+{
+    if (selectedNoteId == -1) {
+        return;
+    }
+    
+    IYCNote *deleteNote = [[[IYCDBAction sharedDBAction]selectHaveNoteServerIdNoteById:selectedNoteId] objectAtIndex:0];
+    
+    if (deleteNote.noteServerID) {
+        //        deleteNote.noteStatus = NOTESTATUES_TYPE_CHANGED;
+        //        deleteNote.status = 0;
+        //        [[IYCDBAction sharedDBAction] insertDeleteNote:deleteNote];
+    }
+    
+    [[IYCDBAction sharedDBAction] deleteNoteById:selectedNoteId];
+    if (deleteNote.noteServerID!=0&&[IYCCheckNetwork isServiceAvailable]) {
+        NSDictionary *dict=@{@"commentsId":[NSString stringWithFormat:@"%i",deleteNote.noteServerID]};
+        
+        [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/commentscontroller/deleteComment" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+            if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+            }
+        } WithFailurBlock:^(NSError *error) {
+        }];
+        
+    }
+    [self refreshView];
+}
+
+- (void)holdTapGesture:(CGPoint)tapPoint
+{
+    _holdTapPoint = CGPointMake(tapPoint.x, tapPoint.y);
+    
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    UITouch *touch=touches.anyObject;
+    CGPoint location2=[touch locationInView:self];
+    _holdTapPoint=location2;
+}
+#pragma mark -
+
+- (void)setLangType:(IYCLanguageType)lang {
+    _langType = lang;
+}
+
+- (void)setChangeChapterIndex:(int)changeIndex {
+    _changeChapterIndex = changeIndex;
+}
+
+- (void)setChangeChapterOffset:(float)changeOffset {
+    _changeChapterOffset = changeOffset;
+}
+
+- (void)setPage:(IYCPage *)page {
+    if (_page != page) {
+        _page = page;
+    }
+}
+
+- (void)setPageNum:(int)pageNumber {
+    _pageNum = pageNumber;
+}
+
+
+
+- (void)loadHTMLString:(NSString *)string baseURL:(NSURL *)baseURL
+{
+    [super loadHTMLString:string baseURL:baseURL];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"HoldPage" object:Nil];
+}
+
+@end

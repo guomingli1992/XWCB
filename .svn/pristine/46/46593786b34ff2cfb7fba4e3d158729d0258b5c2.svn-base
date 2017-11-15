@@ -1,0 +1,239 @@
+//
+//  IYCWordDBAction.m
+//  iyangcong
+//
+//  Created by mingli 郭 on 2017/4/7.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "IYCWordDBAction.h"
+#import "IYCDataBase.h"
+#import "AppDelegate.h"
+
+static IYCWordDBAction *instance = nil;
+
+
+@implementation IYCWordDBAction
+
++(IYCWordDBAction *)sharedDBWordAction{
+    if (instance == nil) {
+        instance = [[IYCWordDBAction alloc] init];
+    }
+    return instance;
+}
+-(NSMutableArray *)setToWordArray:(id)rs{
+    NSMutableArray *wordList = [[NSMutableArray alloc] init];
+    NSArray *array = (NSArray *)rs;
+    for (NSDictionary *dic in array) {
+        IYCWord *word = [[IYCWord alloc] init];
+        NSNumber *wordID = [dic objectForKey:@"wordID"];
+        if ((NSNull *)wordID != [NSNull null]) {
+            word.wordID = [wordID intValue];
+        }
+//        if ([[dic objectForKey:@"wordType"] intValue]==1) {
+//            word.wordStatus =
+//        }
+        [wordList addObject:word];
+    }
+    return wordList;
+}
+
+-(NSArray *)queryAllWord{
+    id rs;
+    rs = [[IYCDataBase share] queryDB:[NSString stringWithFormat:@"SELECT * FROM IYCWORD where USERID='%@'",[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]]];
+    NSArray *result = [self setToWordArray:rs];
+    return result;
+}
+//-(int)queryWords{
+//    id rs;
+//    userManager = [NSUserDefaults standardUserDefaults];
+//    NSString *accountID = [userManager objectForKey:@"userId"];
+//    
+//    NSString *sql = [NSString stringWithFormat:@"select A.*, B.accountID, B.lastReadTime, B.readSchedule from IYCBook A left join (select * from IYCBookState where accountID = '%@')  B on A.bookID = B.bookID order by B.lastOprationTime desc",accountID];
+//    
+//    DebugLog(@"%@",sql);
+//    rs = [[IYCWordDataBase share] queryDB:sql];
+//    
+//    NSMutableArray * result = [self setToWordArray:rs];
+//    DebugLog(@"%ld",[result count]);
+//    
+//    //[[IYCDataBase share] close];
+//    return (int)[result count];
+//
+//}
+
+//-(int)deleteWordByID:(long)wordID{
+//    
+//    NSString *sql = [NSString stringWithFormat:@"DELETE FROM IYCWORD WHERE wordID = '%ld' AND USERID = '%@'", wordID,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+//    int result = [[IYCDataBase share] updateDB:sql];
+//    return result;
+//}
+-(int)deleteWord{
+    NSString *sql = [NSString stringWithFormat:@"DELETE FROM IYCWORD WHERE USERID = '%@'",[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+
+-(int)deleteWordByWordString:(NSString *)wordString andWordDeleteString:(NSString *)worddeletestring{
+    NSString *sql = [NSString stringWithFormat:@"update IYCWORD set WORDDELETE = '%@' WHERE WordString ='%@' and USERID = '%@'",worddeletestring,wordString,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+
+}
+-(int)deleteWordByWordString:(NSString *)wordString andTime:(NSString *)timeString{
+    NSString *sql = [NSString stringWithFormat:@"update IYCWORD set WordUpdateTime = '%@' WHERE WordString ='%@' and USERID = '%@'",timeString,wordString,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+    
+}
+-(int)dropTable{
+    NSString *sql = [NSString stringWithFormat:@"DROP TABLE IF EXISTS IYCWORD"];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+   
+}
+
+-(int)insertWord:(IYCWord *)word{
+//    if (-1 == word.wordID ) {
+//        return 0;
+//    }
+    NSString *insertSql = [NSString stringWithFormat:@"INSERT INTO 'IYCWORD' (USERID,WORDSTATUES_TYPE,WordID,WordString,WordMeaning,WordLevel,WordFavorite,WordUpdateTime,WordLocation,WORDSENTENCE,WORDDELETE ,bookId ,bookName,phonetic) VALUES (%ld,%d,%ld,'%@','%@','%@',%d,'%@','%@','%@','%@',%ld,'%@','%@')",word.userID,word.wordStatus,word.wordID,word.wordString,word.wordMeaning,word.wordlevel,word.favoriteword,word.updatetimestr,word.locationString,word.sentenceString,word.wordDeleteStr,word.bookId,word.bookName,word.phonetic];
+    int result = [[IYCDataBase share] updateDB:insertSql];
+        return result;
+}
+-(int)updateWordId:(long)WordId WordStatusName:(WORDSTATUES_TYPE )status
+{
+//    NSString * accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] ;
+    NSString *sql = [NSString stringWithFormat:@"update IYCWORD set WORDSTATUES_TYPE = '%d' WHERE WORDID = %ld and USERID = '%@'",status,WordId,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+-(int)updateWordId:(long)WordId wordString:(NSString *)wordString newWordId:(int)wordIdd {
+    NSString *sql = [NSString stringWithFormat:@"update IYCWORD set WORDID = '%d' WHERE WORDID = %ld and WordString='%@' and USERID='%@'",wordIdd,WordId,wordString,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+-(int)updateWordString:(NSString *)wordString WordStatusName:(WORDSTATUES_TYPE )status{
+    NSString *sql = [NSString stringWithFormat:@"update IYCWORD set WORDSTATUES_TYPE = '%d' WHERE WordString ='%@' and USERID = '%@'",status,wordString,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+-(int)updateWordString:(NSString *)wordString andTime:(NSString *)upTime{
+    NSString *sql = [NSString stringWithFormat:@"update IYCWORD set WordUpdateTime = '%@' WHERE WordString ='%@' and USERID = '%@'",upTime,wordString,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+-(int)updateWordId:(long)WordId WordFavoriteName:(int)favoriteString{
+    NSString *sql = [NSString stringWithFormat:@"update IYCWORD set WordFavorite = '%d' WHERE WORDID = %ld and USERID = '%@'",favoriteString,WordId,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+-(int)updateWordString:(NSString *)wordString WordFavoriteName:(int)favoriteString{
+    NSString *sql = [NSString stringWithFormat:@"update IYCWORD set WordFavorite = '%d' WHERE WordString ='%@' and USERID = '%@'",favoriteString,wordString,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+-(int)updateWordId:(long)WordId ForTime:(NSString *)uptime{
+    NSString *sql = [NSString stringWithFormat:@"update IYCWORD set WordUpdateTime = '%@' WHERE WORDID = %ld and USERID = '%@'",uptime,WordId,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+-(NSMutableArray *)selectWordByUserId:(long)userId andWordFavoriteName:(int)favoriteString andWordDeleteString:(NSString *)deleteString{
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCWORD WHERE USERID = '%ld' and WordFavorite = %d and WORDDELETE = '%@'",userId,favoriteString,deleteString];
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    return array;
+}
+-(NSMutableArray *)selectWord{
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCWORD WHERE USERID = '%@'and WORDDELETE = '%@'",[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"0"];
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    return array;
+}
+
+-(NSMutableArray *)selectWord1{
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCWORD WHERE USERID = '%@'",[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    return array;
+}
+-(NSMutableArray *)selectWordbyWordNotEqual:(int)wordId{
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCWORD where WORDID != %i and USERID = '%@'",wordId,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    return array;
+}
+
+- (NSMutableArray *)selectWordDictByWordId:(long)wordId
+{
+    NSString * sql = [NSString stringWithFormat:@"SELECT * FROM IYCWORD WHERE wordID = '%ld' and USERID = '%@'",wordId,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    
+    return array;
+}
+
+- (NSMutableArray *)selectWordDictByWordId:(long)wordId andwordString:(NSString *)wordString {
+    NSString * sql = [NSString stringWithFormat:@"SELECT * FROM IYCWORD WHERE wordID = '%ld' and WordString = '%@' and USERID = '%@'",wordId,wordString,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    
+    return array;
+}
+
+-(NSMutableArray *)selectWordDictByWordString:(NSString *)wordString{
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCWORD WHERE WordString ='%@' and USERID = '%@'",wordString,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    return array;
+}
+
+-(NSMutableArray *)selectWordDictByWordString:(NSString *)wordString andUserId:(int)userId{
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCWORD WHERE WordString ='%@' and USERID='%i'",wordString,userId];
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    return array;
+}
+
+- (NSMutableArray *)selectWordByUserId:(long)userId andStatus:(int)status andDeleteString:(NSString *)worddeletestring
+{
+    NSString * sql = [NSString stringWithFormat:@"SELECT * FROM IYCWORD WHERE USERID = '%ld' and WORDSTATUES_TYPE =%i and WORDDELETE = '%@'",userId,status,worddeletestring];
+    
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    
+    return array;
+    
+    //    long bookServerId ;
+    //
+    //    for (NSDictionary *dic in array) {
+    //        bookServerId = [[dic objectForKey:@"bookServerID"] longLongValue];
+    //
+    //    }
+    //    //[[IYCDataBase share] close];
+    //
+    //    //    while ([rs next]) {
+    //    //        bookServerId = [[rs objectForColumn:@"bookServerID"] longLongValue];
+    //    //    }
+    //    //
+    //    //    [rs close];
+    //    return bookServerId;
+}
+
+- (NSMutableArray *)selectWordByUserId:(long)userId andStatus:(int)status andLevel:(NSString *)level {
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCWORD WHERE USERID = '%ld' and WORDSTATUES_TYPE='%i' and  wordlevel LIKE '%%%@%%' and WORDDELETE = '%@' ",userId,status,level,@"0"];
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    return array;
+}
+
+-(int)updateWordStr:(NSString *)wordstring ForTime:(NSString *)uptime{
+    NSString *sql = [NSString stringWithFormat:@"update IYCWORD set WordUpdateTime = '%@' WHERE WordString = %@ and USERID = '%@'",uptime,wordstring,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+    
+}
+
+
+
+
+
+
+
+@end

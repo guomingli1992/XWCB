@@ -1,0 +1,332 @@
+<main>                                                           <!-- 词条开始 --> 
+    <span class="hw">abandon</span>                                   <!-- 单词 -->
+    <hyph>a•ban•don</hyph>
+    <span class="pron">/ə'bændən/</span>                             <!-- 音标 -->  
+    <dl>
+        <x-gram>vt</x-gram>                                          <!-- 第一个词性 --> 
+        <dt>
+            <span class="num">1.</span>                              <!-- 第一个词性第一个释义的编号 --> 
+            <description>放弃</description>                              <!-- 第一个词性第一个释义 --> 
+            <dd>
+                <x-source>
+                <span class="s-dot">•</span>
+                <i>abandon</i>one's hope</x-source>                       <!-- 第一个词性第一个释义的第一个短语或例句（英文） -->
+                <span class="chn">放弃希望</span>                         <!-- 第一个词性第一个释义的第一个短语或例句（中文） --> 
+            </dd>
+            <dd>
+                <x-source>
+                <span class="s-dot">•</span>They finally                 
+                <i>abandoned</i>the search.</x-source>                    <!-- 第一个词性第一个释义的第二个短语或例句（英文） --> 
+                <span class="chn">他们最终放弃了搜索。</span>            <!-- 第一个词性第一个释义的第二个短语或例句（中文） --> 
+            </dd>
+            <dd>
+                <x-source>
+                <span class="s-dot">•</span>He 
+                <i>abandoned</i>medicine for literature.</x-source>      <!-- 第一个词性第一个释义的第三个短语或例句（英文） --> 
+                <span class="chn">他放弃了医学改读文学。</span>         <!-- 第一个词性第一个释义的第三个短语或例句（中文） --> 
+            </dd>
+        </dt>
+        <dt>
+            <span class="num">2.</span>                              <!-- 第一个词性第二个释义的编号 --> 
+            <description>离弃；丢弃</description>                         <!-- 第一个词性第二个释义 --> 
+            <dd>
+                <x-source>
+                <span class="s-dot">•</span>
+                <i>abandon</i>the sinking ship</x-source>
+                <span class="chn">离弃将沉的船</span>
+            </dd>
+        </dt>
+        <dt>
+            <span class="num">3.</span>
+            <description>(不顾责任、义务等而)遗弃，抛弃</description>
+            <dd>
+                <x-source>
+                <span class="s-dot">•</span>children 
+                <i>abandoned</i>by their parents</x-source>
+                <span class="chn">被家长遗弃的孩子们</span>
+            </dd>
+            <dd>
+                <x-source>
+                <span class="s-dot">•</span>
+                <i>abandon</i>one's obligations</x-source>
+                <span class="chn">推卸义务</span>
+            </dd>
+        </dt>
+        <dt>
+            <span class="num">4.</span>
+            <description>使沉溺于；放纵</description>
+            <dd>
+                <x-source>
+                <span class="s-dot">•</span>The lost boy 
+                <i>abandoned</i>himself to despair.</x-source>
+                <span class="chn">迷途的小男孩陷入了绝望。</span>
+            </dd>
+            <dd>
+                <x-source>
+                <span class="s-dot">•</span>We 
+                <i>abandoned</i>ourselves to the beautiful scenery.</x-source>
+                <span class="chn">我们沉浸在美丽的景色中。</span>
+            </dd>
+        </dt>
+    </dl>
+    <derivative>                                                      <!-- 派生词 --> 
+        <word>
+            <b>–abandonment</b>                                         <!-- 派生的单词 --> 
+        </word>
+        <x-gram>n</x-gram>
+        <span class="gram">U</span>                                        <!-- 派生词词性 --> 
+    </derivative>
+    <span class="tag">4,3,5,9,7</span>                                <!-- 词语等级:专八0;专四1;托福7;SAT3;大学四级4;大学六级6;考研5;GRE9;雅思8--> 
+</main>                                                        <!-- 词条结束 --> 
+
+<main>
+        <span class="hw">job</span>
+        <span class="pron">/dʒɒb/</span>
+        <dl>
+            <x-gram>n</x-gram>
+            <dt>
+                <span class="num">1.</span>
+                <span class="gram">C</span>
+                <description>工作，零活；份内事</description>
+                <dd>
+                    <x-source>
+                    <span class="s-dot">•</span>a full-time (part-time) 
+                    <i>job</i></x-source>
+                    <span class="chn">全职(兼职)工作</span>
+                </dd>
+            </dt>
+            <dt>
+                <span class="num">2.</span>
+                <span class="gram">C</span>
+                <description>职业，职位</description>
+                <dd>
+                    <x-source>
+                    <span class="s-dot">•</span>She finally found a 
+                    <i>job</i>as an editor.</x-source>
+                    <span class="chn">她最终找了一份编辑的工作。</span>
+                </dd>
+            </dt>
+            <dt>
+                <span class="num">3.</span>
+                <span class="gram">用作单</span>
+                <description>职责；任务</description>
+                <dd>
+                    <x-source>
+                    <span class="s-dot">•</span>It's my 
+                    <i>job</i>to type these documents.</x-source>
+                    <span class="chn">我的任务是把这些文件打出来。</span>
+                </dd>
+            </dt>
+            <dt>
+                <span class="num">4.</span>
+                <span class="gram">C</span>
+                <description>费劲的事情；困难的工作</description>
+                <dd>
+                    <x-source>
+                    <span class="s-dot">•</span>It was a real 
+                    <i>job</i>to detect his accent.</x-source>
+                    <span class="chn">要听出他的口音真的很费劲。</span>
+                </dd>
+            </dt>
+            <dt>
+                <span class="num">5.</span>
+                <span class="gram">C</span>
+                <x-note>非正式</x-note>
+                <description>犯罪行为(特别是偷盗)</description>
+            </dt>
+            <dt>
+                <span class="num">6.</span>
+                <span class="gram">用作单</span>
+                <x-note>口</x-note>
+                <description>(多指好的)事物</description>
+                <dd>
+                    <x-source>
+                    <span class="s-dot">•</span>You've done a good 
+                    <i>job</i>in the interview.</x-source>
+                    <span class="chn">你面试中的表现真不错。</span>
+                </dd>
+                <dd>
+                    <x-source>
+                    <span class="s-dot">•</span>Good 
+                    <i>job</i>!</x-source>
+                    <span class="chn">干得好!</span>
+                </dd>
+            </dt>
+        </dl>
+        <x-phrase-g>
+            <span class="title">词组</span>                            <!-- 词组--> 
+            <x-phrase>by the job</x-phrase>                               <!-- 第一个词组的英文--> 
+            <sense>
+                <description>计件，按每件工作</description>              <!-- 第一个词组的词组的中文--> 
+                <x-phrase>jobs for the boys</x-phrase>                    <!-- 第二个词组的英文--> 
+                <sense>
+                    <description>为自己的亲信提供的肥缺职位</description><!-- 第二个词组的词组的中文--> 
+                    <x-phrase>on the job</x-phrase>
+                    <sense>
+                        <description>正在工作；忙碌着；尽职的；警惕的</description>
+                        <x-usage>                                    
+                            <div class="usage-t">用法说明</div>           <!-- 用法说明--> 
+                            <p width="0"> 
+                            <b>1.</b>
+                            <b>job</b>, 
+                            <b>work</b>, 
+                            <b>employment</b>, 
+                            <b>occupation</b></p>
+                            <p width="0">这几个词都与职业有关，其区别在于：
+                            <b>job</b>, 
+                            <b>work</b>和
+                            <b>occupation</b>都可指谋生的职业。不过
+                            <b>job</b>是可数名词，
+                            <b>work</b>不可数。
+                            <b>occupation</b>则较正式，多用于书面语，如表格或正式文件中。
+                            <b>employment</b>较正式，表示处于被雇佣状态。试比较：</p>
+                            <p width="0">She has a cleaning 
+                            <i>job</i>.她是个清洁女工。</p>
+                            <p width="0">Occupation: Teacher.职业：教师。</p>
+                            <p width="0">Employment agencies help people to find 
+                            <i>work</i>.职业介绍所帮助人们找工作。</p>
+                            <p width="0">
+                                <b>2.</b>
+                                <b>profession, vocation, career, trade</b>
+                            </p>
+                            <p width="0">
+                            <b>profession</b>多指需要正规训练或良好教育的职业，如医生、教师或律师等。此外，也可用来泛指从事某种具体高级职业的全体人员，例如：</p>
+                            <p width="0">She's a lawyer by 
+                            <i>profession</i>. 她的职业是律师。</p>
+                            <p width="0">medical 
+                            <i>profession</i>医药行业</p>
+                            <p width="0">一些需要专门训练和知识的旨在帮助他人的职业，如教书和护理，也被称作为
+                            <b>vocation</b>。
+                            <b>career</b>一词指希望作为终生从事的且有发展前途的事业，如：Her political 
+                            <i>career</i>began 20 years ago.</p>
+                            <p width="0">她的政治生涯始于20年前。</p>
+                            <p width="0">
+                            <b>trade</b>指需要专门技术的手工行业，例如：</p>
+                            <p width="0">His father is a carpenter by 
+                            <i>trade</i>.他父亲的职业是木匠。</p>
+                            <p width="0">the building 
+                            <i>trade</i>建筑行业</p>
+                            <p width="0">
+                                <p />
+                            </p>
+                        </x-usage>
+                    </sense>
+                </sense>
+            </sense>
+        </x-phrase-g>
+</main>
+
+<main>
+    <span class="hw">preterite</span>
+    <hyph>pret•er•ite</hyph>              
+    <x-variant>亦作                        <!--需要-->
+    <b>preterit</b></x-variant>            <!--需要-->
+    <x-note>美</x-note>                    <!--需要-->
+    <span class="pron">/'pret(ə)rɪt/</span>
+    <dl>
+        <x-gram>n</x-gram>
+        <x-field>【语】</x-field>
+        <dt>
+            <span class="num">1.</span>
+            <description>过去时</description>
+        </dt>
+        <dt>
+            <span class="num">2.</span>
+            <description>过去式动词</description>
+        </dt>
+    </dl>
+    <derivative>
+        <word>
+            <b>–preterite</b>
+        </word>
+        <x-gram>adj</x-gram>
+    </derivative>
+</main>
+<main>
+        <span class="hw">ability</span>
+        <hyph>a•bil•i•ty</hyph>                
+        <span class="pron">/ə'bɪlɪtɪ/</span>    
+        <x-variant>(                        <!--需要-->
+        <b>[
+        <b>复</b>] abilities</b>)</x-variant>
+        <dl>
+            <x-gram>n</x-gram>
+            <span class="gram">C, U</span>
+            <dt>
+                <span class="num">1.</span>
+                <description>能力(指体力或智力)</description>
+                <dd>
+                    <x-source>
+                    <span class="s-dot">•</span>He has the 
+                    <i>ability</i>to solve complex technical problems.</x-source>
+                    <span class="chn">他能够处理复杂的技术问题。</span>
+                </dd>
+                <dd>
+                    <x-source>
+                    <span class="s-dot">•</span>He has great 
+                    <i>ability</i>in teaching physics.</x-source>
+                    <span class="chn">他教物理很有一套。</span>
+                </dd>
+            </dt>
+            <dt>
+                <span class="num">2.</span>
+                <description>聪明，能耐；本领</description>
+                <dd>
+                    <x-source>
+                    <span class="s-dot">•</span>a person of great 
+                    <i>ability</i></x-source>
+                    <span class="chn">本领高强的人</span>
+                </dd>
+            </dt>
+            <dt>
+                <span class="num">3.</span>
+                <gram>[常作abilities]</gram>
+                <description>专门技能；天才；天资</description>
+                <dd>
+                    <x-source>
+                    <span class="s-dot">•</span>It is beyond my 
+                    <i>abilities</i>.</x-source>
+                    <span class="chn">这事非我力所能及。</span>
+                </dd>
+            </dt>
+        </dl>
+        <x-phrase-g>
+            <span class="title">词组</span>
+            <x-phrase>to the best of one's ability (或abilities)</x-phrase>
+            <sense>
+            <description>尽最大努力</description>
+            <dd>
+                <x-source>
+                <span class="s-dot">•</span>I will carry out your instruction to the best of my 
+                <i>ability</i>.</x-source>
+                <span class="chn">我将竭尽全力贯彻您的指示。</span>
+            </dd>
+            <x-usage>
+                <div class="usage-t">用法说明</div>
+                <p width="0">
+                <b>ability</b>, 
+                <b>capacity</b></p>
+                <p width="0">
+                <b>ability</b>指实际表现出来的能力，这种能力可以是先天的也可以是后天培养的；而
+                <b>capacity</b>则侧重潜在的能力(请注意这两个词有不同的搭配形式)，试比较：</p>
+                <p width="0">Everybody envied him for his 
+                <i>ability</i>to speak several dialects fluently.大家都羡慕他有熟练运用几种方言的能力。</p>
+                <p width="0">Her 
+                <i>capacity</i>for learning is surprising.她的学习能力令人称奇。</p>
+            </x-usage>\n</sense>
+        </x-phrase-g>
+</main>
+
+
+ <main>
+        <span class="hw">a posteriori</span>
+        <hyph>a pos•ter•i•o•ri</hyph>
+        <span class="pron">/'eɪpɒsˌterɪ'ɔːraɪ/</span>
+        <dl>
+            <x-gram>adj</x-gram>             
+            <sense>&#160;
+            <x-note>拉</x-note>                    <!--需要-->
+            <x-note>正式</x-note>                  <!--需要-->
+            <description>由结果追溯原因的；归纳性的；后天的</description>\n</sense>
+        </dl>
+</main>

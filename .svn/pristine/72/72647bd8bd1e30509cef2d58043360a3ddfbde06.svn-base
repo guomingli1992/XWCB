@@ -1,0 +1,80 @@
+//
+//  NSXmlKit.h
+//  ↱技术合作、项目承接联系↴
+//  ↱Created by carbon on 13/5/22.Email：icarbon@foxmail.com  QQ/微信:2178785450↴
+//  ↱Copyright (c) 2013年 Carbon. All rights reserved.↴
+//
+
+/**
+ 依赖库 libxml2.2。header search path 增加/usr/include/libxml2
+ */
+
+/**
+ 此库足已满足日常开发解析需要，会不定期更新，更多请关注个人
+ 微博         http://weibo.com/1986weibo
+ CSDN博客     http://blog.csdn.net/yunhuaikong
+ */
+
+
+#import <Foundation/Foundation.h>
+#import <libxml/tree.h>
+#import <libxml/xpath.h>
+#import <libxml/xpathInternals.h>
+
+@interface NSXmlNode : NSObject
+
+#pragma mark - 解析区
+- (NSString *)key;
+- (NSString *)value;
+- (NSInteger )integerValue;
+
+- (xmlElementType)nodeType;
+
+/**解析当前文档,内部为递归解析算法,如果某一级的数据结构list过多,尽量建议使用[SELF children]手动逐层解析*/
+- (NSMutableDictionary *)xmlToDictionary;
+
+/**XPATH 查询*/
+- (NSString *)xPath;
+- (NSArray *)xmlNodesForXPath:(NSString *)xpath error:(NSError **)error;
+
+/**目录*/
+- (NSUInteger)childCount;
+- (NSArray *)children;
+
+/**属性*/
+- (void)addAttribute:(NSXmlNode *)attribute;
+- (NSArray *)attributes;
+- (NSXmlNode *)attributeForName:(NSString *)name;
+
+/**命名空间*/
+- (void)addNamespace:(NSXmlNode *)spaneName;
+- (NSArray *)namespaces;
+
+#pragma mark - 构造区
++ (NSXmlNode*)elementWithName:(NSString *)name URI:(NSString *)URI;
++ (NSXmlNode*)elemtntWithKey:(NSString *)key value:(NSString *)value;
+- (void)addChild:(NSXmlNode *)child;
+@end
+
+@interface NSXmlDoc : NSXmlNode
+
+- (instancetype)initWithXmlStr:(NSString *)xmlStr;
+
+- (NSXmlNode*)rootElement;
+
+/** 解析整个文档*/
+- (NSMutableDictionary *)docToDictionary;
+@end
+
+
+
+@interface NSArray (xmlSerialization)
++ (NSString*)xmlStr:(NSArray*)array;
+- (NSString*)xmlStr;
+@end
+
+
+@interface NSDictionary (xmlSerialization)
++ (NSString*)xmlStr:(NSDictionary*)object;
+- (NSString*)xmlStr;
+@end

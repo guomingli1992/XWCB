@@ -1,0 +1,50 @@
+//
+//  IYCChapter.h
+
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCBookEdition.h"
+
+@class IYCChapter;
+@protocol IYCChapterDelegate <NSObject>
+@required
+- (void) chapterDidFinishLoad:(IYCChapter*)chapter;
+@end
+
+@interface IYCChapter : NSObject <UIWebViewDelegate>{
+    NSString* spinePath;
+    NSString* title;
+	  NSString* text;
+    id <IYCChapterDelegate> __unsafe_unretained delegate;
+    int pageCount;
+    int chapterIndex;
+    int fontPercentSize;
+    int changeChapterIndex;
+    long totalWordsInChapter;
+    NSMutableArray *pageArray;
+    NSMutableArray *paragraphArray;
+    NSMutableDictionary *paragraphEndDict;  //the paragraph end in which page
+    IYCLanguageType lType;
+    UIWebView* webview;
+}
+
+@property (nonatomic, assign) id delegate;
+@property (nonatomic) int pageCount, fontPercentSize;
+@property (nonatomic) long totalWordsInChapter;
+@property (nonatomic, retain) NSString *spinePath, *title, *text;
+@property (nonatomic, retain) NSMutableArray *pageArray, *paragraphArray;
+@property (nonatomic, retain) NSMutableDictionary *paragraphEndDict;
+@property (nonatomic, retain) NSString *stringChangeEdition;
+@property (nonatomic) IYCLanguageType lType;
+@property (nonatomic) int changeChapterIndex, chapterIndex, serverChapterId, bookId;
+@property (nonatomic) BOOL isParseParagraph; // 2013.6.20
+@property (nonatomic) BOOL isParsed;
+@property (nonatomic, retain) NSString * basePath;
+@property (nonatomic, assign) long chapterId;
+
+- (id) initWithPath:(NSString*)theSpinePath title:(NSString*)theTitle chapterIndex:(int) theIndex withBookId:(int)bookid;
+
+- (void) loadChapterWithWindowSize:(CGRect)theWindowSize fontPercentSize:(int) theFontPercentSize withLanguageType:(IYCLanguageType)laType withChangeChapterIndex:(int)cIndex withString:(NSString *)string;
+
+@end

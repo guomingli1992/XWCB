@@ -1,0 +1,2007 @@
+//
+//  IYCDBAction.m
+//  IYangCongReader
+//
+//  Created by Bella on 4/3/13.
+//  Copyright (c) 2013 Bella. All rights reserved.
+//
+
+#import "IYCDBAction.h"
+#import "IYCDataBase.h"
+#import "NSDateHelper.h"
+#import "IYCAccount.h"
+#import "IYCBookMark.h"
+#import "IYCBookState.h"
+#import "IYCBook.h"
+#import "AppDelegate.h"
+
+
+static IYCDBAction *instance = nil;
+
+@implementation IYCDBAction
+
++ (IYCDBAction *)sharedDBAction
+{
+    if (instance == nil){
+        instance = [[IYCDBAction alloc] init];
+    }
+    return instance;
+}
+
+- (NSMutableArray *)setToAccountArray:(id)rs
+{
+    NSMutableArray *accountList = [[NSMutableArray alloc] init];
+    
+    NSMutableArray *array = (NSMutableArray *)rs;
+    
+    for (NSDictionary * dic in array) {
+        IYCAccount *account = [[IYCAccount alloc] init];
+        
+        if ((NSNull *)[dic objectForKey:@"accountID"]!=[NSNull null]) {
+            account.accountID = [[dic objectForKey:@"accountID"]stringValue];
+        }
+        
+        if ((NSNull *)[dic objectForKey:@"fontSize"] != [NSNull null]) {
+            account.fontSize = [[dic objectForKey:@"fontSize"]intValue];
+        }
+        
+        if ((NSNull *)[dic objectForKey:@"brightness"] != [NSNull null]) {
+            account.brightness = [[dic objectForKey:@"brightness"] floatValue];
+        }
+        
+        if ((NSNull *)[dic objectForKey:@"nightMode"] != [NSNull null]) {
+            account.nightMode = [[dic objectForKey:@"nightMode"]intValue];
+        }
+        
+        [accountList addObject:account];
+
+    }
+       return accountList;
+}
+
+- (NSMutableArray *)setToBookmarkArray:(id)rs
+{
+    NSMutableArray *bookmarkList = [[NSMutableArray alloc] init];
+    
+    NSMutableArray *array = (NSMutableArray *)rs;
+    
+    for (NSDictionary * dic in  array) {
+        IYCBookMark *bookmark = [[IYCBookMark alloc]init];
+
+        bookmark.accountId = [dic objectForKey:@"accountID"];
+        bookmark.markId = [[dic objectForKey:@"bookMarkID"] intValue];
+        bookmark.bookMarkServerId=[[dic objectForKey:@"bookMarkServerId"] intValue];
+        bookmark.bookMarkStatus=[[dic objectForKey:@"bookMarkStatus"] intValue];
+        bookmark.markPosition = [[dic objectForKey:@"location"]floatValue];
+        bookmark.chapterId = [[dic objectForKey:@"ChapterID"] intValue];
+        bookmark.log = [dic objectForKey:@"log"];
+        bookmark.paragraphId = [[dic objectForKey:@"paragraphID"]intValue];
+        bookmark.lineNumber = [[dic objectForKey:@"lineNumber"]intValue];
+        bookmark.markTime = [dic objectForKey:@"createTime"];
+        bookmark.edition = [[dic objectForKey:@"edition"] intValue];
+        bookmark.paragraphOffset = [[dic objectForKey:@"paragraphOffset"] floatValue];
+        [bookmarkList addObject:bookmark];
+    }
+      return bookmarkList;
+    
+}
+
+- (NSMutableArray *)setToBookArray:(id)rs
+{
+    NSMutableArray *bookList = [[NSMutableArray alloc] init];
+    
+    NSArray *array = (NSArray *)rs;
+    for (NSDictionary *dic in array) {
+        IYCBook *book = [[IYCBook alloc] init];
+        NSNumber *bookId = [dic objectForKey:@"bookID"];
+        if ((NSNull*)bookId != [NSNull null]) {
+            book.bookId = [bookId intValue];
+        }
+        if ([[dic objectForKey:@"bookType"] intValue]==1) {
+            book.bookType=IYCBookType_OfficialVersion;
+        }
+        else
+            book.bookType=IYCBookType_TrialVersion;
+        book.bookEnglishTitle = [dic objectForKey:@"englishTitle"];
+        book.bookChineseTitle = [dic objectForKey:@"title"];
+        book.bookChineseAuthor = [dic objectForKey:@"author"];
+        book.bookEnglishAuthor=[dic objectForKey:@"englishAuthor"];
+        book.bookServerId=[[dic objectForKey:@"bookServerID"] longLongValue];
+        NSNumber *bookSize = [dic objectForKey:@"bookSize"];
+        
+        if ((NSNull*)bookSize != [NSNull null]) {
+            book.bookSize = [bookSize doubleValue];
+        }
+        IYCAccount *bookAccount =[[IYCAccount alloc] init];
+        NSNumber *readingProgress = [dic objectForKey:@"readSchedule"];
+        
+        if ((NSNull*)readingProgress != [NSNull null]) {
+            bookAccount.readingProgress = [readingProgress floatValue];
+        }
+        book.bookAccount = bookAccount;
+        
+        IYCBookDownload *download = [[IYCBookDownload alloc] init];
+        download.downloadState = [[dic objectForKey:@"downloadState"] intValue];
+        //Dear Bella, attention that DownloadTime and CreateTime are different
+        download.downloadTime = [dic objectForKey:@"createTime"];
+        NSNumber *downloadSize = [dic objectForKey:@"downloadSize"];
+        if ((NSNull*)downloadSize != [NSNull null]) {
+            download.downloadSize = [downloadSize floatValue];
+        }
+        
+        book.bookDownload = download;
+        [bookList addObject:book];
+
+
+        
+    }
+    //[[IYCDataBase share] close];
+    
+//    while ([rs next])
+//    {
+//        IYCBook *book = [[IYCBook alloc] init];
+//        
+//        NSNumber *bookId = [rs objectForColumn:@"bookID"];
+//        if ((NSNull*)bookId != [NSNull null]) {
+//            book.bookId = [bookId intValue];
+//        }
+//        book.bookEnglishTitle = [rs objectForColumn:@"englishTitle"];
+//        book.bookChineseTitle = [rs objectForColumn:@"title"];
+//        book.bookChineseAuthor = [rs objectForColumn:@"author"];
+//        
+//        NSNumber *bookSize = [rs objectForColumn:@"bookSize"];
+//        if ((NSNull*)bookSize != [NSNull null]){
+//            book.bookSize = [bookSize doubleValue];
+//        }
+//        
+//        IYCAccount *bookAccount =[[IYCAccount alloc] init];
+//        NSNumber *readingProgress = [rs objectForColumn:@"readSchedule"];
+//        
+//        if ((NSNull*)readingProgress != [NSNull null]) {
+//            bookAccount.readingProgress = [readingProgress floatValue];
+//        }
+//        book.bookAccount = bookAccount;
+//        [bookAccount release];
+//        
+//        IYCBookDownload *download = [[IYCBookDownload alloc] init];
+//        download.downloadState = [[rs objectForColumn:@"downloadState"] integerValue];
+//        //Dear Bella, attention that DownloadTime and CreateTime are different
+//        download.downloadTime = [rs objectForColumn:@"createTime"];
+//        NSNumber *downloadSize = [rs objectForColumn:@"downloadSize"];
+//        if ((NSNull*)downloadSize != [NSNull null]) {
+//            download.downloadSize = [downloadSize floatValue];
+//        }
+//        
+//        book.bookDownload = download;
+//        [download release];
+//        [bookList addObject:book];
+//        [book release];
+//    }
+//    [rs close];
+    return bookList;
+}
+
+
+- (NSMutableArray *)setToBookStateArray:(id)rs
+{
+    NSMutableArray *bookList = [[NSMutableArray alloc] init];
+    
+    NSMutableArray *array = (NSMutableArray *)rs;
+    for (NSDictionary * dic in array) {
+        IYCUpdateBook *book = [[IYCUpdateBook alloc] init];
+        NSNumber *bookId = [dic objectForKey:@"serverBookId"];
+        if ((NSNull*)bookId != [NSNull null]) {
+            book.bookId = [bookId intValue];
+        }
+        
+        NSNumber *lastReadChapterID = [dic objectForKey:@"lastReadChapterID"];
+        if ((NSNull*)lastReadChapterID != [NSNull null])
+        {
+            book.chapterNo = [lastReadChapterID intValue];
+            
+        }
+        
+        NSNumber *lastReadParagraphID = [dic objectForKey:@"lastReadParagraphID"];
+        if ((NSNull*)lastReadParagraphID != [NSNull null])
+        {
+            book.paragraphNo = [lastReadParagraphID intValue];
+            
+        }
+        NSNumber *lastReadEdition  = [dic objectForKey:@"lastReadEdition"];
+        if ((NSNull*)lastReadParagraphID != [NSNull null])
+        {
+            if ((NSNull *)lastReadEdition != [NSNull null])
+            {
+                book.languageType = [lastReadEdition intValue];
+                if ([lastReadEdition intValue] == 0) {
+                    NSNumber *readSchedule  = [dic objectForKey:@"readSchedule"];
+                    if ((NSNull*)readSchedule != [NSNull null])
+                        book.readShedule = [readSchedule doubleValue];
+                    else
+                        book.readShedule = 0;
+                } else {
+                    //                    NSNumber *englishReadSchedule  = [rs objectForColumn:@"englishReadSchedule"];
+                    NSNumber *englishReadSchedule  = [dic objectForKey:@"readSchedule"];
+                    
+                    
+                    if ((NSNull*)englishReadSchedule != [NSNull null])
+                        book.readShedule = [englishReadSchedule doubleValue];
+                    else
+                        book.readShedule = 0;
+                }
+            }
+            
+        }
+        DebugLog(@"%f",book.readShedule);
+        
+        book.timestamp = [dic objectForKey:@"lastOprationTime"];
+        
+        [bookList addObject:book];
+
+        
+    }
+    //[[IYCDataBase share] close];
+
+/*
+    while ([rs next])
+    {
+        IYCUpdateBook *book = [[IYCUpdateBook alloc] init];
+        NSNumber *bookId = [rs objectForColumn:@"serverBookId"];
+        if ((NSNull*)bookId != [NSNull null]) {
+            book.bookId = [bookId intValue];
+        }
+        
+        NSNumber *lastReadChapterID = [rs objectForColumn:@"lastReadChapterID"];
+        if ((NSNull*)lastReadChapterID != [NSNull null])
+        {
+            book.chapterNo = [lastReadChapterID intValue];
+            
+        }
+        
+        NSNumber *lastReadParagraphID = [rs objectForColumn:@"lastReadParagraphID"];
+        if ((NSNull*)lastReadParagraphID != [NSNull null])
+        {
+            book.paragraphNo = [lastReadParagraphID intValue];
+            
+        }
+        NSNumber *lastReadEdition  = [rs objectForColumn:@"lastReadEdition"];
+        if ((NSNull*)lastReadParagraphID != [NSNull null])
+        {
+            if ((NSNull *)lastReadEdition != [NSNull null])
+            {
+                book.languageType = [lastReadEdition intValue];
+                if ([lastReadEdition intValue] == 0) {
+                    NSNumber *readSchedule  = [rs objectForColumn:@"readSchedule"];
+                    if ((NSNull*)readSchedule != [NSNull null])
+                        book.readShedule = [readSchedule doubleValue];
+                    else
+                        book.readShedule = 0;
+                } else {
+//                    NSNumber *englishReadSchedule  = [rs objectForColumn:@"englishReadSchedule"];
+                    NSNumber *englishReadSchedule  = [rs objectForColumn:@"readSchedule"];
+
+                    
+                    if ((NSNull*)englishReadSchedule != [NSNull null])
+                        book.readShedule = [englishReadSchedule doubleValue];
+                    else
+                        book.readShedule = 0;
+                }
+            }
+            
+        }
+        DebugLog(@"%f",book.readShedule);
+        
+        book.timestamp = [rs objectForColumn:@"lastOprationTime"];
+        
+        [bookList addObject:book];
+        [book release];
+    }
+    [rs close];
+ */
+    return bookList;
+    
+}
+- (NSArray *)queryAllBook
+{
+    
+    id rs;
+    rs = [[IYCDataBase share] queryDB:@"SELECT * FROM IYCBook"];
+
+    NSArray * result = [self setToBookArray:rs];
+    
+    //[[IYCDataBase share] close];
+
+    return result;
+}
+- (int)queryBooks
+{
+    id rs;
+    userManager = [NSUserDefaults standardUserDefaults];
+    NSString *accountID = [userManager objectForKey:@"userId"];
+    
+    NSString *sql = [NSString stringWithFormat:@"select A.*, B.accountID, B.lastReadTime, B.readSchedule from IYCBook A left join (select * from IYCBookState where accountID = '%@')  B on A.bookID = B.bookID order by B.lastOprationTime desc",accountID];
+    
+    DebugLog(@"%@",sql);
+    rs = [[IYCDataBase share] queryDB:sql];
+    
+    NSMutableArray * result = [self setToBookArray:rs];
+    DebugLog(@"%ld",[result count]);
+    
+    //[[IYCDataBase share] close];
+    return (int)[result count];
+    
+}
+
+- (NSMutableArray *)queryBooksByGroupId:(int)bookGroupId
+{
+    NSString *accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"];
+    
+    NSString *sql = [NSString stringWithFormat:@"select B.*, accountID, lastReadTime, readSchedule,bookLocation,bookGroupId from (select * from IYCBookState where accountID = '%@' and bookGroupId = %i) A left join IYCBook B  on A.bookID = B.bookID and B.downloadState == 4 order by bookLocation desc, lastReadTime desc,lastOprationTime desc",accountID,bookGroupId];
+
+    NSMutableArray *rs = [[IYCDataBase share] queryDB:sql];
+
+    return rs;
+    
+}
+
+- (NSMutableArray *)queryBookStateByBookserverId:(long)bookServerId {
+    NSString *accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"];
+    
+    NSString *sql = [NSString stringWithFormat:@"select * from IYCBookState where accountID = '%@' and serverBookId = '%@' ",accountID,[NSString stringWithFormat:@"%ld",bookServerId]];
+    
+    NSMutableArray *rs = [[IYCDataBase share] queryDB:sql];
+    
+    return rs;
+}
+
+- (NSMutableArray *)queryBooks:(int)fromNum to:(int)toNum
+{
+    userManager = [NSUserDefaults standardUserDefaults];
+    NSString *accountID = [userManager objectForKey:@"userId"];
+    
+    NSString *sql = [NSString stringWithFormat:@"select B.*, accountID, lastReadTime, readSchedule,bookLocation,bookGroupId from (select * from IYCBookState where accountID = '%@') A left join IYCBook B  on A.bookID = B.bookID and B.downloadState == 4 order by bookLocation desc, lastReadTime desc,lastOprationTime desc",accountID];
+    
+//    NSString *sql = [NSString stringWithFormat:@"select A.*, B.accountID, B.lastReadTime, readSchedule from IYCBook A left join (select * from IYCBookState where accountID = '%@')  B on A.bookID = B.bookID and A.downloadState == 4 order by bookLocation desc, lastReadTime desc,lastOprationTime desc",accountID];
+    DebugLog(@"%@",sql);
+    NSMutableArray *rs = [[IYCDataBase share] queryDB:sql];
+//    NSMutableArray * result = [self setToBookArray:rs];
+//    DebugLog(@"%ld",[result count]);
+//    if ([result count]>0) {
+//        IYCBook* book = [result objectAtIndex:0];
+//        NSString *sql2 = [NSString stringWithFormat:@"select A.*, B.accountID, B.lastReadTime, readSchedule from IYCBook A left join (select * from IYCBookState where accountID = '%@')  B on A.bookID = B.bookID where A.bookID !=%ld  order by lastOprationTime desc limit %d",accountID,book.bookId,toNum-1];
+//        id rs2;
+//        rs2 = [[IYCDataBase share] queryDB:sql2];
+//        NSMutableArray *result2 = [self setToBookArray:rs2];
+//        [result addObjectsFromArray:result2];
+//        
+//    } else {
+//        NSString *sql3 = [NSString stringWithFormat:@"select A.*, B.accountID, B.lastReadTime, readSchedule from IYCBook A left join (select * from IYCBookState)  B on A.bookID = B.bookID where A.bookID ==0"];
+//        id rs3;
+//        rs3 = [[IYCDataBase share] queryDB:sql3];
+//        NSMutableArray *result3 = [self setToBookArray:rs3];
+//        [result addObjectsFromArray:result3];
+//        
+//        NSString *sql4 = [NSString stringWithFormat:@"select A.*, B.accountID, B.lastReadTime, readSchedule from IYCBook A left join (select * from IYCBookState where accountID = '%@') B on A.bookID = B.bookID order by lastOprationTime desc limit %d",accountID,toNum-1];
+//        id rs2;
+//        rs2 = [[IYCDataBase share] queryDB:sql4];
+//        NSMutableArray *result2 = [self setToBookArray:rs2];
+//        [result addObjectsFromArray:result2];
+//    }
+    return rs;
+    
+}
+
+//set bookThumbnialURl = @""
+- (int)updateBookThumbnailURL:(long)bookId
+{
+    NSString *sql = [NSString stringWithFormat:@"UPDATE IYCBOOK SET bookThumbnailURL = ''  WHERE bookId = %ld", bookId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int) updatebookstateByBookServerId:(int)bookServerId toBookId:(long)bookId {
+    NSString *sql = [NSString stringWithFormat:@"UPDATE IYCBookState SET bookId = '%ld'  WHERE serverBookId = %i and accountID = '%@'", bookId,bookServerId,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (NSArray*)queryBooksSetCover
+{
+    id rs;
+    rs = [[IYCDataBase share] queryDB:@"SELECT * FROM IYCBook WHERE bookThumbnailURL like 'http%'"];
+    NSArray * result = [self setToBookArrayFromQueryBook:rs];
+    
+    //[[IYCDataBase share] close];
+    return result;
+}
+
+-(IYCBook *)queryBookByID:(long)bookId
+{
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCBook WHERE bookID = '%ld'",bookId];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * result = [self setToBookArrayFromQueryBook:rs];
+    
+    //[[IYCDataBase share] close];
+    IYCBook * first = (result.count > 0) ? (IYCBook *)[result objectAtIndex:0] : nil;
+    return  first;
+}
+- (NSMutableArray *)queryBookmarkBy:(int)pagraphID andBookID:(long)bookID andAccountID:(NSString *)ID andedition:(int)edition
+{
+    //    NSMutableArray *result = [[NSMutableArray alloc] init];
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCBookMark WHERE bookID = '%ld' AND accountID = '%@' AND paragraphID = %d AND edition = %@",bookID,ID,pagraphID,[NSString stringWithFormat:@"%d",edition]];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSMutableArray *result = [self setToBookmarkArray:rs];
+    return result ;
+    
+    
+}
+
+
+- (IYCBook *)queryBookByServerID:(long)bookServerId
+{
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCBook WHERE bookServerID = '%ld'",bookServerId];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * result = [self setToBookArrayFromQueryBook:rs];
+    //[[IYCDataBase share] close];
+    IYCBook * first = (result.count > 0) ? (IYCBook *)[result objectAtIndex:0] : nil;
+    return  first;
+}
+
+
+- (NSArray *)queryAllUnzipedBook
+{
+    NSString *sql = @"SELECT * FROM IYCBook WHERE downloadState = 4 order by time(createTime) asc";
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * result = [self setToBookArrayFromQueryBook:rs];
+    return result;
+}
+
+- (IYCBook *)queryBookStateByBookID:(long)bookId
+{
+    NSString *sql = [NSString stringWithFormat:@"select A.*, B.accountID, B.lastReadTime, readSchedule from IYCBook A left join (select * from IYCBookState)  B on A.bookID = B.bookID where A.bookID ==%ld",bookId];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * result = [self setToBookArray:rs];
+    //[[IYCDataBase share] close];
+    IYCBook * first = (result.count > 0) ? (IYCBook *)[result objectAtIndex:0] : nil;
+    return  first;
+}
+
+- (IYCBook *)queryBookStateByBookserverID:(long)bookserverId
+{
+    NSString *sql = [NSString stringWithFormat:@"select A.*, B.accountID, B.lastReadTime, readSchedule from IYCBook A left join (select * from IYCBookState)  B on A.bookID = B.bookID where A.bookServerID ==%ld and B.accountID= %@",bookserverId,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * result = [self setToBookArray:rs];
+    //[[IYCDataBase share] close];
+    IYCBook * first = (result.count > 0) ? (IYCBook *)[result objectAtIndex:0] : nil;
+    return  first;
+}
+
+- (NSMutableArray *)queryBookStateByBookserverID:(long)bookserverId andBookType:(int)bookType
+{
+    NSString *sql = [NSString stringWithFormat:@"select A.*, B.accountID from (select * from IYCBook where bookServerID = %ld) A inner join (select * from IYCBookState where accountID= '%@') B on A.bookID = B.bookID",bookserverId,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    return  rs;
+}
+
+- (IYCBook *)queryBookByServerID:(long)bookServerId  withBookType:(int)bookType
+{
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCBook WHERE bookServerID = '%ld' AND bookType = %i",bookServerId, bookType];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * result = [self setToBookArrayFromQueryBook:rs];
+    //[[IYCDataBase share] close];
+    IYCBook * first = (result.count > 0) ? (IYCBook *)[result objectAtIndex:0] : nil;
+    return  first;
+}
+
+-(int)deleteBookByID:(long)bookId
+{
+    long bookServerId = [self selectBookServerIdByBookId:bookId];
+
+    NSString *sql = [NSString stringWithFormat:@"DELETE FROM IYCBOOK WHERE bookID = '%ld'", bookId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    if (result) {
+        [self deleteBookPriceInfo:bookServerId];
+    }
+    return result;
+}
+
+
+-(int)updateBook:(IYCBook*)book
+{
+    NSString *sql = [NSString stringWithFormat:@"UPDATE IYCBOOK SET downloadState = %i, bookSize = %f, downloadSize = %f", book.bookDownload.downloadState, book.bookSize, book.bookDownload.downloadSize];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+-(NSString *)unicodeString:(NSString*)code
+{
+    NSString *result = code;
+    result = [result stringByReplacingOccurrencesOfString:@"'" withString:@"\\u0027"];
+    return result;
+}
+
+
+
+-(int)saveBook:(IYCBook *)book
+{
+    [self saveBookPrice:book];
+    NSString *now = [NSDate stringFromDate:[NSDate date]];
+    NSString *sql = [NSString stringWithFormat:@"INSERT INTO IYCBook(bookID, bookServerID, bookType, downloadState, createTime, title, author, englishTitle, englishAuthor, bookThumbnailURL) VALUES (%ld,%ld,%d, %d,'%@','%@','%@','%@', '%@', '%@')", book.bookId, book.bookServerId, book.bookType,book.bookDownload.downloadState, now, [book.bookChineseTitle isEqual:[NSNull null]]?@"":book.bookChineseTitle, [book.bookChineseAuthor isEqual:[NSNull null]]?@"":book.bookChineseAuthor,[self unicodeString:[book.bookEnglishTitle isEqual:[NSNull null]]?@"":book.bookEnglishTitle], [book.bookChineseAuthor isEqual:[NSNull null]]?@"":[self unicodeString:book.bookEnglishAuthor] , [book.bookThumbnailURL isEqual:[NSNull null]]?@"":book.bookThumbnailURL];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+-(int)saveBookGroupId:(NSString *)bookGroupName
+{
+    NSString * accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] ;
+    NSString *sql = [NSString stringWithFormat:@"INSERT INTO 'Group_Info' (group_Name,AccountID) VALUES ('%@','%@')",bookGroupName,accountID];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+-(int)updateBookGroupId:(int)bookGroupId bookGroupName:(NSString *)groupName
+{
+    NSString * accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] ;
+    NSString *sql = [NSString stringWithFormat:@"update Group_Info set group_Name = '%@' WHERE AccountID = '%@' and  group_Id = %i",groupName,accountID,bookGroupId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+-(NSMutableArray *)getLastBookGroup
+{
+    NSString * accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] ;
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM Group_Info WHERE AccountID = '%@' ORDER BY group_Id DESC LIMIT 1",accountID];
+    NSMutableArray *result = [[IYCDataBase share] queryDB:sql];
+    return result;
+}
+
+-(int) setBookGroupId:(int)bookGroupId byBookId:(long)bookId {
+    NSString * accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] ;
+    NSString *sql = [NSString stringWithFormat:@"update IYCBookState  set bookGroupId = %i where bookID = '%ld' and accountID = '%@'",bookGroupId, bookId,accountID];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (NSMutableArray *)getBookGroupNameByGroupId:(int)bookGroupId {
+    NSString * accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] ;
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM Group_Info WHERE AccountID = '%@' and  group_Id = %i",accountID,bookGroupId];
+    NSMutableArray *result = [[IYCDataBase share] queryDB:sql];
+    return result;
+}
+
+- (NSMutableArray *)getAllBookGroupInfo {
+    NSString * accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] ;
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM Group_Info WHERE AccountID = '%@'",accountID];
+    NSMutableArray *result = [[IYCDataBase share] queryDB:sql];
+    return result;
+}
+
+- (int)deleteBookGroupByGroupId:(int)bookGroupId {
+    NSString * accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] ;
+    NSString *sql = [NSString stringWithFormat:@"delete from Group_Info where group_Id =%i and AccountID = '%@'",bookGroupId,accountID];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int)saveServerBookState:(IYCBookState *)bookState
+{
+    
+    userManager = [NSUserDefaults standardUserDefaults];
+    NSString * accountID = [userManager objectForKey:@"userId"] ;
+    NSString *now = [NSDate stringFromDate:[NSDate date]];
+    NSString *sql = nil;
+    NSString *checkSql = [NSString stringWithFormat:@"select * from IYCServerBookState where  accountID = %@ and bookServerID = %ld ",accountID,bookState.book.bookServerId];
+    NSMutableArray *rs = [[IYCDataBase share] queryDB:checkSql];
+    if (rs.count == 0) {
+        
+        sql = [NSString stringWithFormat:@"INSERT INTO IYCServerBookState(bookServerID, accountID, paragraphID, syncTime, state, readSchedule, chapterID,serverReadTime) VALUES ('%ld','%@','%i', '%@','%i','%f','%d','%@')", bookState.book.bookServerId,accountID,bookState.paragraphNo, now, bookState.isBuy, bookState.readSchedule,bookState.chapterNo,bookState.timestamp];
+    }else {
+        sql = [NSString stringWithFormat:@"update IYCServerBookState  set paragraphID=%i, syncTime='%@', state=%i, readSchedule=%f, chapterID=%d,serverReadTime='%@' where bookServerID = '%ld' and accountID = '%@'",bookState.paragraphNo, now, bookState.isBuy, bookState.readSchedule,bookState.chapterNo,bookState.timestamp, bookState.book.bookServerId,accountID];
+        
+    }
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (NSMutableArray *)setToBookArrayFromQueryBook:(id)rs
+{
+    NSMutableArray *bookList = [[NSMutableArray alloc] init];
+    NSMutableArray *array = (NSMutableArray *)rs;
+    for (NSDictionary * dic in array) {
+        IYCBook *book = [[IYCBook alloc] init];
+        
+        NSNumber *bookId = [dic objectForKey:@"bookID"];
+        if ((NSNull*)bookId != [NSNull null]) {
+            book.bookId = [bookId intValue];
+        }
+        NSNumber *bookServerId = [dic objectForKey:@"bookServerID"];
+        if ((NSNull*)bookId != [NSNull null]) {
+            book.bookServerId = [bookServerId intValue];
+        }
+        book.bookType = [[dic objectForKey:@"bookType"] intValue];
+        book.bookChineseTitle = [dic objectForKey:@"title"];
+        book.bookChineseAuthor = [dic objectForKey:@"author"];
+        book.bookEnglishTitle = [dic objectForKey:@"englishTitle"];
+        book.bookEnglishAuthor = [dic objectForKey:@"englishAuthor"];
+        NSNumber *bookSize = [dic objectForKey:@"bookSize"];
+        book.bookThumbnailURL = [dic objectForKey:@"bookThumbnailURL"];
+        if ((NSNull*)bookSize != [NSNull null]){
+            book.bookSize = [bookSize doubleValue];
+        }
+        
+        
+        IYCBookDownload *download = [[IYCBookDownload alloc] init];
+        download.downloadState = [[dic objectForKey:@"downloadState"] intValue];
+        //Dear Bella, attention that DownloadTime and CreateTime are different
+        download.downloadTime = [dic objectForKey:@"createTime"];
+        NSNumber *downloadSize = [dic objectForKey:@"downloadSize"];
+        if ((NSNull*)downloadSize != [NSNull null]) {
+            download.downloadSize = [downloadSize floatValue];
+        }
+        
+        book.bookDownload = download;
+        [bookList addObject:book];
+        
+    }
+    //[[IYCDataBase share] close];
+
+    /*
+    while ([rs next])
+    {
+        IYCBook *book = [[IYCBook alloc] init];
+        
+        NSNumber *bookId = [rs objectForColumn:@"bookID"];
+        if ((NSNull*)bookId != [NSNull null]) {
+            book.bookId = [bookId intValue];
+        }
+        NSNumber *bookServerId = [rs objectForColumn:@"bookServerID"];
+        if ((NSNull*)bookId != [NSNull null]) {
+            book.bookServerId = [bookServerId intValue];
+        }
+        book.bookType = [[rs objectForColumn:@"bookType"] integerValue];
+        book.bookChineseTitle = [rs objectForColumn:@"title"];
+        book.bookChineseAuthor = [rs objectForColumn:@"author"];
+        book.bookEnglishTitle = [rs objectForColumn:@"englishTitle"];
+        book.bookEnglishAuthor = [rs objectForColumn:@"englishAuthor"];
+        NSNumber *bookSize = [rs objectForColumn:@"bookSize"];
+        book.bookThumbnailURL = [rs objectForColumn:@"bookThumbnailURL"];
+        if ((NSNull*)bookSize != [NSNull null]){
+            book.bookSize = [bookSize doubleValue];
+        }
+        
+        
+        IYCBookDownload *download = [[IYCBookDownload alloc] init];
+        download.downloadState = [[rs objectForColumn:@"downloadState"] integerValue];
+        //Dear Bella, attention that DownloadTime and CreateTime are different
+        download.downloadTime = [rs objectForColumn:@"createTime"];
+        NSNumber *downloadSize = [rs objectForColumn:@"downloadSize"];
+        if ((NSNull*)downloadSize != [NSNull null]) {
+            download.downloadSize = [downloadSize floatValue];
+        }
+        
+        book.bookDownload = download;
+        [download release];
+        [bookList addObject:book];
+        [book release];
+    }
+    [rs close];
+     */
+    return bookList;
+}
+
+//--------
+//IYCCurrentBookState
+//------
+- (IYCCurrentBookState *)queryBookState:(long)bookID accountID:(NSString *)ID {
+    NSString *sql = [NSString stringWithFormat:@"select * from IYCBookState where  accountID = %@ and bookID = %ld ",ID,bookID];
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    
+    IYCCurrentBookState *currentBookstate = nil;
+    
+    for (NSDictionary *rs in array) {
+        if (currentBookstate) {
+            currentBookstate = nil;
+        }
+        currentBookstate = [[IYCCurrentBookState alloc] init];
+        
+        currentBookstate.accountId = ID;
+        currentBookstate.bookId = bookID;
+        currentBookstate.chapterNo = [[rs objectForKey:@"lastReadChapterID"] intValue];
+        currentBookstate.paragraphNo = [[rs objectForKey:@"lastReadParagraphID"] intValue];
+        currentBookstate.readSchedule = [[rs objectForKey:@"readSchedule"] floatValue];
+        
+        if ([rs objectForKey:@"lastReadEdition"] != [NSNull null])
+            currentBookstate.languageType = [[rs objectForKey:@"lastReadEdition"] intValue];
+        
+        if ([rs objectForKey:@"lastReadTime"] != [NSNull null])
+            currentBookstate.lastReadTime = [rs objectForKey:@"lastReadTime"];
+        
+        if ([rs objectForKey:@"lineNumber"] != [NSNull null])
+            currentBookstate.lineNo = [[rs objectForKey:@"lineNumber"] intValue];
+        
+        if ([rs objectForKey:@"pageNumber"] != [NSNull null])
+            currentBookstate.pageNumber = [[rs objectForKey:@"pageNumber"] intValue];
+        
+        if ([rs objectForKey:@"changeTimes"] != [NSNull null])
+            currentBookstate.changeTimes = [[rs objectForKey:@"changeTimes"] intValue];
+        
+        if ([rs objectForKey:@"lastOprationTime"] != [NSNull null])
+            currentBookstate.lastOprationTime = [rs objectForKey:@"lastOprationTime"];
+        
+        if ([rs objectForKey:@"paragraphSchedule"] != [NSNull null])
+        {
+            currentBookstate.paragraphSchedule = [[rs objectForKey:@"paragraphSchedule"] doubleValue];
+        }
+
+        
+    }
+
+  /*
+   
+    while ([rs next])
+    {
+        if (currentBookstate) {
+            [currentBookstate release];
+            currentBookstate = nil;
+        }
+        currentBookstate = [[IYCCurrentBookState alloc] init];
+        
+        currentBookstate.accountId = ID;
+        currentBookstate.bookId = bookID;
+        currentBookstate.chapterNo = [[rs objectForColumn:@"lastReadChapterID"] intValue];
+        currentBookstate.paragraphNo = [[rs objectForColumn:@"lastReadParagraphID"] intValue];
+        currentBookstate.readSchedule = [[rs objectForColumn:@"readSchedule"] floatValue];
+        
+        if ([rs objectForColumn:@"lastReadEdition"] != [NSNull null])
+            currentBookstate.languageType = [[rs objectForColumn:@"lastReadEdition"] intValue];
+        
+        if ([rs objectForColumn:@"lastReadTime"] != [NSNull null])
+            currentBookstate.lastReadTime = [rs objectForColumn:@"lastReadTime"];
+        
+        if ([rs objectForColumn:@"lineNumber"] != [NSNull null])
+            currentBookstate.lineNo = [[rs objectForColumn:@"lineNumber"] intValue];
+        
+        if ([rs objectForColumn:@"pageNumber"] != [NSNull null])
+            currentBookstate.pageNumber = [[rs objectForColumn:@"pageNumber"] intValue];
+        
+        if ([rs objectForColumn:@"changeTimes"] != [NSNull null])
+            currentBookstate.changeTimes = [[rs objectForColumn:@"changeTimes"] intValue];
+        
+        if ([rs objectForColumn:@"lastOprationTime"] != [NSNull null])
+            currentBookstate.lastOprationTime = [rs objectForColumn:@"lastOprationTime"];
+        
+        if ([rs objectForColumn:@"paragraphSchedule"] != [NSNull null])
+        {
+            currentBookstate.paragraphSchedule = [[rs objectForColumn:@"paragraphSchedule"] doubleValue];
+        }
+        
+    }
+   */
+    
+    return currentBookstate;
+}
+
+- (int)updateBookTimeByBookId:(long)bookID {
+    NSString *sql = nil;
+    NSString *accountId=[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"];
+    sql = [NSString stringWithFormat:@"update IYCBookState set lastReadTime = '1971-01-11 00:00:00',lastOprationTime='1971-01-11 00:00:00' where bookID = '%ld' and accountID = '%@' ",bookID,accountId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int)saveCurrentState:(IYCCurrentBookState *)bookstate {
+    NSString *sql = nil;
+    NSString *checkSql = [NSString stringWithFormat:@"select * from IYCBookState where  accountID = '%@' and bookID = %ld ",bookstate.accountId,bookstate.bookId];
+    NSMutableArray *rs = [[IYCDataBase share] queryDB:checkSql];
+    
+    NSString *now = [NSDate stringFromDate:[NSDate date]];
+
+    if (rs.count == 0) {
+        sql = [NSString stringWithFormat:@"INSERT INTO IYCBookState(bookID,accountID,readSchedule,lastReadEdition,lastReadParagraphID,lastReadChapterID,lineNumber,pageNumber,changeTimes,lastOprationTime,serverBookId,lastReadTime) VALUES (%ld,'%@',%f,%d,%d,%d,%d,%d,%d,'%@',%ld,'%@')", bookstate.bookId,bookstate.accountId,bookstate.readSchedule,bookstate.languageType,bookstate.paragraphNo,bookstate.chapterNo,bookstate.lineNo,bookstate.pageNumber,bookstate.changeTimes,bookstate.lastOprationTime,bookstate.serverBookId,now];
+
+    } else {
+        sql = [NSString stringWithFormat:@"update IYCBookState set lastReadTime = '%@', readSchedule = '%f', lastReadEdition = '%i', lastReadParagraphID = '%i', lastReadChapterID = '%i',lineNumber = '%i',pageNumber = '%i',changeTimes = '%i',lastOprationTime ='%@',serverBookId= '%ld' where bookID = '%ld' and accountID = '%@'", now, bookstate.readSchedule, bookstate.languageType, bookstate.paragraphNo,bookstate.chapterNo,bookstate.lineNo,bookstate.pageNumber,bookstate.changeTimes,now,bookstate.serverBookId,bookstate.bookId, bookstate.accountId];
+    }
+    
+    
+    int result = [[IYCDataBase share] updateDB:sql];
+     
+    return result;
+}
+
+- (int)saveCurrentBookLocation:(float)bookLocation withBookId:(long)bookId {
+    NSString *sql = nil;
+    NSString *accountId=[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"];
+    sql = [NSString stringWithFormat:@"update IYCBookState set bookLocation = %f where bookID = '%ld' and accountID = '%@' ",bookLocation,bookId,accountId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (float)queryBookLocationMax {
+    NSString *sql = nil;
+    NSString *accountId=[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"];
+    sql = [NSString stringWithFormat:@"select  * from IYCBookState where accountID = '%@' order by bookLocation desc limit 1",accountId];
+    NSMutableArray *result = [[IYCDataBase share] queryDB:sql];
+    float f=[[[result objectAtIndex:0] objectForKey:@"bookLocation"] floatValue];
+    return f;
+}
+
+- (IYCUpdateBook *)queryServerBookStartByBookID:(long)bookid accountId:(NSString *)acountid {
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCServerBookState WHERE bookServerID = (SELECT bookServerID FROM IYCBook WHERE bookID = '%ld') AND accountID = '%@'",bookid,acountid];
+    
+
+    NSMutableArray *rs = [[IYCDataBase share] queryDB:sql];
+    IYCUpdateBook *updateBook = nil;
+
+    if (rs.count != 0) {
+        NSDictionary *dic = [rs objectAtIndex:0];
+        
+        if (dic) {
+            
+            updateBook = [[IYCUpdateBook alloc] init];
+            if ([dic objectForKey:@"readSchedule"] == [NSNull null]) {
+                updateBook = nil;
+            } else {
+                updateBook.readShedule = [[dic objectForKey:@"readSchedule"] floatValue];
+                updateBook.chapterNo = [[dic objectForKey:@"chapterID"] intValue];
+                updateBook.paragraphNo = [[dic objectForKey:@"paragraphID"] intValue];
+                updateBook.timestamp = [dic objectForKey:@"serverReadTime"];
+                updateBook.accountId = acountid;
+                updateBook.bookId = bookid;
+            }
+        }
+
+    }
+    
+    return updateBook;
+}
+
+- (int)updatebookstateByDict:(NSDictionary *)dict {
+    NSString *sql = [NSString stringWithFormat:@"update IYCBookState set readSchedule = '%f',lastReadParagraphID = '%i', lastReadChapterID = '%i',pageNumber = '%i', changeTimes = '%i' where bookID = '%i' and accountID = '%@' ",[[[dict objectForKey:@"percent"] isEqual:[NSNull null]]?@"0.0":[dict objectForKey:@"percent"] floatValue],[[dict objectForKey:@"segmentid"] intValue],[[dict objectForKey:@"chapterid"] intValue],-1,-1,[[dict objectForKey:@"bookID"] intValue], [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (BOOL)updateLocalBookState:(IYCUpdateBook *)updateBook {
+    NSString *sql = nil;
+    
+    NSString *checkSql = [NSString stringWithFormat:@"select * from IYCBookState where  accountID = '%@' and bookID = %ld ",updateBook.accountId,updateBook.bookId];
+    
+    NSMutableArray* rs = [[IYCDataBase share] queryDB:checkSql];
+    
+    if (rs.count == 0) {
+        sql = [NSString stringWithFormat:@"INSERT INTO IYCBookState(bookID, accountID, readSchedule, lastReadParagraphID, lastReadChapterID, changeTimes) VALUES ('%ld','%@','%f','%i','%i','%i')", updateBook.bookId, updateBook.accountId,updateBook.readShedule, updateBook.paragraphNo, updateBook.chapterNo, -1];
+    } else {
+        sql = [NSString stringWithFormat:@"update IYCBookState set readSchedule = '%f',lastReadParagraphID = '%i', lastReadChapterID = '%i',pageNumber = '%i', changeTimes = '%i' where bookID = '%ld' and accountID = '%@' ",updateBook.readShedule,updateBook.paragraphNo,updateBook.chapterNo,-1,-1,updateBook.bookId, updateBook.accountId];
+    }
+    
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+#pragma mark  ---download
+- (IYCBook *)queryTopDownloadingTask
+{
+    NSString *sql = @"SELECT * FROM IYCBook WHERE downloadState = 2 order by time(createTime) asc limit 1";
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * result = [self setToBookArrayFromQueryBook:rs];
+        ////[[IYCDataBase share] close];
+    IYCBook * first = (result.count > 0) ? (IYCBook *)[result objectAtIndex:0] : nil;
+    return  first;
+}
+
+- (IYCBook *)queryTopWaitingTask
+{
+    NSString *sql = @"SELECT * FROM IYCBook WHERE downloadState = 1 order by time(createTime) asc limit 1";
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * result = [self setToBookArrayFromQueryBook:rs];
+        ////[[IYCDataBase share] close];
+    IYCBook * first = (result.count > 0) ? (IYCBook *)[result objectAtIndex:0] : nil;
+    return  first;
+}
+
+- (int)updateBookDownloadState:(long)bookId state:(IYCDownloadStateType)type
+{
+    NSString *sql= [NSString stringWithFormat:@"UPDATE IYCBook SET downloadState = %d where bookID = %ld", type, bookId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int)updateBookSize:(long)bookId size:(double)size
+{
+    NSString *sql = [NSString stringWithFormat:@"UPDATE IYCBOOK SET bookSize = %f WHERE bookID = %ld", size, bookId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int)updateBookDownloadSize:(long)bookId size:(double)size
+{
+    NSString *sql = [NSString stringWithFormat:@"UPDATE IYCBOOK SET downloadSize = %f WHERE bookID = %ld", size, bookId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int)updateBookDownloadFinish:(long)bookId downloadSize:(double)size
+{
+    NSString *now = [NSDate stringFromDate:[NSDate date]];
+    NSString *sql = [NSString stringWithFormat:@"UPDATE IYCBOOK SET downloadSize = %f , downloadState = %d, downloadTime = '%@'   WHERE bookID = %ld", size, IYCDownloadStateFinished,now, bookId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+    
+}
+
+- (long)getMaxBookID
+{
+    NSString *sql = @"select bookid from IYCBook ORDER BY bookid+0  DESC LIMIT 1";
+//    id rs;
+    NSMutableArray *rs = [[IYCDataBase share] queryDB:sql];
+    
+    long bookid = 0;
+    for (NSDictionary *dic in rs) {
+        NSString *bookID = [dic objectForKey:@"bookID"];
+        DebugLog(@"%@", bookID);
+        if (![bookID isEqual:[NSNull null]])
+            bookid = [bookID intValue];
+    }
+    
+    ////[[IYCDataBase share] close];
+    return bookid;
+}
+
+//-------
+// IYCTag
+//-------
+- (int)deleteAllTag
+{
+    //method 1:
+    /*
+     PLSqliteDatabase *dataBase = [[IYCDataBase share] setup];
+     
+     BOOL bResult = [dataBase executeUpdate:@"DELETE FROM IYCTag"];
+     
+     //[[IYCDataBase share] close];
+     
+     return bResult;
+     */
+    
+    //method 2:
+    NSString *sql = @"DELETE FROM IYCTag";
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int)saveTag:(IYCTag *)tag
+{
+    //method 1
+    /*
+     PLSqliteDatabase *dataBase = [[IYCDataBase share] setup];
+     
+     
+     NSLog(@"%@", str);
+     //BOOL bResult = [dataBase executeUpdate:@"INSERT INTO IYCTag(tagID, tagName) VALUES (?,?)", self.tagID.stringValue, self.tagName];
+     BOOL bResult =[dataBase executeUpdate:str];
+     
+     //[[IYCDataBase share] close];
+     return bResult; */
+    //method 2
+    NSString *sql = [NSString stringWithFormat:@"INSERT INTO IYCTag(tagID, tagName) VALUES ('%@','%@')", tag.tagID.stringValue, tag.tagName];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+    
+}
+
+- (NSArray*)queryAllTag
+{
+    NSMutableArray *array = [[IYCDataBase share] queryDB:@"SELECT * FROM IYCTag"];
+    NSMutableArray *tagList = [[NSMutableArray alloc]init];
+    
+    for (NSDictionary * rs  in  array) {
+        IYCTag * tag = [[IYCTag alloc]init];
+        tag.tagID = [rs objectForKey:@"tagID"];
+        tag.tagName = [rs objectForKey:@"tagName"];
+        [tagList addObject:tag];
+    }
+    //[[IYCDataBase share] close];
+
+//    while ([rs next])
+//    {
+//        IYCTag * tag = [[IYCTag alloc]init];
+//        tag.tagID = [rs objectForColumn:@"tagID"];
+//        tag.tagName = [rs objectForColumn:@"tagName"];
+//        [tagList addObject:tag];
+//        [tag release];
+//    }
+//    [rs close];
+    //    //[[IYCDataBase share] close];
+    return tagList;
+}
+
+- (int)saveBookNoteFromNet:(NSDictionary *)dict {
+    NSString *now = [NSDate stringFromDate:[NSDate date]];
+    
+    NSString *tmpStr=[[dict objectForKey:@"note"] stringByReplacingOccurrencesOfString:@"'" withString:@"''"];
+    NSString *tmpStr2=[[dict objectForKey:@"content"] stringByReplacingOccurrencesOfString:@"'" withString:@"''"];
+    
+    NSString *sql = [NSString stringWithFormat:@"INSERT INTO IYCNote(NoteID, BookID, accountID, ChapterID, ChapterIndex,StartParagraphID,EndParagraphID,SelectString,NoteContent,ModifyTime,StartOffset,EndOffset,LanguageType,NoteStatus,NoteServerId) VALUES ('%@','%@','%@','%@','%@','%@','%@','%@','%@','%@','%@','%@','%@','%i','%@')", [dict objectForKey:@"noteIDD"],[dict objectForKey:@"bookID"], [[NSUserDefaults standardUserDefaults]objectForKey:@"userId"],[dict objectForKey:@"chapterId"],[dict objectForKey:@"chapterIndex"],[dict objectForKey:@"segmentId"],[dict objectForKey:@"segmentId"], tmpStr2,tmpStr,now,[dict objectForKey:@"startOffset"],[dict objectForKey:@"endOffset"],[dict objectForKey:@"languagetype"],1,[dict objectForKey:@"noteid"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+//-------
+// IYCBookmark
+//-------
+
+- (int)saveBookMarkFromNet:(NSDictionary *)dict {
+    NSString *now = [NSDate stringFromDate:[NSDate date]];
+    NSString *sql = [NSString stringWithFormat:@"INSERT INTO IYCBookMark(bookMarkID, bookID, accountID, location, createTime, paragraphID,edition,ChapterID,bookMarkServerId,bookMarkStatus,log,lineNumber,paragraphID) VALUES ('%@','%@','%@','%i','%@','%@','%d','%@','%@','%i','%@','%i','%d')", [dict objectForKey:@"bookMarkID"],[dict objectForKey:@"bookID"], [[NSUserDefaults standardUserDefaults]objectForKey:@"userId"],0, now, [dict objectForKey:@"segmentId"],[[dict objectForKey:@"languagetype"] intValue],[dict objectForKey:@"chapterId"],[dict objectForKey:@"Id"],1,[dict objectForKey:@"content"],0,0];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (NSMutableArray *)queryBookMark:(long)BookId andMarkServerId:(long)markServerId {
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCBookMark WHERE bookID = '%ld' and bookMarkServerId = '%ld' and accountID = '%@'",BookId, markServerId,[[NSUserDefaults standardUserDefaults]objectForKey:@"userId"]];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    return  rs;
+}
+
+- (NSMutableArray *)queryBookNote:(long)BookId andNoteServerId:(long)NoteServerId {
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCNote WHERE bookID = '%ld' and NoteServerId = '%ld' and accountID = '%@'",BookId, NoteServerId,[[NSUserDefaults standardUserDefaults]objectForKey:@"userId"]];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    return  rs;
+}
+
+- (int)saveBookmark:(IYCBookMark *)bookmark
+{
+    NSString *now = [NSDate stringFromDate:[NSDate date]];
+    NSString *sql = [NSString stringWithFormat:@"INSERT INTO IYCBookMark(bookMarkID, bookID, accountID, location, createTime, paragraphID,edition,log,ChapterID,lineNumber,paragraphOffset,bookMarkServerId,bookMarkStatus) VALUES ('%d','%ld','%@','%d', '%@','%d','%d','%@','%d','%d','%f','%d','%d')", bookmark.markId, bookmark.bookServerId,bookmark.accountId, 0, now, bookmark.paragraphId,bookmark.edition,bookmark.log,bookmark.chapterId,bookmark.lineNumber,bookmark.paragraphOffset,bookmark.bookMarkServerId,bookmark.bookMarkStatus];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+        //[[IYCDataBase share] close];
+}
+
+- (int)updataBookmark:(IYCBookMark *)bookmark
+{
+    NSString *now = [NSDate stringFromDate:[NSDate date]];
+    
+    NSString *sql = [NSString stringWithFormat:@"UPDATE IYCBookMark SET bookMarkServerId = '%d',bookMarkStatus = '%d',createTime = '%@' WHERE bookMarkID = '%d' and accountID = '%@'",bookmark.bookMarkServerId,bookmark.bookMarkStatus,now,bookmark.markId,bookmark.accountId];
+    
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int)getbookIdByServerId:(int)bookServerId andBookType:(int)BookType
+{
+    NSString *sql = [NSString stringWithFormat:@"select bookID from IYCBook WHERE bookServerID=%i and bookType = %i",bookServerId,BookType];
+    
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    
+    if (array.count>0) {
+        return [[[array objectAtIndex:0] objectForKey:@"bookID"] intValue];
+    }
+    else
+        return 0;
+}
+
+- (int)getMaxBookNote
+{
+    NSString *sql = @"select NoteID from IYCNote ORDER BY NoteID  DESC LIMIT 1";
+    
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    int NoteID = 0;
+    
+    for (NSDictionary *rs in  array) {
+        NSString *bookMark = [rs objectForKey:@"NoteID"];
+        if (![bookMark isEqual:[NSNull null]])
+            NoteID = [bookMark intValue];
+        
+    }
+
+    return NoteID;
+}
+
+
+- (int)getMaxBookMark
+{
+    NSString *sql = @"select bookMarkID from IYCBookMark ORDER BY bookMarkID+0  DESC LIMIT 1";
+    //    NSString *sql = @"select max(bookMarkID) as bookMarkID from IYCBookMark";
+  
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    int bookMarkID = 0;
+
+    for (NSDictionary *rs in  array) {
+        NSString *bookMark = [rs objectForKey:@"bookMarkID"];
+        if (![bookMark isEqual:[NSNull null]])
+            bookMarkID = [bookMark intValue];
+
+    }
+    //[[IYCDataBase share] close];
+
+//    while ([rs next])
+//    {
+//        NSString *bookMark = [rs objectForColumn:@"bookMarkID"];
+//        if (![bookMark isEqual:[NSNull null]])
+//            bookMarkID = [bookMark intValue];
+//    }
+//    [rs close];
+    return bookMarkID;
+}
+
+-(int)deleteBookmarkByAccount:(NSString *)accountId andPargraphId:(int)pargraphId
+{
+    NSString *sql = [NSString stringWithFormat:@"DELETE FROM IYCBOOKMark WHERE accountId = '%@' AND  paragraphID = '%d'",accountId,pargraphId];
+    int result = [[IYCDataBase share] updateDB:sql];
+        //[[IYCDataBase share] close];
+    return result;
+}
+- (int)deleteBookmarkByBookId:(long)bookID
+{
+    NSString *sql = [NSString stringWithFormat:@"DELETE FROM IYCBOOKMark WHERE bookID = '%ld'",bookID];
+    int result = [[IYCDataBase share] updateDB:sql];
+        //[[IYCDataBase share] close];
+    return result;
+}
+- (int)deleteServerBookStateByBookId:(long)bookID
+{
+    NSString *sql = @"DELETE FROM IYCServerBookState WHERE bookServerID not in (SELECT bookServerID from IYCBook)";
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+    
+    
+    
+}
+
+- (NSMutableArray*)queryBookmark:(long)bookID accountID:(NSString *)ID edition:(int)edition
+{
+    NSString *sql = [NSString stringWithFormat:@"select * from IYCBookMark where  accountID ='%@' and bookID=%ld and edition = %d",ID,bookID,edition];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSMutableArray *bookmark = [self setToBookmarkArray:rs];
+    //    //[[IYCDataBase share] close];
+    return bookmark;
+}
+
+
+
+//- (IYCAccount *)getAccountInfo:(long)bookID
+//{
+//    NSString * accountID = [userManager objectForKey:KEY_AccountID];
+//
+//    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCAccount WHERE accountID = %@",accountID];
+//
+//    id rs;
+//    rs = [[IYCDataBase share] queryDB:sql];
+//    NSArray * result = [self setToAccountArray:rs];
+////    //[[IYCDataBase share] close];
+//    IYCAccount * first = (result.count > 0) ? (IYCAccount *)[result objectAtIndex:0] : nil;
+//    if (first != nil) {
+//        first.bookmark = [self queryBookmark:bookID accountID:accountID];
+//    }
+//    return  first;
+//
+//}
+- (int)saveAccount:(IYCAccount *)account {
+    NSString *sql = nil;
+//    NSString *checkSql = [NSString stringWithFormat:@"select * from IYCAccount where  accountID = '%@'",account.accountID];
+//    id rs = [[IYCDataBase share] queryDB:checkSql];
+//    if (![rs next]) {
+        sql = [NSString stringWithFormat:@"REPLACE INTO IYCAccount(accountID, fontSize, brightness, nightMode) VALUES ('%@','%d','%f','%d')",account.accountID, account.fontSize,account.brightness,account.nightMode];
+//    } else {
+//        sql = [NSString stringWithFormat:@"update IYCAccount set accountID = '%@', fontSize = '%d', brightness = '%f', nightMode = '%d' ",account.accountID, account.fontSize,account.brightness,account.nightMode];
+//    }
+    
+    
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (IYCAccount *)queryAccountByAccountID:(NSString *)accountID {
+    NSString *sql = [NSString stringWithFormat:@"select * from IYCAccount where  accountID = '%@'",accountID];
+    
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    
+    IYCAccount *book = nil;
+
+    for (NSDictionary * rs in array) {
+        book = [[IYCAccount alloc] init];
+        if ([rs objectForKey:@"fontSize"] == [NSNull null]) {
+            book = nil;
+        } else {
+            if ((NSNull *)[rs objectForKey:@"accountID"]!=[NSNull null]) {
+                book.accountID = [rs objectForKey:@"accountID"];
+            }
+            
+            if ((NSNull *)[rs objectForKey:@"fontSize"] != [NSNull null]) {
+                book.fontSize = [[rs objectForKey:@"fontSize"]intValue];
+            }
+            
+            if ((NSNull *)[rs objectForKey:@"brightness"] != [NSNull null]) {
+                book.brightness = [[rs objectForKey:@"brightness"] floatValue];
+            }
+            
+            if ((NSNull *)[rs objectForKey:@"nightMode"] != [NSNull null]) {
+                book.nightMode = [[rs objectForKey:@"nightMode"]intValue];
+            }
+        }
+
+    }
+  /*
+    if ([rs next]) {
+        
+        book = [[IYCAccount alloc] init];
+        if ([rs objectForColumn:@"fontSize"] == [NSNull null]) {
+            [book release];
+            book = nil;
+        } else {
+            if ((NSNull *)[rs objectForColumn:@"accountID"]!=[NSNull null]) {
+                book.accountID = [rs objectForColumn:@"accountID"];
+            }
+            
+            if ((NSNull *)[rs objectForColumn:@"fontSize"] != [NSNull null]) {
+                book.fontSize = [[rs objectForColumn:@"fontSize"]intValue];
+            }
+            
+            if ((NSNull *)[rs objectForColumn:@"brightness"] != [NSNull null]) {
+                book.brightness = [[rs objectForColumn:@"brightness"] floatValue];
+            }
+            
+            if ((NSNull *)[rs objectForColumn:@"nightMode"] != [NSNull null]) {
+                book.nightMode = [[rs objectForColumn:@"nightMode"]intValue];
+            }
+        }
+    }
+     */
+    DebugLog(@"%@ %d %f %d",book.accountID,book.fontSize,book.brightness,book.nightMode);
+    return book;
+}
+
+//-------
+// IYCDictionary
+//-------
+- (NSString *)translateWords:(NSString *)string {
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM englishDict WHERE word = '%@'",string];
+    
+    
+    NSMutableArray *array = [[IYCDataBase share] queryDict:sql];
+    NSString *result = [NSString string];
+
+    for (NSDictionary *rs in array) {
+        result = [rs objectForKey:@"chinese"];
+
+    }
+    
+    ////[[IYCDataBase share] close];
+    
+//    NSString *result = [NSString string];
+//    if ([rs next])
+//    {
+//        result = [rs objectForColumn:@"chinese"];
+//    }
+    
+    return result;
+}
+
+#pragma mark -
+#pragma mark IYCBookState
+- (NSArray *)queryBookByAccountId:(NSString *)accountId
+{
+    //    NSString * accountID = [userManager objectForKey:KEY_AccountID];
+    
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCBookState WHERE accountID = '%@'",accountId];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    
+    NSArray * result = [self setToBookStateArray:rs];
+    return result;
+    
+}
+
+- (NSArray *)queryBookByAccountId:(NSString *)accountId andBookType:(int)bookType
+{
+    
+    NSString *sql = [NSString stringWithFormat:@"SELECT A.*, B.bookType FROM (select * from IYCBookState where accountID = '%@') A INNER join (select * from IYCBook where bookType = '%i') B on A.bookID=B.bookID",accountId,bookType];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    
+    NSArray * result = [self setToBookStateArray:rs];
+    return result;
+    
+}
+
+
+- (int)newDeleteBookStateByBookId:(long)bookId {
+    NSString * accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] ;
+    NSString *sql = [NSString stringWithFormat:@"DELETE FROM IYCBookState WHERE bookID = '%ld' and accountID = '%@'",bookId,accountID];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int)updateBookStateByBookserverID:(long)bookserverId andBookID:(int)bookID{
+    NSString *sql = [NSString stringWithFormat:@"UPDATE IYCBookState SET bookID = '%i'  WHERE serverBookId = %li and accountID = '%@'", bookID,bookserverId,[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+
+- (int)deleteBookStateByBookId:(long)bookId
+{
+    NSString *sql = [NSString stringWithFormat:@"DELETE FROM IYCBookState WHERE bookID = '%ld'", bookId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+//-------
+// IYCParseBook
+//-------
+
+- (int)saveParseBook:(IYCParseBook *)parseBook
+{
+    NSString *sql = [NSString stringWithFormat:@"INSERT INTO IYCParseBook(parseID, bookID, epubEdition, fontSize, isSaveFinished) VALUES ('%d','%ld','%d','%f','%d')",parseBook.parseId, parseBook.bookId, parseBook.epubEdition, parseBook.fontSize, parseBook.isSaveFinished];
+    
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+    
+}
+- (BOOL)isParseBookExist:(long)bookid  withFontSize:(float)fontSize  andEdition:(int)edition
+{
+    NSString *checkSql = [NSString stringWithFormat:@"select * from IYCParseBook where  bookID = '%ld' and   fontSize = '%f' and epubEdition = '%d'",bookid, fontSize,  edition];
+    id rs = [[IYCDataBase share] queryDB:checkSql];
+    
+    if ([rs next]) {
+        return YES;
+    }
+    
+    return NO;
+    
+}
+
+
+- (IYCParseBook *)getParseBook:(long)bookid  withFontSize:(float)fontSize  andEdition:(int)edition
+{
+    NSString *sql = [NSString stringWithFormat:@"SELECT * FROM IYCParseBook where  bookID = '%ld' and   fontSize = '%f' and epubEdition = '%d'",bookid, fontSize, edition];
+  
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    IYCParseBook *parseBook = nil;
+
+    for (NSDictionary * rs in array) {
+        parseBook = [[IYCParseBook alloc] init];
+        
+        NSNumber *Id = [rs objectForKey:@"parseID"];
+        if ((NSNull*)Id != [NSNull null]) {
+            parseBook.parseId = [Id intValue];
+        }
+        
+        NSNumber *bookId = [rs objectForKey:@"bookID"];
+        if ((NSNull*)bookId != [NSNull null]) {
+            parseBook.bookId = [bookId intValue];
+        }
+        
+        NSNumber *fontSize = [rs objectForKey:@"fontSize"];
+        if ((NSNull*)fontSize != [NSNull null]){
+            parseBook.fontSize = [fontSize floatValue];
+        }
+        
+        NSNumber *edition = [rs objectForKey:@"epubEdition"];
+        if ((NSNull*)edition != [NSNull null]) {
+            parseBook.epubEdition = [edition intValue];
+        }
+        
+        NSNumber *isSaveFinished = [rs objectForKey:@"isSaveFinished"];
+        if ((NSNull*)isSaveFinished != [NSNull null]) {
+            parseBook.isSaveFinished = [isSaveFinished intValue];
+        }
+
+    }
+    /*
+    while ([rs next])
+    {
+        parseBook = [[IYCParseBook alloc] init];
+        
+        NSNumber *Id = [rs objectForColumn:@"parseID"];
+        if ((NSNull*)Id != [NSNull null]) {
+            parseBook.parseId = [Id intValue];
+        }
+        
+        NSNumber *bookId = [rs objectForColumn:@"bookID"];
+        if ((NSNull*)bookId != [NSNull null]) {
+            parseBook.bookId = [bookId intValue];
+        }
+        
+        NSNumber *fontSize = [rs objectForColumn:@"fontSize"];
+        if ((NSNull*)fontSize != [NSNull null]){
+            parseBook.fontSize = [fontSize floatValue];
+        }
+        
+        NSNumber *edition = [rs objectForColumn:@"epubEdition"];
+        if ((NSNull*)edition != [NSNull null]) {
+            parseBook.epubEdition = [edition intValue];
+        }
+        
+        NSNumber *isSaveFinished = [rs objectForColumn:@"isSaveFinished"];
+        if ((NSNull*)isSaveFinished != [NSNull null]) {
+            parseBook.isSaveFinished = [isSaveFinished intValue];
+        }
+    }
+     */
+    return parseBook;
+    
+}
+
+
+- (int)updateParseBookFinished:(IYCParseBook *)parseBook
+{
+    NSString *sql = [NSString stringWithFormat:@"UPDATE IYCParseBOOK SET isSaveFinished = '1'  WHERE parseID = %d",parseBook.parseId];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+//-------
+// IYCParsePage
+//-------
+- (int)savePageInfo:(IYCPage *)page withParseId:(int)parseId
+{
+    NSString *sql = nil;
+    
+    NSString *checkSql = [NSString stringWithFormat:@"select * from IYCParsePage where  parseID = '%d' and pageID = '%d' and chapterID = '%d'",parseId,page.pageId,page.chapterId];
+    
+    NSMutableArray *rs = [[IYCDataBase share] queryDB:checkSql];
+    
+    
+    if (rs.count == 0) {
+        sql = [NSString stringWithFormat:@"INSERT INTO IYCParsePage(parseID, chapterID, pageID, pageOffsetX, pageOffsetY, pageURL) VALUES ('%d','%d','%d','%f','%f','%@')", parseId, page.chapterId,page.pageId,page.pageOffset,page.pageOffsetH,page.pageUrl];
+    } else {
+        sql = [NSString stringWithFormat:@"update IYCParsePage set pageOffsetX = '%f',pageOffsetY = '%f', pageURL = '%@' where parseID = '%d' and pageID = '%d' and chapterID = '%d' ",page.pageOffset,page.pageOffsetH,page.pageUrl,parseId,page.pageId,page.chapterId];
+    }
+    
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int)saveBuyCoinRecord:(NSDictionary *)infoDict {
+    NSString * sql = [NSString stringWithFormat:@"INSERT INTO IYCCoinRecord(accountID, time, receipt, money, coin) values('%@', '%@', '%@', '%@', '%@')",[infoDict objectForKey:@"userId"],[infoDict objectForKey:@"time"],[infoDict objectForKey:@"receipt"],[infoDict objectForKey:@"money"],[infoDict objectForKey:@"coin"]];
+    int result = [[IYCDataBase share] updateDB:sql];
+
+    return result;
+}
+
+- (NSMutableArray *)queryBuycoinRecordByUserId:(NSString *)userId {
+    NSString *checkSql = [NSString stringWithFormat:@"select * from IYCCoinRecord where  accountID = '%@'",userId];
+    
+    NSMutableArray *rs = [[IYCDataBase share] queryDB:checkSql];
+    
+    return rs;
+}
+
+- (int)setBuyCoinRecordStatusByUserId:(NSString *)userId buyTime:(NSString *)buyTime {
+    NSString *sql = [NSString stringWithFormat:@"UPDATE IYCCoinRecord SET status = '2'  WHERE accountID = %@ and time = '%@'",userId,buyTime];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (int)deleteBuyCoinRecordByUserId:(NSString *)userId buyTime:(NSString *)buyTime {
+    NSString *sql = [NSString stringWithFormat:@"DELETE FROM IYCCoinRecord WHERE accountID = '%@' and time = '%@'",userId,buyTime];
+    int result = [[IYCDataBase share] updateDB:sql];
+    return result;
+}
+
+- (NSMutableArray *)getParsePageWithParseId:(int)parseId
+{
+    NSString *sql = [NSString stringWithFormat:@"select * from IYCParsePage where parseID= %d order by chapterID, pageID",parseId];
+    DebugLog(@"%@",sql);
+    NSMutableArray * array = [[IYCDataBase share] queryDB:sql];
+    NSMutableArray * result = [[NSMutableArray alloc] init];
+    for (NSDictionary * rs in array) {
+        IYCPage  *page = [[IYCPage alloc] init];
+        
+        NSNumber *chapterId = [rs objectForKey:@"chapterID"];
+        if ((NSNull*)chapterId != [NSNull null]) {
+            page.chapterId = [chapterId intValue];
+        }
+        
+        NSNumber *pageId = [rs objectForKey:@"pageID"];
+        if ((NSNull*)pageId != [NSNull null]){
+            page.pageId = [pageId intValue];
+        }
+        
+        NSNumber *offsetX = [rs objectForKey:@"pageOffsetX"];
+        if ((NSNull*)offsetX != [NSNull null]) {
+            page.pageOffset = [offsetX floatValue];
+        }
+        
+        NSNumber *offsetY = [rs objectForKey:@"pageOffsetY"];
+        if ((NSNull*)offsetY != [NSNull null]) {
+            page.pageOffsetH = [offsetY intValue];
+        }
+        
+        page.pageUrl = [rs objectForKey:@"pageURL"];
+    }
+    /*
+    while ([rs next])
+    {
+        IYCPage  *page = [[IYCPage alloc] init];
+        
+        NSNumber *chapterId = [rs objectForColumn:@"chapterID"];
+        if ((NSNull*)chapterId != [NSNull null]) {
+            page.chapterId = [chapterId intValue];
+        }
+        
+        NSNumber *pageId = [rs objectForColumn:@"pageID"];
+        if ((NSNull*)pageId != [NSNull null]){
+            page.pageId = [pageId intValue];
+        }
+        
+        NSNumber *offsetX = [rs objectForColumn:@"pageOffsetX"];
+        if ((NSNull*)offsetX != [NSNull null]) {
+            page.pageOffset = [offsetX floatValue];
+        }
+        
+        NSNumber *offsetY = [rs objectForColumn:@"pageOffsetY"];
+        if ((NSNull*)offsetY != [NSNull null]) {
+            page.pageOffsetH = [offsetY intValue];
+        }
+        
+        page.pageUrl = [rs objectForColumn:@"pageURL"];
+    }
+    */
+    return result;
+}
+#pragma mark -
+#pragma mark Note
+
+
+//装填IYCNote数据结构
+- (NSArray *)makeResultToNote:(id)rs
+{
+    NSMutableArray * tmpArray = [[NSMutableArray alloc] init];
+    
+    NSMutableArray *array = (NSMutableArray *)rs;
+    
+    for (NSDictionary * dic in array) {
+        IYCNote * note = [[IYCNote alloc] init];
+        note.noteID     = [[dic objectForKey:@"NoteID"] intValue];
+        note.bookID     = [[dic objectForKey:@"BookID"] longLongValue];
+        note.accountID  = [[dic objectForKey:@"AccountID"] longLongValue];
+        note.chapterID  = [[dic objectForKey:@"ChapterID"] longLongValue];
+        note.startParagraphId   = [[dic objectForKey:@"StartParagraphID"] longLongValue];
+        note.endParagraphId     = [[dic objectForKey:@"EndParagraphID"] longLongValue];
+        note.selectString       = [dic objectForKey:@"SelectString"];
+        note.noteContent        = [dic objectForKey:@"NoteContent"];
+        note.modifyTime         = [dic objectForKey:@"ModifyTime"];
+        note.startOffset        = [[dic objectForKey:@"StartOffset"] intValue];
+        note.endOffset          = [[dic objectForKey:@"EndOffset"] intValue];
+        note.chapterIndex       = [[dic objectForKey:@"ChapterIndex"] intValue];
+        note.language           = [[dic objectForKey:@"LanguageType"] intValue];
+        note.noteStatus         = [[dic objectForKey:@"NoteStatus"] intValue];
+        if (note.noteStatus == NOTESTATUES_TYPE_CHANGED) {
+            note.noteServerID = [[dic objectForKey:@"NoteServerId"] intValue];
+        }
+        
+        [tmpArray addObject:note];
+
+    }
+
+    return tmpArray;
+}
+
+- (NSArray *)makeResultHaveNoteServerId:(id)rs
+{
+    NSMutableArray * tmpArray = [[NSMutableArray alloc] init];
+    
+    NSMutableArray *array = (NSMutableArray *)rs;
+    
+    for (NSDictionary * dic in array) {
+        IYCNote * note = [[IYCNote alloc] init];
+        note.noteID     = [[dic objectForKey:@"NoteID"] intValue];
+        note.bookID     = [[dic objectForKey:@"BookID"] longLongValue];
+        note.accountID  = [[dic objectForKey:@"AccountID"] longLongValue];
+        note.chapterID  = [[dic objectForKey:@"ChapterID"] longLongValue];
+        note.startParagraphId   = [[dic objectForKey:@"StartParagraphID"] longLongValue];
+        note.endParagraphId     = [[dic objectForKey:@"EndParagraphID"] longLongValue];
+        note.selectString       = [dic objectForKey:@"SelectString"];
+        note.noteContent        = [dic objectForKey:@"NoteContent"];
+        note.modifyTime         = [dic objectForKey:@"ModifyTime"];
+        note.startOffset        = [[dic objectForKey:@"StartOffset"] intValue];
+        note.endOffset          = [[dic objectForKey:@"EndOffset"] intValue];
+        note.chapterIndex       = [[dic objectForKey:@"ChapterIndex"] intValue];
+        note.language           = [[dic objectForKey:@"LanguageType"] intValue];
+        note.noteStatus         = [[dic objectForKey:@"NoteStatus"] intValue];
+        note.noteServerID = [[dic objectForKey:@"NoteServerId"] intValue];
+      
+        [tmpArray addObject:note];
+        
+    }
+    
+    return tmpArray;
+}
+
+/*
+ bookId 为 -1 时查询全部书的笔记，
+ chapterIndex 为 -1 时查询全部章节的笔记，bookid不为-1时chapterId才有效，
+ accountId 为 -1 时查询全部用户的笔记，
+ lanType 语言：0 汉语，1英语，只有bookId不为-1时lantype才有效。
+ */
+- (NSString *)getSelectSqlByBookID:(long)bookId
+                         AccountId:(long)accountId
+                      ChapterIndex:(int)chapterIndex
+                          language:(IYCLanguageType)lanType
+{
+    NSString * selectSql = [NSString stringWithFormat:@"select * from IYCNote"];
+    if (bookId != -1 && accountId == -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" where BookID = '%ld'",bookId];
+    }
+    else if(bookId == -1 && accountId != -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" where AccountID = '%ld'",accountId];
+    }
+    else if(bookId != -1 && accountId != -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" where BookID = '%ld' and AccountID = '%ld'",bookId,accountId];
+    }
+    
+    if (bookId != -1 && chapterIndex != -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" and ChapterIndex = '%d'",chapterIndex];
+    }
+    
+    if (bookId != -1) {
+        selectSql = [selectSql stringByAppendingFormat:@" and LanguageType = '%d'",lanType];
+    }
+    return selectSql;
+}
+- (NSString *)getAllHaveDeleteNoteWithBookId:(long)bookId
+                         AccountId:(long)accountId
+{
+    NSString * selectSql = [NSString stringWithFormat:@"select * from IYCDeleteNote"];
+    selectSql = [selectSql stringByAppendingFormat:@" where BookID = '%ld' and AccountID = '%ld'",bookId,accountId];
+    
+    return selectSql;
+}
+
+- (NSArray *)selectHaveDeleteNoteWithBookId:(long)bookId AccountId:(long)accountId
+{
+    NSString * selectSql = [self getAllHaveDeleteNoteWithBookId:bookId AccountId:accountId];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:selectSql];
+    NSArray * notes = [self makeResultHaveNoteServerId:rs];
+    //[[IYCDataBase share] close];
+    
+    
+    return notes;
+
+}
+/*
+ bookId 为 -1 时查询全部书的笔记，
+ chapterIndex 为 -1 时查询全部章节的笔记，bookid不为-1时chapterId才有效，
+ accountId 为 -1 时查询全部用户的笔记，
+ lanType 语言：0 汉语，1英语，只有bookId不为-1时lantype才有效。
+ */
+- (NSArray *)selectNotesByBookID:(long)bookId
+                       AccountId:(long)accountId
+                    ChapterIndex:(int)chapterIndex
+                        language:(IYCLanguageType)lanType
+{
+    NSString * selectSql = [self getSelectSqlByBookID:bookId AccountId:accountId ChapterIndex:chapterIndex language:lanType];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:selectSql];
+    NSArray * notes = [self makeResultToNote:rs];
+    //[[IYCDataBase share] close];
+
+    
+    return notes;
+}
+- (NSArray *)selectWebNotesByBookID:(long)bookId
+                       AccountId:(long)accountId
+                    ChapterId:(int)chapterId
+                        language:(IYCLanguageType)lanType
+{
+    AppDelegate *appdelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    
+    int realChapterId = chapterId + (int)appdelegate.noteFirstIndex;
+    
+    NSString * selectSql = [self getSelectSqlByBookID:bookId AccountId:accountId ChapterId:realChapterId language:lanType];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:selectSql];
+    NSArray * notes = [self makeResultToNote:rs];
+    //[[IYCDataBase share] close];
+    
+    
+    return notes;
+}
+- (NSString *)getSelectSqlByBookID:(long)bookId
+                         AccountId:(long)accountId
+                      ChapterId:(int)chapterId
+                          language:(IYCLanguageType)lanType
+{
+    NSString * selectSql = [NSString stringWithFormat:@"select * from IYCNote"];
+    if (bookId != -1 && accountId == -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" where BookID = '%ld'",bookId];
+    }
+    else if(bookId == -1 && accountId != -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" where AccountID = '%ld'",accountId];
+    }
+    else if(bookId != -1 && accountId != -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" where BookID = '%ld' and AccountID = '%ld'",bookId,accountId];
+    }
+    
+    if (bookId != -1 && chapterId != -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" and ChapterId = '%d'",chapterId];
+    }
+    
+    if (bookId != -1) {
+        selectSql = [selectSql stringByAppendingFormat:@" and LanguageType = '%d'",lanType];
+    }
+    return selectSql;
+}
+
+- (NSString *)getSelectSqlByBookID:(long)bookId
+                         AccountId:(long)accountId
+                      ChapterIndex:(int)chapterIndex
+                          noteStatus:(NOTESTATUES_TYPE)noteType
+{
+    NSString * selectSql = [NSString stringWithFormat:@"select * from IYCNote"];
+    if (bookId != -1 && accountId == -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" where BookID = '%ld'",bookId];
+    }
+    else if(bookId == -1 && accountId != -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" where AccountID = '%ld'",accountId];
+    }
+    else if(bookId != -1 && accountId != -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" where BookID = '%ld' and AccountID = '%ld'",bookId,accountId];
+    }
+    
+    if (bookId != -1 && chapterIndex != -1)
+    {
+        selectSql = [selectSql stringByAppendingFormat:@" and ChapterIndex = '%d'",chapterIndex];
+    }
+    
+    //查找 未上传\已经上传\状态改变的笔记
+    if (bookId != -1 && noteType != 4 && noteType != 3) {
+        selectSql = [selectSql stringByAppendingFormat:@" and NoteStatus = '%d'",noteType];
+    }
+    //查找除上传过的笔记(包括未上传和状态改变的笔记)
+    if (noteType == 3) {
+        selectSql = [selectSql stringByAppendingFormat:@" and NoteStatus != '1'"];
+
+    }
+    //查找所有笔记
+    if (noteType == 4) {
+        
+    }
+
+    return selectSql;
+}
+
+//查找note
+- (NSArray *)selectNotesByBookID:(long)bookId AccountId:(long)accountId ChapterIndex:(int)chapterIndex noteStatus:(NOTESTATUES_TYPE)noteType
+{
+    NSString * selectSql = [self getSelectSqlByBookID:bookId AccountId:accountId ChapterIndex:chapterIndex noteStatus:noteType];
+    id rs;
+    NSArray * notes = nil;
+    rs = [[IYCDataBase share] queryDB:selectSql];
+    if (noteType == NOTESTATUES_TYPE_ALL) {
+        notes = [self makeResultHaveNoteServerId:rs];
+        
+    }else if (noteType == NOTESTATUES_TYPE_UPLOADED){
+        notes = [self makeResultHaveNoteServerId:rs];
+
+    }
+    else{
+        notes = [self makeResultToNote:rs];
+
+    }
+
+    return notes;
+    
+}
+
+//通过id查找某一条note
+- (NSArray *)selectNoteById:(int)noteId
+{
+    NSString * sql = [NSString stringWithFormat:@"select * from IYCNote where NoteID = '%d'",noteId];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * notes = [self makeResultToNote:rs];
+    //[[IYCDataBase share] close];
+
+    
+    return notes;
+}
+- (NSArray *)selectHaveNoteServerIdNoteById:(int)noteId
+{
+    NSString * sql = [NSString stringWithFormat:@"select * from IYCNote where NoteID = '%d'",noteId];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * notes = [self makeResultHaveNoteServerId:rs];
+    //[[IYCDataBase share] close];
+    
+    
+    return notes;
+
+}
+//插入数据库一条笔记，失败返回0，成功返回1。
+- (int) insertNote:(IYCNote *)note
+{
+    if (-1==note.bookID || -1==note.accountID || -1==note.chapterID || -1==note.startParagraphId)
+    {
+        return 0;
+    }
+    NSString *tmpStr=[note.selectString stringByReplacingOccurrencesOfString:@"'" withString:@"''"];
+    NSString *tmpStr2=[note.noteContent stringByReplacingOccurrencesOfString:@"'" withString:@"''"];
+    NSString * insertSql = [NSString stringWithFormat:@"INSERT INTO IYCNote(BookID, AccountID, ChapterID, StartParagraphID, SelectString, NoteContent, ModifyTime, StartOffset, EndOffset, EndParagraphID, ChapterIndex, LanguageType,NoteStatus,NoteServerID) VALUES ('%ld','%ld','%ld','%ld','%@','%@','%@','%d','%d','%ld','%d','%d','%d','%d')",note.bookID,note.accountID,note.chapterID,note.startParagraphId,tmpStr,tmpStr2,note.modifyTime,note.startOffset,note.endOffset,note.endParagraphId,note.chapterIndex,note.language,note.noteStatus,note.noteServerID];
+    
+    int result = [[IYCDataBase share] updateDB:insertSql];
+    
+    return result;
+}
+
+- (int) insertDeleteNote:(IYCNote *)note
+{
+    if (-1==note.bookID || -1==note.accountID || -1==note.chapterID || -1==note.startParagraphId)
+    {
+        return 0;
+    }
+    NSString * insertSql = [NSString stringWithFormat:@"INSERT INTO IYCDeleteNote(BookID, AccountID, ChapterID, StartParagraphID, SelectString, NoteContent, ModifyTime, StartOffset, EndOffset, EndParagraphID, ChapterIndex, LanguageType,NoteStatus,NoteServerID) VALUES ('%ld','%ld','%ld','%ld','%@','%@','%@','%d','%d','%ld','%d','%d','%d','%d')",note.bookID,note.accountID,note.chapterID,note.startParagraphId,note.selectString,note.noteContent,note.modifyTime,note.startOffset,note.endOffset,note.endParagraphId,note.chapterIndex,note.language,note.noteStatus,note.noteServerID];
+    
+    int result = [[IYCDataBase share] updateDB:insertSql];
+    
+    return result;
+
+    
+}
+//更新一条笔记，只会更新笔记内容及修改时间，数据结构中需装填noteId,noteContent,modifyTime;
+//- (int) updateNote:(IYCNote *)note
+//{
+//    NSString * updateSql = [NSString stringWithFormat:@"UPDATE IYCNote SET NoteContent = '%@', ModifyTime = '%@' ,NoteStatus = '%d' WHERE NoteID = '%d'",note.noteContent,note.modifyTime,note.noteStatus, note.noteID];
+//    int result = [[IYCDataBase share] updateDB:updateSql];
+//    return result;
+//}
+- (int) updateNote:(IYCNote *)note
+{
+    NSString * updateSql = nil;
+    
+    NSString *tmpStr=[note.selectString stringByReplacingOccurrencesOfString:@"'" withString:@"''"];
+    NSString *tmpStr2=[note.noteContent stringByReplacingOccurrencesOfString:@"'" withString:@"''"];
+    
+    if (note.noteStatus == NOTESTATUES_TYPE_CHANGED) {
+        
+         updateSql = [NSString stringWithFormat:@"UPDATE IYCNote SET NoteStatus = '%d',NoteContent = '%@', ModifyTime = '%@' WHERE BookID= '%ld' and AccountID= '%ld' and ChapterID= '%ld' and StartParagraphID = '%ld'  and StartOffset= '%d' and EndOffset = '%d' and LanguageType = '%d'",note.noteStatus,tmpStr2,note.modifyTime, note.bookID,note.accountID,note.chapterID,note.startParagraphId,note.startOffset,note.endOffset,note.language];
+    }else{
+        updateSql = [NSString stringWithFormat:@"UPDATE IYCNote SET NoteStatus = '%d',NoteServerId = '%i',NoteContent = '%@', ModifyTime = '%@' WHERE BookID= '%ld' and AccountID= '%ld' and ChapterID= '%ld' and StartParagraphID = '%ld'  and StartOffset= '%d' and EndOffset = '%d' and LanguageType = '%d'",note.noteStatus,note.noteServerID,tmpStr2,note.modifyTime, note.bookID,note.accountID,note.chapterID,note.startParagraphId,note.startOffset,note.endOffset,note.language];
+
+    }
+       int result = [[IYCDataBase share] updateDB:updateSql];
+    return result;
+ 
+}
+//bookId 为 -1 时删除全部书的笔记，accountId 为 -1 时删除全部用户的笔记
+- (int) deleteNotesWithBookID:(long)bookId accountID:(long)accountId
+{
+    NSString * deleteSql = [NSString stringWithFormat:@"delete from IYCNote"];
+    if (bookId != -1 && accountId == -1)
+    {
+        deleteSql = [deleteSql stringByAppendingFormat:@" where BookID = '%ld'",bookId];
+    }
+    else if(bookId == -1 && accountId != -1)
+    {
+        deleteSql = [deleteSql stringByAppendingFormat:@" where AccountID = '%ld'",accountId];
+    }
+    else if(bookId != -1 && accountId != -1)
+    {
+        deleteSql = [deleteSql stringByAppendingFormat:@" where BookID = '%ld' and AccountID = '%ld'",bookId,accountId];
+    }
+    return [[IYCDataBase share] updateDB:deleteSql];
+}
+//删除某一条笔记
+- (int) deleteNote:(IYCNote *)note
+{
+    return [self deleteNoteById:note.noteID];
+}
+- (int) deleteNoteById:(int)noteId
+{
+    NSString * deleteSql = [NSString stringWithFormat:@"delete from IYCNote where NoteID = '%d'",noteId];
+    
+    return [[IYCDataBase share] updateDB:deleteSql];
+}
+- (int) deleteNoteByServerId:(int)noteServerId
+{
+    NSString * deleteSql = [NSString stringWithFormat:@"delete from IYCNote where NoteServerId = '%d'",noteServerId];
+    
+    return [[IYCDataBase share] updateDB:deleteSql];
+}
+- (int) deleteIYCDeleteNoteWithBookId:(long)bookServerId andAccountId:(long)accountId
+{
+    NSString * deleteSql = [NSString stringWithFormat:@"delete from IYCDeleteNote where BookID = %ld and AccountID = %ld",bookServerId,accountId];
+
+    return [[IYCDataBase share] updateDB:deleteSql];
+
+}
+
+#pragma mark -
+#pragma mark book price
+- (int)updateBookPrice:(IYCBook *)book
+{
+    return [self saveBookPrice:book];
+}
+- (int)saveBookPrice:(IYCBook *)book
+{
+    NSString * sql = [NSString stringWithFormat:@"replace into IYCBookPrice(BookId, PriceRMB, PriceUSD, DiscountType, DiscountPriceRMB, DiscountPriceUSD) values(%ld, %f, %f, %d, %f, %f)",book.bookServerId,book.bookPriceRMB,book.bookPriceUSD,book.discountType,book.discountPriceRMB,book.discountPriceUSD];
+    return [[IYCDataBase share] updateDB:sql];
+}
+- (int)deleteBookPriceInfo:(long)bookServerId
+{
+    NSString * sql = [NSString stringWithFormat:@"delete from IYCBookPrice where BookId = '%ld'",bookServerId];
+    return [[IYCDataBase share] updateDB:sql];
+}
+
+- (IYCBook *)getBookPrice:(IYCBook *)book
+{
+    NSString * sql = [NSString stringWithFormat:@"select * from IYCBookPrice where BookId = '%ld'",book.bookServerId];
+    
+    IYCBook * tmpBook = [book copyWithZone:NSDefaultMallocZone()];
+
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    
+    for (NSDictionary *rs in array) {
+        tmpBook.bookPriceRMB = [[rs objectForKey:@"PriceRMB"] doubleValue];
+        tmpBook.bookPriceUSD = [[rs objectForKey:@"PriceUSD"] doubleValue];
+        tmpBook.discountType = [[rs objectForKey:@"DiscountType"] intValue];
+        tmpBook.discountPriceRMB = [[rs objectForKey:@"DiscountPriceRMB"] doubleValue];
+        tmpBook.discountPriceUSD = [[rs objectForKey:@"DiscountPriceUSD"] doubleValue];
+
+    }
+    //[[IYCDataBase share] close];
+
+    /*
+    while ([rs next]) {
+        tmpBook.bookPriceRMB = [[rs objectForColumn:@"PriceRMB"] doubleValue];
+        tmpBook.bookPriceUSD = [[rs objectForColumn:@"PriceUSD"] doubleValue];
+        tmpBook.discountType = [[rs objectForColumn:@"DiscountType"] integerValue];
+        tmpBook.discountPriceRMB = [[rs objectForColumn:@"DiscountPriceRMB"] doubleValue];
+        tmpBook.discountPriceUSD = [[rs objectForColumn:@"DiscountPriceUSD"] doubleValue];
+    }
+    [rs close];
+    */
+    return tmpBook;
+}
+
+- (long)selectBookServerIdByBookId:(long)bookId
+{
+    NSString * sql = [NSString stringWithFormat:@"SELECT * FROM IYCBOOK WHERE bookID = '%ld'",bookId];
+    
+    NSMutableArray *array = [[IYCDataBase share] queryDB:sql];
+    long bookServerId;
+
+    for (NSDictionary *dic in array) {
+        bookServerId = [[dic objectForKey:@"bookServerID"] longLongValue];
+
+    }
+    //[[IYCDataBase share] close];
+
+//    while ([rs next]) {
+//        bookServerId = [[rs objectForColumn:@"bookServerID"] longLongValue];
+//    }
+//    
+//    [rs close];
+    return bookServerId;
+}
+
+@end

@@ -1,0 +1,30 @@
+//
+//  IYCBookmarkView.h
+//  IYangCongReader
+//
+//  Created by haley on 5/17/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface IYCBookmarkView : UIView<UITableViewDataSource,UITableViewDelegate>
+{
+    IBOutlet UITableView *bookmarkTable;
+    NSMutableArray *bookmark;
+
+    long   bookId;
+    NSString *accountId;
+    int  edition;
+
+
+}
+@property (nonatomic)int  edition;
+@property (nonatomic,retain) NSString *accountId;
+@property (nonatomic)long   bookId;
+@property (nonatomic,assign)IBOutlet UIView *bookmarkImage;
+@property (nonatomic,assign)IBOutlet UIImageView *bgImageView;
+@property (nonatomic,retain) NSMutableArray *bookmark;
+@property (nonatomic,retain) IBOutlet UITableView *bookmarkTable;
+- (void)getBookmark;
+@end

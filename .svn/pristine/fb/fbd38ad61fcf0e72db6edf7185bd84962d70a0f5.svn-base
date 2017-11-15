@@ -1,0 +1,20 @@
+//
+//  IYCAppConfig.h
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-7-17.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+#define KEY_APPVERSION @"APPVERSION"
+
+@interface IYCAppConfig : NSObject
+
++ (NSString *)getLastAppVersion;
+
++ (NSString *)getCurrentAppVersion;
+//重置应用版本号
++ (void)resetAppVersion;
+@end

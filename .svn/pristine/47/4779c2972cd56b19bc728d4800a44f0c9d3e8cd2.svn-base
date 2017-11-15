@@ -1,0 +1,158 @@
+//
+//  IYCNotesView.m
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-8-7.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCNotesView.h"
+#import "RTLabel.h"
+#import "IYCDBAction.h"
+#import "AppDelegate.h"
+@implementation IYCNotesView
+
+- (id)initWithFrame:(CGRect)frame book:(long)bookId language:(int)language
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        notesTableView = [[UITableView alloc] initWithFrame:CGRectMake(10, 0, frame.size.width-10, frame.size.height)
+                                                      style:UITableViewStylePlain];
+        notesTableView.dataSource = self;
+        notesTableView.delegate = self;
+        notesTableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+//        notesTableView.backgroundColor = [UIColor colorWithRed:239.0/255
+//                                                         green:239.0/255
+//                                                          blue:239.0/255
+//                                                         alpha:1.0f];
+        notesTableView.backgroundColor = [UIColor clearColor];
+        [self addSubview:notesTableView];
+        
+        long accoutId = [[[NSUserDefaults standardUserDefaults] objectForKey:@"userId" ] longLongValue];
+        notesArray = [[IYCDBAction sharedDBAction] selectNotesByBookID:bookId
+                                                             AccountId:accoutId
+                                                          ChapterIndex:-1
+                                                              language:language];
+    }
+    return self;
+}
+
+- (NSString *)translateTimeStr:(NSString *)time
+{
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyyMMddHHmmss"];
+    NSDate * timeDate = [formatter dateFromString:time];
+    
+    [formatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    NSString * str = [formatter stringFromDate:timeDate];
+    return str;
+}
+- (float)getNoteContentLabelHight:(NSString *)noteContent
+{
+   
+    CGSize size = [noteContent sizeWithFont:[UIFont systemFontOfSize:14] constrainedToSize:CGSizeMake(notesTableView.frame.size.width-10, 9999) lineBreakMode:NSLineBreakByWordWrapping];
+    return size.height;
+}
+- (void)refreshViewWithBook:(long)bookId language:(int)language
+{
+    if (notesArray) {
+    }
+    long accoutId = [[[NSUserDefaults standardUserDefaults] objectForKey:@"userId" ] longLongValue];
+    notesArray = [[IYCDBAction sharedDBAction] selectNotesByBookID:bookId
+                                                          AccountId:accoutId
+                                                       ChapterIndex:-1
+                                                           language:language];
+    [notesTableView reloadData];
+}
+#pragma mark -
+#pragma mark tableview delegete
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSString * identify = @"identify";
+    UITableViewCell * cell = [tableView dequeueReusableCellWithIdentifier:identify];
+    if (!cell) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identify];
+    }
+    for (UIView * view in cell.contentView.subviews) {
+        [view removeFromSuperview];
+    }
+    cell.backgroundColor = [UIColor clearColor];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+ 
+    UIImageView * line = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"dot-line.png"]];
+    line.frame = CGRectMake(5, 1, tableView.frame.size.width-20, 2);
+    [cell.contentView addSubview:line];
+    line.backgroundColor = [UIColor clearColor];
+    
+    IYCNote * note = [notesArray objectAtIndex:indexPath.row];
+    
+    AppDelegate *appdelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    NSInteger index = appdelegate.noteFirstIndex;
+    
+    NSLog(@"%ld",index);
+    
+    
+    
+    UILabel * chapterLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 3, 100, 20)];
+    chapterLabel.text = [NSString stringWithFormat:@"Chapter %ld",note.chapterID - index];
+    chapterLabel.backgroundColor = [UIColor clearColor];
+    chapterLabel.font = [UIFont systemFontOfSize:12];
+    chapterLabel.textColor = [UIColor colorWithRed:55.0/255 green:58.0/255 blue:51.0/255 alpha:1.0f];
+    [cell.contentView addSubview:chapterLabel];
+    
+    UILabel * time = [[UILabel alloc] initWithFrame:CGRectMake(tableView.frame.size.width-120, 4, 100, 20)];
+    time.text = [self translateTimeStr:note.modifyTime];
+    time.font = [UIFont systemFontOfSize:10];
+    time.textColor = [UIColor colorWithRed:152.0/255 green:152.0/255 blue:152.0/255 alpha:1.0f];
+    time.backgroundColor = [UIColor clearColor];
+    [cell.contentView addSubview:time];
+    
+    UILabel * selectStr = [[UILabel alloc] initWithFrame:CGRectMake(5, 25, tableView.frame.size.width-10, 20)];
+    selectStr.text = note.selectString;
+    selectStr.font = [UIFont systemFontOfSize:13];
+    selectStr.lineBreakMode = NSLineBreakByTruncatingTail;
+    selectStr.textColor = [UIColor colorWithHexString:@"A9A9A9"];
+    selectStr.backgroundColor = [UIColor clearColor];
+    [cell.contentView addSubview:selectStr];
+    
+    RTLabel * notelabel = [[RTLabel alloc] initWithFrame:CGRectMake(5, 48,
+                                                                    tableView.frame.size.width-10,
+                                                                    [self getNoteContentLabelHight:note.noteContent]+5)];
+    [notelabel setText:[NSString stringWithFormat:@"<font size=14 color='#A9A9A9'>Note: </font><font size=14 color='#FF692E'>%@</font>",note.noteContent]];
+    [notelabel setLineBreakMode:RTTextLineBreakModeWordWrapping];
+    [cell.contentView addSubview:notelabel];
+    
+    return cell;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    IYCNote * note = [notesArray objectAtIndex:indexPath.row];
+    float h = [self getNoteContentLabelHight:note.noteContent];
+    return h+52;
+}
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return [notesArray count];
+}
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    IYCNote * note = [notesArray objectAtIndex:indexPath.row];
+    NSDictionary * info = [NSDictionary dictionaryWithObject:note forKey:@"note"];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"turnToNote" object:self userInfo:info];
+}
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect
+{
+    // Drawing code
+}
+*/
+
+@end

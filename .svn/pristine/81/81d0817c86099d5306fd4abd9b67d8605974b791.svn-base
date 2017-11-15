@@ -1,0 +1,70 @@
+//
+//  IYCBookReviewRequest.m
+//  IYangCongReader
+//
+//  Created by Bella on 5/6/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCBookReviewRequest.h"
+#import "IYCBookReview.h"
+
+@implementation IYCBookReviewRequest
+@synthesize bookId = _bookId;
+@synthesize start = _start;
+@synthesize maximumSize = _maximumSize;
+
+@synthesize total = _total;
+@synthesize bookReviewList = _bookReviewList;
+
+
+- (id)initWithJSONDictionary: (NSDictionary*)jsonDic
+{
+    if (self = [super initWithJSONDictionary:jsonDic])
+    {
+        if (self.errorCode == ResponseErrorCode_Success)
+        {
+            self.total = [jsonDic objectForKey:@"total"];
+            
+            NSMutableArray *bookReviewArray =[[NSMutableArray alloc] init];
+            self.bookReviewList = bookReviewArray;
+            
+            NSArray *jsonArray = [jsonDic objectForKey:@"bookReviewList"];
+            for (int i = 0; i < [jsonArray count]; i++) {
+                NSDictionary *dic = [jsonArray objectAtIndex:i];
+                IYCBookReview *bookReview = [[IYCBookReview alloc] initWithJSONDictionary:dic];
+                [self.bookReviewList addObject:bookReview];
+            }
+        }
+    }
+	return self;
+}
+
+
+- (NSString *)getJSONString {
+    
+    NSMutableDictionary *JSONDict = [super getJSONString];
+    
+    if (self.bookId) {
+        [JSONDict setObject:self.bookId forKey:@"bookId"];
+    }
+    if (self.start) {
+        [JSONDict setObject:self.start forKey:@"start"];
+    }
+    if (self.maximumSize) {
+        [JSONDict setObject:self.maximumSize forKey:@"maximumSize"];
+    }
+    
+    if (self.deviceType) {
+        [JSONDict setObject:self.deviceType forKey:@"deviceType"];
+    }
+    
+    if (self.deviceToken) {
+        [JSONDict setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+    
+    return JSONDict.JSONString;
+}
+
+
+@end

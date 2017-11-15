@@ -1,0 +1,52 @@
+//
+//  IYCSecretKey.m
+//  IYangCongReader
+//
+//  Created by haley on 5/2/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//  说明：请求服务器类（获取秘钥）
+
+#import "IYCSecretKeyService.h"
+#import "IYCURLUtil.h"
+#import "IYCCongradientUserInfo.h"
+#import "IYCSecretKey.h"
+@implementation IYCSecretKeyService
+- (void)getSecretKey
+{
+    NSURL *url = [NSURL URLWithString:[IYCURLUtil getSecretKey]];
+    IYCSecretKey *requestData = [[IYCSecretKey alloc]init];
+    requestData.deviceType = [self getDeviceType:[self getPhoneModel]];
+    requestData.deviceToken = [self getDeviceToken];
+    [self initRequest:url withBody:[requestData getJSONString]];
+    [self startAsynRequest];
+
+}
+#pragma mark -
+#pragma mark ASIHTTPRequestDelegate method
+- (void)requestFinished:(ASIHTTPRequest *)requestParam {
+    NSString *jsonString = [requestParam responseString];
+    DebugLog(@"%@",jsonString);
+    IYCSecretKey *key = [[IYCSecretKey alloc]initWithJSONDictionary:[jsonString objectFromJSONString]];
+    if (key.errorCode == ResponseErrorCode_Success) {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidSuccess:)]) {
+            [self.delegate requestDidSuccess:key];
+        }
+    } else
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+            [self.delegate requestDidFailed:key];
+        }
+    }
+}
+
+- (void)requestFailed:(ASIHTTPRequest *)requestParam {
+    
+    IYCRequest * request = [[IYCRequest alloc] init];
+    request.errorCode = ResponseErrorCode_RequestAccessFailed;
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+        [self.delegate requestDidFailed:request];
+    }
+}
+
+@end

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="12121" systemVersion="16F73" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="IYCReadingViewController">
+            <connections>
+                <outlet property="buyBtn" destination="Q6n-pH-UoB" id="ZHt-Fb-VPy"/>
+                <outlet property="readingBannerImg" destination="38" id="UUd-wG-hIR"/>
+                <outlet property="segmentBgView" destination="43" id="46"/>
+            </connections>
+        </placeholder>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="3">
+            <rect key="frame" x="0.0" y="0.0" width="320" height="64"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <imageView userInteractionEnabled="NO" contentMode="scaleToFill" image="阅读器banner.png" translatesAutoresizingMaskIntoConstraints="NO" id="38">
+                    <rect key="frame" x="0.0" y="0.0" width="320" height="64"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="64" id="4BY-JR-YpX"/>
+                    </constraints>
+                </imageView>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="37">
+                    <rect key="frame" x="283" y="32" width="21" height="21"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="21" id="C6N-0l-HMn"/>
+                        <constraint firstAttribute="height" constant="21" id="CN4-lS-1nu"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
+                    <state key="normal" image="分享3.png">
+                        <color key="titleColor" red="0.19607843459999999" green="0.30980393290000002" blue="0.52156865600000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                    </state>
+                    <state key="highlighted">
+                        <color key="titleColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="titleShadowColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                    </state>
+                    <connections>
+                        <action selector="shareToAction:" destination="-1" eventType="touchUpInside" id="3ZD-T3-QdK"/>
+                    </connections>
+                </button>
+                <imageView userInteractionEnabled="NO" contentMode="scaleToFill" image="中英切换.png" translatesAutoresizingMaskIntoConstraints="NO" id="43">
+                    <rect key="frame" x="208" y="30" width="62" height="25"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="25" id="Pw1-M6-9wn"/>
+                        <constraint firstAttribute="width" constant="62" id="b5l-W7-LZv"/>
+                    </constraints>
+                </imageView>
+                <button opaque="NO" tag="2" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="42">
+                    <rect key="frame" x="240" y="32" width="27" height="22"/>
+                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="27" id="dyE-2O-hFC"/>
+                        <constraint firstAttribute="height" constant="22" id="kDH-jT-4KE"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
+                    <state key="normal">
+                        <color key="titleColor" red="0.50196078430000002" green="0.50196078430000002" blue="0.50196078430000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                    </state>
+                    <state key="highlighted">
+                        <color key="titleColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                    </state>
+                    <connections>
+                        <action selector="segmentAction:" destination="-1" eventType="touchDown" id="48"/>
+                    </connections>
+                </button>
+                <button opaque="NO" tag="1" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="41">
+                    <rect key="frame" x="213" y="32" width="27" height="22"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="22" id="5WZ-p5-z4r"/>
+                        <constraint firstAttribute="width" constant="27" id="7y9-CJ-3n4"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
+                    <state key="normal">
+                        <color key="titleColor" red="0.50196078430000002" green="0.50196078430000002" blue="0.50196078430000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                    </state>
+                    <state key="highlighted">
+                        <color key="titleColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                    </state>
+                    <connections>
+                        <action selector="segmentAction:" destination="-1" eventType="touchDown" id="47"/>
+                    </connections>
+                </button>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Q6n-pH-UoB">
+                    <rect key="frame" x="166" y="32" width="21" height="21"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="21" id="OcX-Dl-Van"/>
+                        <constraint firstAttribute="width" constant="21" id="gaL-Q5-gOU"/>
+                    </constraints>
+                    <state key="normal" image="goumai.png"/>
+                    <connections>
+                        <action selector="buyNewBtn:" destination="-1" eventType="touchUpInside" id="4sm-Xm-xiT"/>
+                    </connections>
+                </button>
+            </subviews>
+            <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+            <constraints>
+                <constraint firstItem="38" firstAttribute="top" secondItem="3" secondAttribute="top" id="BSd-xk-0Xm"/>
+                <constraint firstAttribute="trailing" secondItem="42" secondAttribute="trailing" constant="53" id="Bdh-CW-S93"/>
+                <constraint firstItem="42" firstAttribute="top" secondItem="3" secondAttribute="top" constant="32" id="ESQ-ls-q1p"/>
+                <constraint firstItem="37" firstAttribute="top" secondItem="3" secondAttribute="top" constant="32" id="N0V-ie-y22"/>
+                <constraint firstItem="41" firstAttribute="top" secondItem="3" secondAttribute="top" constant="32" id="Uw3-Pu-NNi"/>
+                <constraint firstItem="43" firstAttribute="top" secondItem="3" secondAttribute="top" constant="30" id="XNR-df-pix"/>
+                <constraint firstAttribute="trailing" secondItem="43" secondAttribute="trailing" constant="50" id="bqu-1z-hD5"/>
+                <constraint firstAttribute="bottom" secondItem="Q6n-pH-UoB" secondAttribute="bottom" constant="11" id="jOS-TJ-KKS"/>
+                <constraint firstAttribute="trailing" secondItem="38" secondAttribute="trailing" id="ozw-8f-byu"/>
+                <constraint firstItem="43" firstAttribute="leading" secondItem="Q6n-pH-UoB" secondAttribute="trailing" constant="21" id="pBt-dg-lRD"/>
+                <constraint firstAttribute="trailing" secondItem="37" secondAttribute="trailing" constant="16" id="pMc-5c-BEs"/>
+                <constraint firstItem="38" firstAttribute="leading" secondItem="3" secondAttribute="leading" id="rx2-H1-qkT"/>
+                <constraint firstItem="42" firstAttribute="leading" secondItem="41" secondAttribute="trailing" id="wKq-YW-bkX"/>
+            </constraints>
+            <nil key="simulatedStatusBarMetrics"/>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <point key="canvasLocation" x="3" y="87"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="goumai.png" width="22" height="22"/>
+        <image name="中英切换.png" width="69" height="28"/>
+        <image name="分享3.png" width="20" height="20"/>
+        <image name="阅读器banner.png" width="375" height="64"/>
+    </resources>
+    <simulatedMetricsContainer key="defaultSimulatedMetrics">
+        <simulatedStatusBarMetrics key="statusBar"/>
+        <simulatedOrientationMetrics key="orientation"/>
+        <simulatedScreenMetrics key="destination" type="retina4_7.fullscreen"/>
+    </simulatedMetricsContainer>
+</document>

@@ -1,0 +1,97 @@
+//
+//  IYCNoteContentView.m
+//  IYangCongReader
+//
+//  Created by 马腾 on 15/7/24.
+//  Copyright (c) 2015年 IYangCong. All rights reserved.
+//
+
+#import "IYCNoteContentView.h"
+#import "IYCNote.h"
+
+@interface IYCNoteContentView()<UITextViewDelegate>
+
+@property (nonatomic, strong) UILabel *selectLabel;
+@property (nonatomic, assign) id<IYCNoteContentDelegate>delegate;
+@property (nonatomic, strong) UITextView *contentTextView;
+@property (nonatomic, strong) UIButton *finishedBtn;
+
+
+@end
+
+@implementation IYCNoteContentView
+@synthesize delegate = _dg,selectLabel = _selectLabel,contentTextView = _contentTextView,finishedBtn = _finishedBtn;
+
+- (instancetype)initWithFrame:(CGRect)frame withNote:(IYCNote *)note withDelegate:(id)delegate
+{
+    if ([super initWithFrame:frame]) {
+        
+        _dg = delegate;
+        
+//        frame.size.width = frame.size.width;
+//        frame.size.height = frame.size.height/4;
+        
+        _selectLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 5, frame.size.width-30, 20)];
+        _selectLabel.lineBreakMode = NSLineBreakByTruncatingMiddle;
+        _selectLabel.font = [UIFont boldSystemFontOfSize:14.0];
+        _selectLabel.text = note.selectString;
+        _selectLabel.textAlignment = NSTextAlignmentLeft;
+        _selectLabel.textColor = [UIColor colorWithRed:111.0/255.0 green:216.0/255.0 blue:255.0/255.0 alpha:1.0];
+        _selectLabel.backgroundColor = [UIColor clearColor];
+        [self addSubview:_selectLabel];
+        
+//        @{@"lastSelectString":note.selectString,@"lastContent":note.noteContent,@"newSelectString":selectString,@"newContent":noteContent};
+        
+        _contentTextView = [[UITextView alloc] initWithFrame:CGRectMake(0, 30, frame.size.width, frame.size.height - 35)];
+        _contentTextView.text = note.noteContent;
+        _contentTextView.tag = note.noteID;
+        _contentTextView.scrollEnabled = YES;
+        _contentTextView.editable = YES;
+        _contentTextView.delegate = self;
+        _contentTextView.font = [UIFont boldSystemFontOfSize:13.0];
+        _contentTextView.textColor = [UIColor whiteColor];
+        _contentTextView.backgroundColor = [UIColor clearColor];
+        [self addSubview:_contentTextView];
+        
+        UIView *lineView = [[UIView alloc] initWithFrame:CGRectMake(0, frame.size.height, frame.size.width, 0.5)];
+        lineView.backgroundColor = [UIColor colorWithRed:92.0/255.0 green:92.0/255.0 blue:92.0/255.0 alpha:1.0];
+        [self addSubview:lineView];
+        
+    }
+    return self;
+
+}
+
+- (void) finished
+{
+    NSString *temp = [_contentTextView.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+    
+    if (!_contentTextView.text || _contentTextView.text.length==0 || temp.length == 0) {
+        UIAlertView * alert = [[UIAlertView alloc] initWithTitle:@"提示"
+                                                         message:@"请输入笔记内容。"
+                                                        delegate:nil
+                                               cancelButtonTitle:@"好的"
+                                               otherButtonTitles:nil, nil];
+        [alert show];
+        return;
+    }
+    [_finishedBtn removeFromSuperview];
+
+    if (_dg && [_dg respondsToSelector:@selector(finishedEditContent:)]) {
+        [_dg finishedEditContent:_contentTextView];
+    }
+}
+
+- (void)textViewDidBeginEditing:(UITextView *)textView
+{
+    _finishedBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    _finishedBtn.frame = CGRectMake(self.frame.size.width - 32, 10, 25, 20);
+    [_finishedBtn setTitle:@"保存" forState:UIControlStateNormal];
+    _finishedBtn.titleLabel.font = [UIFont systemFontOfSize:10.0];
+    [_finishedBtn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [_finishedBtn setBackgroundImage:[UIImage imageNamed:@"logout.png"] forState:UIControlStateNormal];
+    [_finishedBtn addTarget:self action:@selector(finished) forControlEvents:UIControlEventTouchUpInside];
+    [self addSubview:_finishedBtn];
+}
+
+@end

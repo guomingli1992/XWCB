@@ -1,0 +1,603 @@
+//
+//  AppDelegate.m
+//  iyangcong
+//
+//  Created by lxm on 2016/11/29.
+//  Copyright © 2016年 FLTRP. All rights reserved.
+//
+
+#import "AppDelegate.h"
+#import "ManuscriptViewController.h"
+#import "HomePageOneViewController.h"
+#import "FindViewController.h"
+#import "MineViewController.h"
+#import "PlusmanuscriptViewController.h"
+#import "IYCWelcomeViewController.h"
+#import "APPUtils.h"
+#import <UserNotifications/UserNotifications.h>
+#import "BPush.h"
+
+static BOOL isBackGroundActivateApplication;
+
+@interface AppDelegate ()
+@end
+
+@implementation AppDelegate
+@synthesize userBean;
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    _tmpBookId=@"0";
+    [WXApi registerApp:APP_ID];
+    [WeiboSDK enableDebugMode:YES];
+    [WeiboSDK registerApp:kAppKey];
+    _readingrecordlogid=@"0";
+    _studentUserId=@"0";
+    NSUserDefaults *userDefault = [NSUserDefaults standardUserDefaults];
+    NSString *isFirst = [userDefault objectForKey:@"KEY_IsFirst"];
+    if (![isFirst isEqualToString:@"NO"]) {
+        [userDefault setValue:@"0" forKey:@"buyCount"];
+        [userDefault setValue:@"0" forKey:@"msgCount"];
+
+        [userDefault setObject:@"0" forKey:@"isLoginIn"];
+        [userDefault setObject:@"" forKey:@"pwdNum"];
+        [userDefault setObject:@"" forKey:@"accountNum"];
+        [userDefault setObject:@"0" forKey:@"userId"];        
+        [userDefault setObject:@"0" forKey:@"semesterId"];    //班级ID标识，区分是否是学生用户
+        [userDefault setObject:@"0" forKey:@"autoWord"];      //标识是否自动加入生词本
+        [userDefault setObject:[NSNumber numberWithInt:0] forKey:KEY_GestureType];
+        [[NSUserDefaults standardUserDefaults] setObject:@"1" forKey:@"nightMode"];
+        [userDefault synchronize];
+        IYCAccount *account = [[IYCAccount alloc] init];
+        account.accountID = @"0";
+        account.fontSize = IYCFONTSIZE3;
+        account.brightness = 1.0;
+        account.nightMode = 1;
+        [[IYCDBAction sharedDBAction] saveAccount:account];
+        IYCBook *defaultBook=[[IYCDBAction sharedDBAction] queryBookByID:0];
+        IYCCurrentBookState *bookState = [[IYCCurrentBookState alloc] init];
+        bookState.bookId = defaultBook.bookId;
+        bookState.serverBookId = defaultBook.bookServerId;
+        bookState.accountId = @"0";
+        bookState.lastOprationTime = [NSDate stringFromDate:[NSDate date]];
+        [[IYCDBAction sharedDBAction] saveCurrentState:bookState];
+        [[IYCDBAction sharedDBAction] updateBookTimeByBookId:bookState.bookId];
+        [[IYCDBAction sharedDBAction] saveCurrentBookLocation:0 withBookId:defaultBook.bookId];
+    }
+    _isLoginIn=[userDefault objectForKey:@"isLoginIn"];
+    _userId=[userDefault objectForKey:@"userId"];
+    
+    long bookid = 0;
+    NSString *targetPath = [[IYCFileManager getBookSavePath:bookid] stringByAppendingPathComponent:[NSString stringWithFormat:@"%ld.zip",bookid]];
+    NSString *sourcePath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"0.zip"];
+    NSFileManager *defaultManager = [NSFileManager defaultManager];
+    if (![defaultManager fileExistsAtPath:targetPath]) {
+        BOOL test= [defaultManager copyItemAtPath:sourcePath toPath:targetPath error:nil];
+        DebugLog(@"test====%d",test);
+    }
+    
+    NSString *imageTargetPath = [[IYCFileManager getBookSavePath:bookid] stringByAppendingPathComponent:[NSString stringWithFormat:@"0Image"]];
+    NSString *imageSourcePath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"0Image"];
+    DebugLog(@"targetPath = %@, sourcePath = %@",targetPath,sourcePath);
+    
+    if (![defaultManager fileExistsAtPath:imageTargetPath]) {
+        BOOL test = [defaultManager copyItemAtPath:imageSourcePath toPath:imageTargetPath error:nil];
+        DebugLog(@"test====%d",test);
+    }
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(changeMainPage:) name:@"CHANGEMAINPAGE" object:nil];
+
+    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen]bounds]];
+    UINavigationController * rootView = nil;
+    [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleLightContent animated:NO];
+    
+    if (![isFirst isEqualToString:@"NO"]) {
+        
+        self.window.rootViewController=[[IYCWelcomeViewController alloc]init];
+        self.window.backgroundColor = [UIColor whiteColor];
+        [userDefault setObject:@"NO" forKey:@"KEY_IsFirst"];
+    }
+    else{
+        
+        if ([IYCCheckNetwork isServiceAvailable]) {
+            rootView=[[UINavigationController alloc] initWithRootViewController:[[HomePageOneViewController alloc] init]];
+        }
+        else
+            rootView=[[UINavigationController alloc] initWithRootViewController:[[ManuscriptViewController alloc] init]];
+        
+        rootView.navigationBar.tintColor=[UIColor whiteColor];
+        [[UINavigationBar appearance] setBackgroundImage:[UIImage imageNamed:@"navigationBar"] forBarMetrics:UIBarMetricsDefault];
+
+        self.window.rootViewController = rootView;
+        self.window.backgroundColor = [UIColor whiteColor];
+    }
+    [self.window makeKeyAndVisible];
+    
+    IQKeyboardManager *manager = [IQKeyboardManager sharedManager];
+    
+    manager.enable = YES;
+    
+    manager.shouldResignOnTouchOutside = YES;
+    
+    manager.shouldToolbarUsesTextFieldTintColor = YES;
+    
+    manager.enableAutoToolbar = NO;
+    userManager = [NSUserDefaults standardUserDefaults];
+    [self getKey];
+    [self getSecretKey];
+    [[IYCDBAction sharedDBAction] startMergeData];
+    
+    if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]) {
+        [NSThread detachNewThreadSelector:@selector(loadUnUpData) toTarget:self withObject:nil];
+    }
+    
+    // iOS10 下需要使用新的 API
+    
+    if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 10.0) {
+#ifdef NSFoundationVersionNumber_iOS_9_x_Max
+        UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
+        
+        [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert + UNAuthorizationOptionSound + UNAuthorizationOptionBadge)
+                              completionHandler:^(BOOL granted, NSError * _Nullable error) {
+                                  // Enable or disable features based on authorization.
+                                  if (granted) {
+                                      [application registerForRemoteNotifications];
+                                  }
+                              }];
+#endif
+    }
+    else if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0) {
+        UIUserNotificationType myTypes = UIUserNotificationTypeBadge | UIUserNotificationTypeSound | UIUserNotificationTypeAlert;
+        
+        UIUserNotificationSettings *settings = [UIUserNotificationSettings settingsForTypes:myTypes categories:nil];
+        [[UIApplication sharedApplication] registerUserNotificationSettings:settings];
+    }else {
+//        UIRemoteNotificationType myTypes = UIRemoteNotificationTypeBadge|UIRemoteNotificationTypeAlert|UIRemoteNotificationTypeSound;
+//        [[UIApplication sharedApplication] registerForRemoteNotificationTypes:myTypes];
+    }
+    
+#pragma mark 上线 AppStore 时需要修改BPushMode为BPushModeProduction 需要修改Apikey为自己的Apikey
+    
+    // 在 App 启动时注册百度云推送服务，需要提供 Apikey
+    [BPush registerChannel:launchOptions apiKey:@"YAGscwW34vFlbvkU44cGX46X" pushMode:BPushModeDevelopment withFirstAction:@"打开" withSecondAction:@"回复" withCategory:@"test" useBehaviorTextInput:YES isDebug:NO];
+    // App 是用户点击推送消息启动
+    NSDictionary *userInfo = [launchOptions objectForKey:UIApplicationLaunchOptionsRemoteNotificationKey];
+    if (userInfo) {
+        NSLog(@"从消息启动:%@",userInfo);
+        [BPush handleNotification:userInfo];
+    }
+    //角标清0
+    [[UIApplication sharedApplication] setApplicationIconBadgeNumber:0];
+
+
+    
+    return YES;
+}
+
+- (void)testLocalNotifi
+{
+    NSLog(@"测试本地通知啦！！！");
+    NSDate *fireDate = [[NSDate new] dateByAddingTimeInterval:5];
+    [BPush localNotification:fireDate alertBody:@"这是本地通知" badge:3 withFirstAction:@"打开" withSecondAction:@"关闭" userInfo:nil soundName:nil region:nil regionTriggersOnce:YES category:nil useBehaviorTextInput:YES];
+}
+
+// 此方法是 用户点击了通知，应用在前台 或者开启后台并且应用在后台 时调起
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
+{
+    // 打印到日志 textView 中
+    
+    NSLog(@"********** iOS7.0之后 background **********");
+    //杀死状态下，直接跳转到跳转页面。
+    if (application.applicationState == UIApplicationStateInactive && !isBackGroundActivateApplication)
+    {
+//        BookstoreViewController *skipCtr = [[BookstoreViewController alloc]init];
+        // 根视图是nav 用push 方式跳转
+//        [self.window.rootViewController.selectedViewController pushViewController:skipCtr animated:YES];
+        NSLog(@"applacation is unactive ===== %@",userInfo);
+        /*
+         // 根视图是普通的viewctr 用present跳转
+         [_tabBarCtr.selectedViewController presentViewController:skipCtr animated:YES completion:nil]; */
+    }
+    // 应用在后台。当后台设置aps字段里的 content-available 值为 1 并开启远程通知激活应用的选项
+    if (application.applicationState == UIApplicationStateBackground) {
+        NSLog(@"background is Activated Application ");
+        // 此处可以选择激活应用提前下载邮件图片等内容。
+        isBackGroundActivateApplication = YES;
+        UIAlertView *alertView =[[UIAlertView alloc]initWithTitle:@"收到一条消息" message:userInfo[@"aps"][@"alert"] delegate:self cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+        [alertView show];
+    }
+//    [self.viewController addLogString:[NSString stringWithFormat:@"Received Remote Notification :\n%@",userInfo]];
+    else {
+        completionHandler(UIBackgroundFetchResultNewData);
+        UIAlertView *alertView =[[UIAlertView alloc]initWithTitle:@"收到一条消息" message:userInfo[@"aps"][@"alert"] delegate:self cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+        [alertView show];
+    }
+    NSLog(@"backgroud : %@",userInfo);
+
+}
+
+// 在 iOS8 系统中，还需要添加这个方法。通过新的 API 注册推送服务
+- (void)application:(UIApplication *)application didRegisterUserNotificationSettings:(UIUserNotificationSettings *)notificationSettings
+{
+    
+    [application registerForRemoteNotifications];
+    
+    
+}
+
+
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken
+{
+    NSLog(@"test:%@",deviceToken);
+    [BPush registerDeviceToken:deviceToken];
+    [BPush bindChannelWithCompleteHandler:^(id result, NSError *error) {
+//        [self.viewController addLogString:[NSString stringWithFormat:@"Method: %@\n%@",BPushRequestMethodBind,result]];
+        // 需要在绑定成功后进行 settag listtag deletetag unbind 操作否则会失败
+        // 网络错误
+        if (error) {
+            return ;
+        }
+        if (result) {
+            // 确认绑定成功
+            if ([result[@"error_code"]intValue]!=0) {
+                return;
+            }
+            [BPush setTag:@"Mytag" withCompleteHandler:^(id result, NSError *error) {
+                if (result) {
+                    NSLog(@"设置tag成功");
+                }
+            }];
+        }
+    }];
+    
+    // 打印到日志 textView 中
+//    [self.viewController addLogString:[NSString stringWithFormat:@"Register use deviceToken : %@",deviceToken]];
+    
+    
+}
+
+// 当 DeviceToken 获取失败时，系统会回调此方法
+- (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error
+{
+    NSLog(@"DeviceToken 获取失败，原因：%@",error);
+}
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo
+{
+    // App 收到推送的通知
+    [BPush handleNotification:userInfo];
+    NSLog(@"********** ios7.0之前 **********");
+    // 应用在前台 或者后台开启状态下，不跳转页面，让用户选择。
+    if (application.applicationState == UIApplicationStateActive || application.applicationState == UIApplicationStateBackground) {
+        NSLog(@"acitve or background");
+        UIAlertView *alertView =[[UIAlertView alloc]initWithTitle:@"收到一条消息" message:userInfo[@"aps"][@"alert"] delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"确定", nil];
+        [alertView show];
+    }
+    else//杀死状态下，直接跳转到跳转页面。
+    {
+//        SkipViewController *skipCtr = [[SkipViewController alloc]init];
+//        [_tabBarCtr.selectedViewController pushViewController:skipCtr animated:YES];
+    }
+    
+//    [self.viewController addLogString:[NSString stringWithFormat:@"Received Remote Notification :\n%@",userInfo]];
+    
+    NSLog(@"%@",userInfo);
+    
+}
+
+- (void)application:(UIApplication *)application didReceiveLocalNotification:(UILocalNotification *)notification
+{
+    NSLog(@"接收本地通知啦！！！");
+    [BPush showLocalNotificationAtFront:notification identifierKey:nil];
+}
+
+
+- (void)loadUnUpData {
+    NSMutableArray *infoArray=[[IYCDBAction sharedDBAction] queryBuycoinRecordByUserId:[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]];
+    
+    for (NSDictionary *infoDict in infoArray) {
+        
+        NSString*urlString =[NSString stringWithFormat:@"%@app/personCenter/savepayrecord",webAddress];
+        
+        NSDictionary *dict12=@{@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"time":[infoDict objectForKey:@"time"],@"receipt":[infoDict objectForKey:@"receipt"],@"money":[infoDict objectForKey:@"money"],@"coin":[infoDict objectForKey:@"coin"],@"deviceType":@"2"};
+        
+        AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
+        
+        // 接收的输入类型
+        manager.responseSerializer = [AFHTTPResponseSerializer serializer];
+        
+        [manager POST:urlString parameters:dict12 progress:^(NSProgress * _Nonnull uploadProgress) {
+            
+        } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+            NSDictionary*resDict= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+            if ([[resDict objectForKey:@"statusCode"] intValue]==0) {
+                if ([[[resDict objectForKey:@"data"] objectForKey:@"status"] intValue]==0) {
+                    
+                    [[IYCDBAction sharedDBAction] deleteBuyCoinRecordByUserId:[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] buyTime:[infoDict objectForKey:@"time"]];
+                    
+                }
+            }
+            
+        } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+            
+        }];
+        
+    }
+    
+    [NSThread exit];
+}
+
+
+- (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url {
+    if ([_loginType isEqualToString:@"1"]) {
+        return [WXApi handleOpenURL:url delegate:self];
+    }
+    else if ([_loginType isEqualToString:@"2"]) {
+        return [TencentOAuth HandleOpenURL:url];
+    }
+    else if ([_loginType isEqualToString:@"3"]) {
+        return [WeiboSDK handleOpenURL:url delegate:self];
+    }
+    else return NO;
+}
+
+- (BOOL)application:(UIApplication *)app openURL:(nonnull NSURL *)url options:(nonnull NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
+    if ([_loginType isEqualToString:@"1"]) {
+        return [WXApi handleOpenURL:url delegate:self];
+    }
+    else if ([_loginType isEqualToString:@"2"]) {
+        return [TencentOAuth HandleOpenURL:url];
+    }
+    else if ([_loginType isEqualToString:@"3"]) {
+        return [WeiboSDK handleOpenURL:url delegate:self];
+    }
+    else return NO;
+}
+
+
+- (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
+    if ([_loginType isEqualToString:@"1"]) {
+        return [WXApi handleOpenURL:url delegate:self];
+    }
+    else if ([_loginType isEqualToString:@"2"]) {
+        return [TencentOAuth HandleOpenURL:url];
+    }
+    else if ([_loginType isEqualToString:@"3"]) {
+        return [WeiboSDK handleOpenURL:url delegate:self];
+    }
+    else return NO;
+}
+
+/**
+ * onReq微信终端向第三方程序发起请求，要求第三方程序响应。第三方程序响应完后必须调用
+ * sendRsp返回。在调用sendRsp返回时，会切回到微信终端程序界面。
+ */
+- (void)onReq:(BaseReq *)req {
+    NSLog(@" ----req %@",req);
+}
+
+/**
+ *  如果第三方程序向微信发送了sendReq的请求，那么onResp会被回调。sendReq请求调用后，
+ *  会切到微信终端程序界面。
+ */
+- (void)onResp:(BaseResp *)resp {
+    if ([_loginType isEqualToString:@"1"]) {
+        SendAuthResp *aresp = (SendAuthResp *)resp;
+        if (aresp.errCode == 0) { // 用户同意
+            NSLog(@"errCode = %d", aresp.errCode);
+            NSLog(@"code = %@", aresp.code);
+            
+            // 获取access_token
+            //      格式：https://api.weixin.qq.com/sns/oauth2/access_token?appid=APPID&secret=SECRET&code=CODE&grant_type=authorization_code
+            NSString *url =[NSString stringWithFormat:@"https://api.weixin.qq.com/sns/oauth2/access_token?appid=%@&secret=%@&code=%@&grant_type=authorization_code", APP_ID, APP_SECRET, aresp.code];
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                NSURL *zoneUrl = [NSURL URLWithString:url];
+                NSString *zoneStr = [NSString stringWithContentsOfURL:zoneUrl encoding:NSUTF8StringEncoding error:nil];
+                NSData *data = [zoneStr dataUsingEncoding:NSUTF8StringEncoding];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (data) {
+                        NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:nil];
+                        _unionid=[dic objectForKey:@"unionid"];
+                        _openid = [dic objectForKey:@"openid"]; // 初始化
+                        _access_token = [dic objectForKey:@"access_token"];
+                        //                    NSLog(@"openid = %@", _openid);
+                        //                    NSLog(@"access = %@", [dic objectForKey:@"access_token"]);
+                        NSLog(@"dic = %@", dic);
+                        [self getUserInfo]; // 获取用户信息
+                    }
+                });
+            });
+        } else if (aresp.errCode == -2) {
+            NSLog(@"用户取消登录");
+        } else if (aresp.errCode == -4) {
+            NSLog(@"用户拒绝登录");
+        } else {
+            NSLog(@"errCode = %d", aresp.errCode);
+            NSLog(@"code = %@", aresp.code);
+        }
+    }
+    else if ([_loginType isEqualToString:@"2"]) {
+        NSLog(@" ----resp %@",resp);
+
+    }
+    
+    
+}
+
+// 获取用户信息
+- (void)getUserInfo {
+    NSString *url = [NSString stringWithFormat:@"https://api.weixin.qq.com/sns/userinfo?access_token=%@&openid=%@", self.access_token, self.openid];
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSURL *zoneUrl = [NSURL URLWithString:url];
+        NSString *zoneStr = [NSString stringWithContentsOfURL:zoneUrl encoding:NSUTF8StringEncoding error:nil];
+        NSData *data = [zoneStr dataUsingEncoding:NSUTF8StringEncoding];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (data) {
+                NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:nil];
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"weixinresponse" object:dic]; // 发送通知
+            }
+        });
+    });
+}
+
+//    刷新access_token有效期。获取第一步的code后，请求以下链接进行refresh_token https://api.weixin.qq.com/sns/oauth2/refresh_token?appid=APPID&grant_type=refresh_token&refresh_token=REFRESH_TOKEN
+- (void)refresh {
+    //    NSString *url =[NSString stringWithFormat:@"https://api.weixin.qq.com/sns/oauth2/refresh_token?appid=%@&grant_type=refresh_token&refresh_token=%@", APP_ID, [dic objectForKey:@"access_token"]];
+    //
+    //    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    //        NSURL *zoneUrl = [NSURL URLWithString:url];
+    //        NSString *zoneStr = [NSString stringWithContentsOfURL:zoneUrl encoding:NSUTF8StringEncoding error:nil];
+    //        NSData *data = [zoneStr dataUsingEncoding:NSUTF8StringEncoding];
+    //        dispatch_async(dispatch_get_main_queue(), ^{
+    //            if (data) {
+    //                NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:nil];
+    //                NSLog(@"dic = %@", dic);
+    //            }
+    //        });
+    //    });
+}
+
+
+
+
+/**
+ 处理QQ在线状态的回调
+ */
+- (void)isOnlineResponse:(NSDictionary *)response{
+    
+}
+
+
+
+- (void)didReceiveWeiboRequest:(WBBaseRequest *)request
+{
+    
+}
+
+- (void)didReceiveWeiboResponse:(WBBaseResponse *)response
+{
+    if ([response isKindOfClass:WBAuthorizeResponse.class])
+    {
+        self.wbtoken=[(WBAuthorizeResponse *)response accessToken];
+        if (_wbtoken) {
+            NSString *urlStr=[NSString stringWithFormat:@"https://api.weibo.com/2/users/show.json?uid=%@&access_token=%@",[(WBAuthorizeResponse *)response userID],[(WBAuthorizeResponse *)response accessToken]];
+            urlStr=[urlStr stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+            NSURL *url=[NSURL URLWithString:urlStr];
+            
+            //通过URL设置网络请求
+            NSURLRequest *request = [[NSURLRequest alloc]initWithURL:url cachePolicy:NSURLRequestUseProtocolCachePolicy timeoutInterval:10];
+            
+            NSError *error=nil;
+            //获取服务器数据
+            NSData *requestData= [NSURLConnection sendSynchronousRequest:request returningResponse:nil error:&error];
+            if (error) {
+                NSLog(@"错误信息:%@",[error localizedDescription]);
+            }else{
+                NSDictionary*resDict=[NSJSONSerialization JSONObjectWithData:requestData options:NSJSONReadingAllowFragments error:nil];
+
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"weiboresponse" object:resDict]; // 发送通知
+            }
+        }
+    }
+}
+
+
+
+- (void)applicationWillResignActive:(UIApplication *)application {
+    // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
+    // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
+}
+
+
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
+    // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
+}
+
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+    // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
+}
+
+
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+    // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+}
+
+
+- (void)applicationWillTerminate:(UIApplication *)application {
+    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+}
+
+//主界面tab键切换
+-(void)changeMainPage:(NSNotification *)notification
+{
+    
+    int i=[notification.object intValue];
+    HomePageOneViewController *first=[[HomePageOneViewController alloc] init];
+    ManuscriptViewController *second=[[ManuscriptViewController alloc] init];
+    PlusmanuscriptViewController *third=[[PlusmanuscriptViewController alloc] init];
+    FindViewController *fourth=[[FindViewController alloc] init];
+    MineViewController *fifth = [[MineViewController alloc] init];
+    NSMutableArray*controllersArry=[[NSMutableArray alloc] initWithObjects:first,second,third,fourth,fifth, nil];
+    UINavigationController * rootView = (UINavigationController*)self.window.rootViewController;
+    rootView=[[UINavigationController alloc] initWithRootViewController:[controllersArry objectAtIndex:(i-100)]];
+    
+    [rootView.navigationBar setTitleTextAttributes: @{NSFontAttributeName:[UIFont systemFontOfSize:19],NSForegroundColorAttributeName:[UIColor whiteColor]}];
+    rootView.navigationBar.tintColor=[UIColor whiteColor];
+//    [rootView.navigationBar setBarTintColor:[UIColor colorWithHexString:mainColor]];
+//    rootView.navigationBar.backgroundColor =[UIColor colorWithHexString:mainColor];
+    
+    [[UINavigationBar appearance] setBackgroundImage:[UIImage imageNamed:@"navigationBar"] forBarMetrics:UIBarMetricsDefault];
+    self.window.rootViewController = rootView;
+    
+}
+
+- (void)getSecretKey
+{
+    keyservice = [[IYCSecretKeyService alloc] init];
+    
+//    keyservice.delegate = self;
+//    [keyservice getSecretKey];
+
+    
+    NSDictionary *dict = [NSDictionary dictionaryWithObjectsAndKeys:[keyservice getDeviceType:[keyservice getPhoneModel]], @"deviceType", [keyservice getDeviceToken], @"deviceToken", nil];
+    
+    [[IYCNetSetting sharedManager] requestWithMethod:GET1 WithPath:@"EncryptKey/SecretKey" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+        if ([dic objectForKey:@"Key"]&&[[dic objectForKey:@"errorCode"] intValue]==0) {
+            [[NSUserDefaults standardUserDefaults] setObject:[dic objectForKey:@"Key"] forKey:@"theLastKey"];
+        }
+    } WithFailurBlock:^(NSError *error) {
+    }];
+    
+}
+- (void)getKey
+{
+    service = [[IYCService alloc] init];
+    NSString *theString=[NSString stringWithFormat:@"%@%@",[service getDeviceType:[service getPhoneModel]],[service getDeviceToken]];
+    theString=@"98d66529248df976eb3f5365357166e567";
+    NSString *md5Token = [IYCMD5Util md5:theString];
+    
+    NSData *sKeyData = [IYCSecurityManager hexString2Byte:md5Token];
+    [userManager setObject:sKeyData forKey:@"ssKey"];
+    [userManager synchronize];
+}
+
+#pragma mark -
+#pragma mark QPTopChartServiceDelegate methods
+- (void)requestDidSuccess:(id)data {
+        IYCSecretKey *secretKey = (IYCSecretKey *)data;
+        NSData *serverKeyData = [IYCSecurityManager hexString2Byte:secretKey.key];
+        
+        if (secretKey) {
+            [userManager setObject:serverKeyData forKey:@"serverKey"];
+            NSLog(@"%@ %@",serverKeyData,[userManager objectForKey:@"serverKey"]);
+        }
+}
+
+- (void)requestDidFailed:(id)data {
+    DebugLog(@"getServerKey Failed");
+}
+
+
+@end

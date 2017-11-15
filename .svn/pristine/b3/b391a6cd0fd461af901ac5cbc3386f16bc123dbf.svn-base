@@ -1,0 +1,83 @@
+//
+//  IYCNetSetting.m
+//  iyangcong
+//
+//  Created by lxm on 2017/1/13.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "IYCNetSetting.h"
+
+@implementation IYCNetSetting
+
++ (instancetype)sharedManager {
+    static IYCNetSetting *manager = nil;
+    static dispatch_once_t pred;
+    dispatch_once(&pred, ^{
+        manager = [[self alloc] initWithBaseURL:[NSURL URLWithString:webAddress]];
+    });
+    return manager;
+}
+
+-(instancetype)initWithBaseURL:(NSURL *)url
+{
+    self = [super initWithBaseURL:url];
+    if (self) {
+        // 请求超时设定
+        self.requestSerializer.timeoutInterval = 10.0;
+        self.requestSerializer.cachePolicy = NSURLRequestReloadIgnoringLocalCacheData;
+        [self.requestSerializer setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+        [self.requestSerializer setValue:url.absoluteString forHTTPHeaderField:@"Referer"];
+        
+        self.responseSerializer.acceptableContentTypes = [NSSet setWithObjects:@"application/json", @"text/plain", @"text/javascript", @"text/json", @"text/html", nil];
+        
+        self.securityPolicy.allowInvalidCertificates = YES;
+    }
+    return self;
+}
+
+- (void)requestWithMethod:(HTTPMethod)method
+                 WithPath:(NSString *)path
+               WithParams:(NSDictionary*)params
+         WithSuccessBlock:(requestSuccessBlock)success
+          WithFailurBlock:(requestFailureBlock)failure
+{
+    NSMutableDictionary *paramss=[[NSMutableDictionary alloc]initWithDictionary:params];
+    [paramss setObject:@"2" forKey:@"deviceType"];
+    switch (method) {
+        case GET1:{
+            [self GET:path parameters:paramss progress:nil success:^(NSURLSessionTask *task, NSDictionary * responseObject) {
+//                NSLog(@"JSON: %@", responseObject);
+                success(responseObject);
+            } failure:^(NSURLSessionTask *operation, NSError *error) {
+                NSLog(@"Error: %@", error);
+                failure(error);
+            }];
+            break;
+        }
+        case POST1:{
+            [self POST:path parameters:paramss progress:nil success:^(NSURLSessionTask *task, NSDictionary * responseObject) {
+//                NSLog(@"JSON: %@", responseObject);
+                success(responseObject);
+            } failure:^(NSURLSessionTask *operation, NSError *error) {
+                NSLog(@"Error: %@", error);
+//                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:error.localizedDescription delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+//                [alert show];
+                failure(error);
+//                [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+
+            }];
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+- (void) dimissAlert:(UIAlertView *)alert {
+    if(alert){
+        [alert dismissWithClickedButtonIndex:[alert cancelButtonIndex] animated:YES];
+    }
+}
+@end
+

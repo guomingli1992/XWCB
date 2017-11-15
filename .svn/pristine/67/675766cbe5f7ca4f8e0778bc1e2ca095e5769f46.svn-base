@@ -1,0 +1,33 @@
+//
+//  IYCUpdateBookList.h
+//  IYangCongReader
+//
+//  Created by haley on 4/26/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCRequest.h"
+@interface IYCUpdateBook : IYCRequest
+{
+    long bookId;
+    NSString *accountId;
+    int  paragraphNo;
+    int  chapterNo;
+    double readShedule;
+    NSString *timestamp;
+    int languageType;
+}
+
+@property (nonatomic,retain) NSString *timestamp;
+@property (nonatomic,retain) NSString *accountId;
+@property (nonatomic)long bookId;
+@property (nonatomic)int  paragraphNo;
+@property (nonatomic)int chapterNo;
+@property (nonatomic)double readShedule;
+@property (nonatomic)int languageType;
+
+- (NSString *)getJSONString;
+
+- (NSDictionary *)getJSONDictinary;
+@end

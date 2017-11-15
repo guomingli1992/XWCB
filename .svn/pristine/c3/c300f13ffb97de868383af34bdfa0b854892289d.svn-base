@@ -1,0 +1,323 @@
+//
+//  IYCFileManager.m
+//  Reader
+//
+//  Created by haley on 13-3-8.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCFileManager.h"
+#import "ZipArchive.h"
+#import "IYCSecurityManager.h"
+
+#define SAVE_BOOK_DIR_NAME @"books"
+#define TEMP_SAVE_BOOK_DIR_NAME @"temp"
+#define SAVE_PREVIEW_BOOK_DIR_NAME @"0"
+#define SAVE_ADCACHE_DIR_NAME @"ADCache"
+#define BOOK_ZIP_EXTENSION @"zip"
+
+@implementation IYCFileManager
+
+
++ (NSString *)getBundlePath {
+	return [[NSBundle mainBundle] resourcePath];
+}
+
++ (NSString *)getDocumentPath {
+	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+	return [paths objectAtIndex:0];
+}
+
++ (NSString *)getCachesDir {
+	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+	return [paths objectAtIndex:0];
+}
+
++ (NSString *)createOrGetDirWithName:(NSString *)dirPathName {
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	NSError *error = nil;
+	
+	if (![fileManager fileExistsAtPath:dirPathName]) {
+		if(![fileManager createDirectoryAtPath:dirPathName withIntermediateDirectories:YES attributes:nil error:&error]) {
+			DebugLog(@"ERROR: Failed to create dir path %@ with comming message %@ .", dirPathName,[error localizedDescription]);
+		}
+	}
+	return dirPathName;
+}
+
++ (NSString *)getBundlePlistPathByName: (NSString *)name {
+	return [[IYCFileManager getBundlePath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.plist",name]];
+}
+
++ (NSString *)getBundleResourcePath: (NSString *)picName {
+	return [[IYCFileManager getBundlePath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.png",picName]];
+}
+
++ (NSString *)getDataBasePathByName:(NSString *)name {
+	return [[IYCFileManager getBundlePath] stringByAppendingPathComponent:name];
+}
+
++ (NSString *)getBookSavePath:(long)bookID {
+    NSString *fileSaveDir = [[IYCFileManager getCachesDir] stringByAppendingPathComponent:SAVE_BOOK_DIR_NAME];
+    fileSaveDir =[fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%ld", bookID]];
+    return [IYCFileManager createOrGetDirWithName:fileSaveDir];
+}
+
++ (NSString *)getBookTempSavePath {
+    NSString *fileSaveDir = [[IYCFileManager getCachesDir] stringByAppendingPathComponent:TEMP_SAVE_BOOK_DIR_NAME];
+    return [IYCFileManager createOrGetDirWithName:fileSaveDir];
+}
+
++ (NSString *)getResourcePath:(int)bookID resource:(NSString *)resource {
+    NSString *fileSaveDir = [[IYCFileManager getCachesDir] stringByAppendingPathComponent:SAVE_BOOK_DIR_NAME];
+	NSString *filePath = [fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%d/%@", bookID, resource]];
+    return filePath;
+}
+
++ (NSString *)getBookTocThumbnailPath:(int)bookID thumbnail:(NSString *)thumbnail {
+    NSString *fileSaveDir = [[IYCFileManager getCachesDir] stringByAppendingPathComponent:SAVE_BOOK_DIR_NAME];
+	NSString *filePath = [fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%d/%@", bookID, thumbnail]];
+    return filePath;
+}
+
++ (NSString *)getBookPageFilePath:(int)bookID pageFile:(NSString *)pageFile {
+    NSString *fileSaveDir = [[IYCFileManager getCachesDir] stringByAppendingPathComponent:SAVE_BOOK_DIR_NAME];
+	return [fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%d/%@", bookID, pageFile]];
+}
+
++ (NSString *)getBookCoverFilePath:(long)bookID imageFile:(NSString *)imageFile {
+    NSString *fileSaveDir = [[IYCFileManager getCachesDir] stringByAppendingPathComponent:SAVE_BOOK_DIR_NAME];
+    //DebugLog(@"%@",[fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%ld/%@", bookID, imageFile]]);
+	return [fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%ld/%@", bookID, imageFile]];
+}
+
++ (NSString *)getOnlineSourceFilePath:(NSInteger)bookId pageNum:(int)num overlayID:(NSString *)ID sourceType:(NSString *)type {
+    NSString *sourcePath = [IYCFileManager getResourcePath:bookId resource:@"Resources"];
+    return [sourcePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%d_%@.%@",num,ID,type]];
+}
+
++ (BOOL)removeOnlineSourceTempFiles:(NSInteger)num overlay_ID:(NSString *)ID sourcePostfix:(NSString *)postfix {
+	NSString *path = [[IYCFileManager getBookTempSavePath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%d_%@.%@.temp",num,ID,postfix]];
+	return [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
+}
+
++ (BOOL)removeOnlineSourceFiles:(NSInteger)bookId pageNum:(int)num overlayID:(NSString *)ID sourceType:(NSString *)type {
+	NSString *sourcePath = [IYCFileManager getResourcePath:bookId resource:@"Resources"];
+	NSString *path = [sourcePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%d_%@.%@",num,ID,type]];
+	
+	return [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
+}
+
+//+ (NSString *)getPreviousPreviewPath {
+//    return [[IYCFileManager getCachesDir] stringByAppendingPathComponent:SAVE_PREVIEW_BOOK_DIR_NAME];
+//}
+
++ (NSString *)getPreviewResourcePath:(NSString *)resource {
+    NSString *fileSaveDir = [[[IYCFileManager getCachesDir] stringByAppendingPathComponent:SAVE_BOOK_DIR_NAME] stringByAppendingPathComponent:SAVE_PREVIEW_BOOK_DIR_NAME];
+    return [fileSaveDir stringByAppendingPathComponent:resource];
+}
+
++ (NSString *)getPreviewBookTocThumbnailPath:(int)bookID thumbnail:(NSString *)thumbnail {
+    NSString *fileSaveDir = [[[IYCFileManager getCachesDir] stringByAppendingPathComponent:SAVE_BOOK_DIR_NAME]  stringByAppendingPathComponent:SAVE_PREVIEW_BOOK_DIR_NAME];
+    return [fileSaveDir stringByAppendingPathComponent:thumbnail];
+}
+
+/**
+ * 解压zip文件
+ */
++ (BOOL)unzipBook:(long)bookId progress:(id)view{
+	
+	NSString *zipFilePath = [[IYCFileManager getBookSavePath:bookId] stringByAppendingPathComponent:[NSString stringWithFormat:@"%ld.%@", bookId,BOOK_ZIP_EXTENSION]];
+    NSString *fileDirPath = [[IYCFileManager getBookSavePath:bookId] stringByAppendingPathComponent:[NSString stringWithFormat:@"%ld", bookId]];
+	
+	BOOL isDir = YES;
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	if([fileManager fileExistsAtPath:fileDirPath isDirectory:(&isDir)] && isDir) {
+		[fileManager removeItemAtPath:fileDirPath error:nil];
+	}
+	[fileManager createDirectoryAtPath:fileDirPath withIntermediateDirectories:YES attributes:nil error:nil];
+	
+	BOOL isSuccessful = NO;
+    if ([fileManager fileExistsAtPath:zipFilePath]) {
+        ZipArchive *zipArchive = [[ZipArchive alloc] init];
+        if ([zipArchive UnzipOpenFile:zipFilePath]) {
+            isSuccessful = [zipArchive UnzipFileTo:fileDirPath overWrite:YES];
+			[zipArchive UnzipCloseFile];
+        }
+    }
+    
+    if (!isSuccessful) {
+        return isSuccessful;
+    }
+    
+    //**unzip epub file-----start
+    NSArray *fileNameList = [fileManager contentsOfDirectoryAtPath:fileDirPath error:nil];
+
+    NSString *epubFilePath = @"";
+    NSString *epubFileDirPath = @"";
+    
+    for (int i = 0; i < [fileNameList count] ; i++) {
+        NSString *fileName = [fileNameList objectAtIndex:i];
+//        DebugLog(@"file name :  %@", fileName);
+        epubFilePath = [fileDirPath stringByAppendingPathComponent:fileName];
+        NSString *tFileName = [fileName hasSuffix:@"zh.epub"]? @"UnzippedChineseEpub" : @"UnzippedEnglishEpub";
+        epubFileDirPath = [fileDirPath stringByAppendingPathComponent:tFileName];
+        
+        if([fileManager fileExistsAtPath:epubFileDirPath isDirectory:(&isDir)] && isDir) {
+            [fileManager removeItemAtPath:epubFileDirPath error:nil];
+        }
+        [fileManager createDirectoryAtPath:epubFileDirPath withIntermediateDirectories:YES attributes:nil error:nil];
+        
+        if ([fileManager fileExistsAtPath:epubFilePath]) {
+            ZipArchive *zipArchive = [[ZipArchive alloc] init];
+            if ([zipArchive UnzipOpenFile:epubFilePath]) {
+                isSuccessful = [zipArchive UnzipFileTo:epubFileDirPath overWrite:YES];
+                [zipArchive UnzipCloseFile];
+            }
+        }
+        
+        // decrpt html file
+        epubFileDirPath = [epubFileDirPath stringByAppendingPathComponent:@"OEBPS"];
+        NSArray *htmlFileList = [fileManager contentsOfDirectoryAtPath:epubFileDirPath error:nil];
+        for (int j= 0; j < [htmlFileList count]; j++)
+         {
+            NSString *fileName = [htmlFileList objectAtIndex:j];
+            if ([fileName hasSuffix:@"html"])
+             {
+                  NSString * tempPath = [epubFileDirPath stringByAppendingPathComponent:[htmlFileList objectAtIndex:j]];
+                 //DebugLog(@"epath :  %@", tempPath);
+                 IYCSecurityManager *manager = [[IYCSecurityManager alloc] init];
+                  [manager decryptWithFilePath:tempPath];
+             }
+        }
+    }
+    //**unzip epub file---end
+	
+	DebugLog(@"unzip = %d",isSuccessful ? 1 : 0);
+    return isSuccessful;
+}
+
+//+ (void)unzipWidgetByBook:(int)bookId{
+//	NSFileManager *fileManager = [NSFileManager defaultManager];
+//	
+//	int bookid = 0;
+//	if (!type) {
+//		bookid = bookId;
+//	}
+//	
+//	NSString *zipWidgetPath = [[IYCFileManager getBookSavePath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%d/Resources", bookid]];
+//	
+//	NSArray *zipWidgets = [[fileManager contentsOfDirectoryAtPath:zipWidgetPath error:nil] pathsMatchingExtensions:[NSArray arrayWithObjects:@"webzip", nil]];
+//	
+//	for (NSString *str in zipWidgets)
+//	{
+//		NSString *zipFilePath = [zipWidgetPath stringByAppendingPathComponent:str];
+//		NSString *fileDirPath = [zipWidgetPath stringByAppendingPathComponent:[str stringByDeletingPathExtension]];
+//		DebugLog(@"zipFilePath = %@,   fileDirPath = %@",zipFilePath,fileDirPath);
+//		
+//		BOOL isDir = YES;
+//		if([fileManager fileExistsAtPath:fileDirPath isDirectory:(&isDir)] && isDir) {
+//			[fileManager removeItemAtPath:fileDirPath error:nil];
+//		}
+//		[fileManager createDirectoryAtPath:fileDirPath withIntermediateDirectories:YES attributes:nil error:nil];
+//		
+//		BOOL isSuccessful = NO;
+//		if ([fileManager fileExistsAtPath:zipFilePath]) {
+//			ZipArchive *zipArchive = [[ZipArchive alloc] init];
+//			if ([zipArchive UnzipOpenFile:zipFilePath]) {
+//				isSuccessful = [zipArchive UnzipFileTo:fileDirPath overWrite:YES];
+//				[zipArchive UnzipCloseFile];
+//			}
+//		}
+//	}
+//}
+
++ (void)removeZipFile:(long)bookId {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString *zipFilePath = [[IYCFileManager getBookSavePath:bookId] stringByAppendingPathComponent:[NSString stringWithFormat:@"%ld.%@", bookId,BOOK_ZIP_EXTENSION]];
+	if ([fileManager fileExistsAtPath:zipFilePath]) {
+		[fileManager removeItemAtPath:zipFilePath error:nil];
+	}
+}
+
++ (void)removeZipWidget:(int)bookId isPreview: (BOOL)type {
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	
+	int bookid = 0;
+	if (!type) {
+		bookid = bookId;
+	}
+	
+    NSString *zipWidgetPath = [[IYCFileManager getBookSavePath:bookId] stringByAppendingPathComponent:[NSString stringWithFormat:@"%d/Resources", bookId]];
+	
+	NSArray *zipWidgets = [[fileManager contentsOfDirectoryAtPath:zipWidgetPath error:nil] pathsMatchingExtensions:[NSArray arrayWithObjects:@"webzip", nil]];
+	for (NSString *str in zipWidgets) {
+		[fileManager removeItemAtPath:[zipWidgetPath stringByAppendingPathComponent:str] error:nil];
+	}
+}
+
++ (BOOL)removeBookFiles:(long)bookId {
+    NSString *fileSaveDir = [[IYCFileManager getCachesDir] stringByAppendingPathComponent:SAVE_BOOK_DIR_NAME];
+	NSString *path = [fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%ld",bookId]];
+	
+	BOOL isSucces = YES;
+	if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
+		isSucces = [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
+	}
+	
+	return isSucces;
+}
+
++ (BOOL)removeBookTempPartFile:(NSInteger)bookId {
+    NSString *fileSaveDir = [[IYCFileManager getCachesDir] stringByAppendingPathComponent:TEMP_SAVE_BOOK_DIR_NAME];
+	NSString *path = [fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%d.zip.temp",bookId]];
+	return [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
+}
+
++ (NSString *)getBookStyleXmlFilePath:(int)bookId {
+    NSString *fileSaveDir = [IYCFileManager getCachesDir];
+	NSString *contentPath = [fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%d/content.obml", bookId]];
+	NSString *contentPath_obsd = [fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%d/content.obsd", bookId]];
+	NSString *contentPath_qpsd = [fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%d/content.qpsd", bookId]];
+	
+	NSString *path = nil;
+	if ([[NSFileManager defaultManager] fileExistsAtPath:contentPath]) {
+		path = contentPath;
+	} else if ([[NSFileManager defaultManager] fileExistsAtPath:contentPath_qpsd]) {
+		path = contentPath_qpsd;
+	} else if ([[NSFileManager defaultManager] fileExistsAtPath:contentPath_obsd]) {
+		path = contentPath_obsd;
+	}
+	
+	return path;
+}
+
++ (float)getTempBookFileSize:(int)bookId {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+	NSError *error = nil;
+    NSString *tempPath = [[IYCFileManager getBookTempSavePath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%d.zip.temp",bookId]];
+    
+    if ([fileManager fileExistsAtPath:tempPath]) {
+        unsigned long long size = [[fileManager attributesOfItemAtPath:tempPath error:&error] fileSize];
+        if (error) {
+            return 0;
+        } else {
+            return size/1024.0/1024.0;//转成以（M兆）为单位
+        }
+    } else {
+        return 0;
+    }
+}
+
++ (NSString *)getbookThumbnailPath:(int)bookID imageFile:(NSString *)imageFile
+{
+       
+    NSString *fileSaveDir = [[IYCFileManager getCachesDir] stringByAppendingPathComponent:SAVE_BOOK_DIR_NAME];
+    return [fileSaveDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%d/%@", bookID, imageFile]];
+    
+    
+    
+    
+}
+
+@end

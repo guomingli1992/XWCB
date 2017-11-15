@@ -1,0 +1,16 @@
+//
+//  IYCGetNoteResp.h
+//  IYangCongReader
+//
+//  Created by 马腾 on 15/7/15.
+//  Copyright (c) 2015年 IYangCong. All rights reserved.
+//
+
+#import "IYCRequest.h"
+
+@interface IYCGetNoteResp : IYCRequest
+@property (nonatomic, strong) NSArray *minutes;
+
+//- (NSString *)getJSONString;
+- (id)initWithJSONDictionary: (NSDictionary*)jsonDic;
+@end

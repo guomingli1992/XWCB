@@ -1,0 +1,6 @@
+framework module NSXmlKit {
+  umbrella header "NSXmlKit.h"
+
+  export *
+  module * { export * }
+}

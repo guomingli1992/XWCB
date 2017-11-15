@@ -1,0 +1,22 @@
+//
+//  IYCBookMark.m
+//  IYangCongReader
+//
+//  Created by she-mac on 4/1/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCBookMark.h"
+
+@implementation IYCBookMark
+@synthesize paragraphId = _paragraphId;
+@synthesize bookServerId = _bookServerId;
+@synthesize edition = _edition;
+@synthesize lineNumber = _lineNumber;
+@synthesize chapterId = _chapterId;
+@synthesize log = _log;
+@synthesize paragraphOffset;
+@synthesize bookMarkServerId=_bookMarkServerId;
+@synthesize bookMarkStatus=_bookMarkStatus;
+
+@end

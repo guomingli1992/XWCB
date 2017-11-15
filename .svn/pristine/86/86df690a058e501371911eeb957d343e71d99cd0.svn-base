@@ -1,0 +1,22 @@
+//
+//  IYCExperienceReq.h
+//  IYangCongReader
+//
+//  Created by MaTeng on 14-6-10.
+//  Copyright (c) 2014年 IYangCong. All rights reserved.
+//
+
+#import "IYCRequest.h"
+
+@interface IYCExperienceReq : IYCRequest
+@property (nonatomic, assign) NSNumber *acountId;
+@property (nonatomic, assign) NSNumber *bookId;
+@property (nonatomic, assign) NSNumber *readingLong;
+@property (nonatomic, assign) NSNumber *language;
+@property (nonatomic, retain) NSString *startTime;
+@property (nonatomic, retain) NSString *endTime;
+@property (nonatomic, retain) NSMutableArray *experiences;
+
+- (NSString *)getJSONString;
+//- (id)initWithJSONDictionary: (NSDictionary*)jsonDic;
+@end

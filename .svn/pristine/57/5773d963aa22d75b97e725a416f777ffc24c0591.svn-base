@@ -1,0 +1,54 @@
+//
+//  IYCSearchViewController.h
+//  IYangCongReader
+//
+//  Created by haley on 5/13/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "IYCSearchResultsViewController.h"
+#import "IYCSearchResult.h"
+#import "IYCBookEdition.h"
+
+@protocol IYCSearchReadingViewControllerDelegate <NSObject>
+@required
+
+- (void) loadSpine:(int)spineIndex atPageIndex:(int)pageIndex highlightSearchResult:(IYCSearchResult*)theResult;
+
+@end
+
+@class IYCReadingViewController;
+@interface IYCSearchReadingViewController : UIViewController<UISearchBarDelegate,IYCSearchResultsViewControllerDelegate>
+{
+    
+    UIActivityIndicatorView *spinner;
+    IYCSearchResultsViewController* searchResViewController;
+    IYCSearchResult* currentSearchResult;
+    IYCLanguageType currentLang;
+    IYCBookEdition * __unsafe_unretained currentBookEdition;
+    id <IYCSearchReadingViewControllerDelegate> __unsafe_unretained delegate;
+    IBOutlet UILabel *bookTitle;
+    IBOutlet UILabel *resultTitle;
+    IBOutlet UIImageView *resultLine;
+    IBOutlet UIView *noResultView;
+    IBOutlet UISearchBar *mySearchBar;
+    IBOutlet UILabel *label;
+    UILabel *waitingView;
+    UIView *bgView;
+
+}
+@property (nonatomic) IYCLanguageType currentLang;
+@property (nonatomic, retain) IBOutlet UISearchBar *mySearchBar;
+@property (nonatomic, retain) IBOutlet UIImageView *resultLine;
+@property (nonatomic, retain) IBOutlet UILabel *resultTitle;
+@property (nonatomic, retain) IBOutlet UILabel *bookTitle;
+
+@property (nonatomic, assign) id <IYCSearchReadingViewControllerDelegate> delegate;
+@property (nonatomic, assign) IYCBookEdition* currentBookEdition;
+@property (nonatomic, assign) IYCReadingViewController *readingVC;
+
+- (void)showSearchReadingView;
+- (IBAction)hideSearchReadingView;
+- (void)setSearchText:(NSString *)text;
+@end

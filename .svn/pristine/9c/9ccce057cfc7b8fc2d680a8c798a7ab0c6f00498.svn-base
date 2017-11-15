@@ -1,0 +1,125 @@
+//
+//  IYCBookmarkView.m
+//  IYangCongReader
+//
+//  Created by haley on 5/17/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCBookmarkView.h"
+#import "IYCDBAction.h"
+#import "IYCBookmarkCellView.h"
+#import "IYCChapter.h"
+#import "IYCParagraph.h"
+#import "IYCConfig.h"
+@implementation IYCBookmarkView
+@synthesize bookmarkTable;
+@synthesize bookmarkImage;
+@synthesize bookmark;
+@synthesize bookId;
+@synthesize accountId;
+@synthesize edition;
+
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.autoresizesSubviews = YES;
+        NSString *nibName = @"IYCBookmarkView";
+        self.backgroundColor = [UIColor clearColor];
+        NSArray *viewArray = [[NSBundle mainBundle] loadNibNamed:nibName owner:self options:nil];
+        if ([viewArray count] > 0)
+        {
+            UIView *view = [viewArray objectAtIndex:0];
+            view.frame = CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height);
+            view.autoresizesSubviews = YES;
+            self.bookmarkTable.frame = view.frame;
+            self.bgImageView.frame = view.frame;
+            [self addSubview:view];
+        }
+        
+        // Initialization code
+    }
+    return self;
+}
+
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect
+{
+    // Drawing code
+}
+*/
+- (void)getBookmark
+{
+    
+//    self.bookmark = [[NSMutableArray alloc] init];
+    self.bookmark = [[IYCDBAction sharedDBAction] queryBookmark:self.bookId accountID:self.accountId edition:edition];
+    if ([bookmark count]>0) {
+        bookmarkImage.hidden = YES;
+    } else {
+        bookmarkImage.hidden = NO;
+    }
+    [self.bookmarkTable reloadData];
+
+}
+#pragma UITableViewDataSource method
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return [bookmark count];
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    static NSString *tableCellIdentifier = @"UITableViewCell";
+    
+    UITableViewCell *cell = (UITableViewCell *)[tableView dequeueReusableCellWithIdentifier: tableCellIdentifier];
+    
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:tableCellIdentifier];
+    }
+
+    IYCBookMark *bookmark2 = [self.bookmark objectAtIndex:indexPath.row];
+//    UIImageView *imageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"chapter-break.png"]];
+//    imageView.frame = CGRectMake(5, 3, 250, 44);
+//    [cell addSubview:imageView];
+//    [imageView release];
+    
+    IYCBookmarkCellView *bookmarkCell = (IYCBookmarkCellView *)[cell viewWithTag:5];
+    if (bookmarkCell == nil) {
+        bookmarkCell = [[IYCBookmarkCellView alloc] initWithFrame:CGRectMake(0, 0, 268,60)];
+          [cell addSubview:bookmarkCell];
+        bookmarkCell.tag = 5;
+        
+    }
+    bookmarkCell.pageNumber.backgroundColor   = [UIColor clearColor];    
+    bookmarkCell.contentLabel.backgroundColor = [UIColor clearColor];
+    bookmarkCell.dateLabel.backgroundColor    = [UIColor clearColor];
+    bookmarkCell.pageNumber.text   = @"";
+    bookmarkCell.contentLabel.text = bookmark2.log;
+    bookmarkCell.dateLabel.text    = bookmark2.markTime;
+    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"nightMode"] isEqualToString:@"6"]) {
+        bookmarkCell.pageNumber.textColor   = [UIColor colorWithRed:109.0/255.0 green:109.0/255.0 blue:109.0/255.0 alpha:1.0];
+        bookmarkCell.contentLabel.textColor = [UIColor colorWithRed:115.0/255.0 green: 99.0/255.0 blue: 87.0/255.0 alpha:1.0];
+        bookmarkCell.dateLabel.textColor    = [UIColor colorWithRed:109.0/255.0 green:109.0/255.0 blue:109.0/255.0 alpha:1.0];
+    }else{
+        bookmarkCell.pageNumber.textColor   = [UIColor colorWithRed: 56.0/255.0 green: 56.0/255.0 blue: 56.0/255.0 alpha:1.0];
+        bookmarkCell.contentLabel.textColor = [UIColor colorWithRed:153.0/255.0 green:153.0/255.0 blue:153.0/255.0 alpha:1.0];
+        bookmarkCell.dateLabel.textColor    = [UIColor colorWithRed: 83.0/255.0 green: 71.0/255.0 blue: 71.0/255.0 alpha:1.0];
+    }
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    cell.backgroundColor = [UIColor clearColor];
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:NO];
+
+    IYCBookMark *bookmark2 = [self.bookmark objectAtIndex:indexPath.row];
+    NSMutableDictionary *dictionary = [[NSMutableDictionary alloc] init];
+    [dictionary setObject:bookmark2 forKey:@"bookmark"];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"gotoBookMark" object:dictionary];
+}
+
+
+@end

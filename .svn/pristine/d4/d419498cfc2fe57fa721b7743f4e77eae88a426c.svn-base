@@ -1,0 +1,168 @@
+//
+//  IYCDataBase.m
+//  IYangCongReader
+//
+//  Created by Bella on 4/3/13.
+//  Copyright (c) 2013 Bella. All rights reserved.
+//
+
+#import "IYCDataBase.h"
+#import <sqlite3.h>
+
+#define IYangCongDBName @"IYangCong.sqlite"
+#define IYCDictionary   @"dictionary.sqlite"
+
+static inline NSString *toto(const char *pStr)
+{
+    if (pStr == nil) {
+        return nil;
+    }
+    return [NSString stringWithUTF8String:pStr];
+}
+
+@implementation IYCDataBase
+{
+    sqlite3 *database;
+    NSString *realPath;
+    
+}
+
++ (IYCDataBase *)share
+{
+    static IYCDataBase *base = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        base = [[IYCDataBase alloc] init];
+    });
+    return base;
+}
+
+- (instancetype)init
+{
+    if ([super init]) {
+        NSString *documentPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+        realPath = [documentPath stringByAppendingPathComponent:IYangCongDBName];
+        
+        NSString *dbNameFronter = [[IYangCongDBName componentsSeparatedByString:@"."] objectAtIndex:0];
+        
+        NSString *sourcePath = [[NSBundle mainBundle] pathForResource:dbNameFronter ofType:@"sqlite"];
+        
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        if (![fileManager fileExistsAtPath:realPath]) {
+            NSError *error;
+            if (![fileManager copyItemAtPath:sourcePath toPath:realPath error:&error]) {
+
+            }
+
+        }
+
+    }
+    if (sqlite3_open([realPath UTF8String], &database) != SQLITE_OK) {
+        sqlite3_close(database);
+        NSLog(@"数据库打开失败");
+    }
+    return self;
+
+}
+
+- (void)open
+{   //打开数据库
+    sqlite3_open([realPath UTF8String], &database);
+
+}
+
+- (void) close{
+    //关闭数据库
+    sqlite3_close(database);
+}
+
+
+- (int)updateDB:(NSString *)sql
+{
+   
+//    [self open];
+    int result = sqlite3_exec(database, sql.UTF8String, NULL, NULL, NULL);
+    //关闭数据库
+//    [self close];
+    return result == SQLITE_OK;
+
+
+}
+
+- (NSMutableArray *)queryDB:(NSString*)sql
+{
+//    [self open];
+    //声明sql执行状态对象
+    sqlite3_stmt *statement = NULL;
+    //获取执行状态对象
+    sqlite3_prepare(database, sql.UTF8String, (int)sql.length, &statement, NULL);
+    
+    NSMutableArray *resultList = [[NSMutableArray alloc] init];
+    
+    //执行sql语句
+    while (sqlite3_step(statement) == SQLITE_ROW)
+    {
+        NSInteger columnCount = sqlite3_column_count(statement);
+        NSMutableDictionary *dic = [[NSMutableDictionary alloc] init];
+
+        for (NSInteger index = 0; index < columnCount; index ++) {
+            NSString *value = toto((const char *)sqlite3_column_text(statement, (int)index));
+            NSString *key = toto((const char *)sqlite3_column_name(statement, (int)index));
+
+            if (value && key) {
+                [dic setObject:value forKey:key];
+
+            }
+
+        }
+
+        [resultList addObject:dic];
+
+    }
+    
+    sqlite3_finalize(statement);
+
+//    [self close];
+    //终止执行状态对象
+
+
+
+    return resultList;
+}
+
+- (id)queryDict:(NSString*)sql {
+    sqlite3_stmt *statement = NULL;
+    //获取执行状态对象
+    sqlite3_prepare(database, sql.UTF8String, (int)sql.length, &statement, NULL);
+    
+    NSMutableArray *resultList = [[NSMutableArray alloc] init];
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    
+    //执行sql语句
+    while (sqlite3_step(statement) == SQLITE_ROW)
+    {
+        NSInteger columnCount = sqlite3_column_count(statement);
+        for (NSInteger index = 0; index < columnCount; index ++) {
+            NSString *value = toto((const char *)sqlite3_column_text(statement, (int)index));
+            NSString *key = toto((const char *)sqlite3_column_name(statement, (int)index));
+            
+            if (value && key) {
+                [dic setObject:value forKey:key];
+                
+            }
+            
+        }
+        
+        [resultList addObject:dic];
+        
+    }
+    
+    sqlite3_finalize(statement);
+    
+//    PLSqliteDatabase *dataBase = [IYCDataBase setupWithDBName:IYCDictionary];
+//    id<PLResultSet> rs;
+//    rs = [dataBase executeQuery:sql];
+    return resultList;
+}
+
+@end

@@ -1,0 +1,15 @@
+//
+//  IYCPurchaseData.m
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-10-15.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCPurchaseData.h"
+
+@implementation IYCPurchaseData
+@synthesize purchaseDataId, orderId, receiptData, status, accountId, productId;
+
+
+@end

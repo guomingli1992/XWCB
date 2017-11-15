@@ -1,0 +1,42 @@
+//
+//  IYCEventManager.m
+//  Reader
+//
+//  Created by Ian on 13-3-18.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCEventManager.h"
+
+@implementation IYCEventManager
+
++ (void) Register: (id)target callback: (SEL)method event: (NSString *)name {
+	[[NSNotificationCenter defaultCenter] addObserver:target selector: method name: name object: nil];
+}
+
++ (void) Unregister: (id)target {
+	[[NSNotificationCenter defaultCenter] removeObserver:target];
+}
+
++ (void) FireEvent:(NSString *)name {
+	[[NSNotificationCenter defaultCenter] postNotificationName:name object: nil];
+}
+
++ (void) Unregister: (id)target event: (NSString *)name {
+	[[NSNotificationCenter defaultCenter] removeObserver: target name: name object: nil];
+}
+
++ (void) FireEvent: (id)target event: (NSString *)name {
+	[[NSNotificationCenter defaultCenter] postNotificationName: name object: target userInfo: nil];
+}
+
++ (void) FireEvent: (id)target event: (NSString *)name moreData: (NSDictionary *)moreData {
+	[[NSNotificationCenter defaultCenter] postNotificationName: name object: target userInfo: moreData];
+}
+
++ (void) FireErrorEvent: (id)target event: (NSString *)name error: (NSError *)error {
+	NSDictionary *dict = [NSDictionary dictionaryWithObject: error forKey: @"error"];
+	[[NSNotificationCenter defaultCenter] postNotificationName: name object: target userInfo: dict];
+}
+
+@end

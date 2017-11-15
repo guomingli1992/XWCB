@@ -1,0 +1,14 @@
+//
+//  QueryLocalWord.h
+//  iyangcong
+//
+//  Created by lxm on 2017/4/20.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface QueryLocalWord : NSObject
+-(NSMutableDictionary *)queryLocalWordDictionary:(NSString *)theWord;
+
+@end

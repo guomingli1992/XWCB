@@ -1,0 +1,13 @@
+//
+//  IYCSynchroService.h
+//  IYangCongReader
+//
+//  Created by haley on 4/25/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//  说明：请求服务器类（同步用户阅读信息到服务器）
+
+#import <Foundation/Foundation.h>
+#import "IYCService.h"
+@interface IYCSynchroService : IYCService
+-(void)uploadToServer:(NSString*)accountId andBookList:(NSArray *)bookList;
+@end

@@ -1,0 +1,15 @@
+//
+//  IYCGetQqAppIDSrv.h
+//  IYangCongReader
+//
+//  Created by MaTeng on 14-10-11.
+//  Copyright (c) 2014年 IYangCong. All rights reserved.
+//
+
+#import "IYCService.h"
+#import "IYCGetAppIDReq.h"
+
+@interface IYCGetQqAppIDSrv : IYCService
+
+- (void)GetQqappID:(IYCGetAppIDReq *)request;
+@end

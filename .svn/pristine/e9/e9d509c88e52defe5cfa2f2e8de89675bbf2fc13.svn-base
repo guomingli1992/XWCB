@@ -1,0 +1,21 @@
+//
+//  IYCSecurityManager.h
+//  IYangCongReader
+//
+//  Created by haley on 5/6/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCSecurityManager : NSObject
+{
+    NSUserDefaults *userManager;
+    
+
+
+
+}
++ (NSData *)hexString2Byte:(NSString *)hexString;
+- (NSString *) decryptWithFilePath:(NSString *)filePath;
+@end

@@ -1,0 +1,62 @@
+﻿
+try {
+jQuery(function($) {
+    
+    var TAP_DURATION = 300; // 单位 milliseconds
+    var DRAG_DISTANCE = 32; // 单位 pixels
+
+    // current touch start, for tap
+    var touchStartTimeStamp = 0;
+    // for drag event
+    var firstPoint = null;
+    var lastPoint = null;
+	   
+    // bind events
+    $("body").touchstart(function(event) {
+	touchStartTimeStamp = event.timeStamp;
+        firstPoint = js.getPoint(event);
+        lastPoint = firstPoint;
+    }).touchmove(function(event){
+        //event.preventDefault();
+        lastPoint = js.getPoint(event);
+    }).touchend(function(event) {
+				triggerSelectingTextEvent(event);
+	
+	// tap
+        //if (event.timeStamp - currTouchstart < TAP_DURATION) {
+           // cmd.tap(firstPoint.x, firstPoint.y % js.browserHeight);
+        //} else { // drag || hold
+	//    var touch = event.originalEvent.touches[0] || event.originalEvent.changedTouches[0];
+	//    alert("1坐标位置：x=" + touch.screenX + "   y=" + touch.screenY);
+	//}
+        // clear
+	    touchStartTimeStamp = 0;
+        firstPoint = null;
+        lastPoint = null;
+    }).touchcancel(function(event) {
+        // clear
+		touchStartTimeStamp = 0;
+        firstPoint = null;
+        lastPoint = null;
+    });
+	
+    function triggerSelectingTextEvent(event) {
+	   // 检测用户有没有选中文本
+	   var selection = window.getSelection();
+	   if (selection && selection.toString() != '') {
+			var touch = event.originalEvent.touches[0] || event.originalEvent.changedTouches[0];
+			//alert("坐标位置：x=" + event.screenX + "   y=" + event.screenY);
+			if (touch.screenX > 0 && touch.screenY > 0) {
+				js.currentScreenY = touch.pageY;
+				cmd.didSelectText(touch.screenX, touch.screenY);
+			}
+	   }
+    }
+	   
+	
+});
+	
+} catch (error) {
+    alert("BindEvent.js error: " + error);
+}
+

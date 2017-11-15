@@ -1,0 +1,55 @@
+//
+//  IYCBookEdition.m
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCBookEdition.h"
+
+#import "IYCChapter.h"
+
+@implementation IYCBookEdition
+
+- (id)initWithLanguageType:(IYCLanguageType)lType {
+
+    if((self = [super init])){
+        self.languageType = lType;
+        self.totalWordsInBook = 0;
+        self.allFilesParsed = NO;
+        self.pageArray = [NSMutableArray array];
+        self.chapters = [NSMutableArray array];
+    }
+    
+    return self;
+}
+
+
+- (long)getTotalWordsInBook {
+    self.totalWordsInBook = 0;
+    for (int i = 0; i < [self.chapters count] ; i++) {
+      IYCChapter *chapter = [self.chapters objectAtIndex:i];
+      self.totalWordsInBook = self.totalWordsInBook + chapter.totalWordsInChapter;
+    }
+    
+    return self.totalWordsInBook;
+}
+
+- (id)copyWithZone:(NSZone *)zone {
+    IYCBookEdition *copy = [[[self class] allocWithZone:zone] init];
+    
+    NSMutableArray *array1 = [[NSMutableArray alloc] initWithArray:self.chapters copyItems:YES];
+    copy.chapters = array1;
+    
+    NSMutableArray *array2 = [[NSMutableArray alloc] initWithArray:self.pageArray copyItems:YES];
+    copy.pageArray = array2;
+    
+    copy.languageType = self.languageType;
+    copy.bookMark = self.bookMark;
+    copy.totalWordsInBook = self.totalWordsInBook;
+    
+    return copy;
+}
+
+@end

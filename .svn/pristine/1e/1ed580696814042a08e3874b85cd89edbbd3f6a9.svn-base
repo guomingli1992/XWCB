@@ -1,0 +1,23 @@
+//
+//  IYCLastView.h
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-8-12.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@protocol IYCLastViewDelegate <NSObject>
+
+- (void)reactionAfterReading;
+- (void)backToShelf;
+- (void)lastViewDidDisappear;
+
+
+@end
+
+@interface IYCLastView : UIView
+
+@property (nonatomic, assign)id<IYCLastViewDelegate> delegate;
+@end

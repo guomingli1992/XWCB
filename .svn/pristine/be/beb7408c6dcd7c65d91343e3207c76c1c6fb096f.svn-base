@@ -1,0 +1,33 @@
+//
+//  IYCPage.m
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCPage.h"
+
+@implementation IYCPage
+@synthesize pageId;
+@synthesize pageOffset;
+@synthesize pageUrl;
+@synthesize chapterId;
+@synthesize pageOffsetH;
+@synthesize baseURL;
+
+- (id)copyWithZone:(NSZone *)zone {
+    IYCPage *copy = [[[self class] allocWithZone:zone] init];
+    copy.pageId = self.pageId;
+    copy.pageOffset = self.pageOffset;
+    copy.pageUrl = self.pageUrl;
+    copy.chapterId = self.chapterId;
+    copy.pageOffsetH = self.pageOffsetH;
+    copy.baseURL = self.baseURL;
+    
+    return copy;
+}
+
+
+
+@end

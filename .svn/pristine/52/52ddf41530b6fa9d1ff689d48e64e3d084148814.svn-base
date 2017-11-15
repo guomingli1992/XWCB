@@ -1,0 +1,62 @@
+//
+//  IYCBookReviewService.m
+//  IYangCongReader
+//
+//  Created by Bella on 5/6/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//  说明：请求服务器类（获取书籍读后感）
+
+#import "IYCBookReviewService.h"
+#import "IYCURLUtil.h"
+
+@implementation IYCBookReviewService
+
+- (void)getBookReview:(IYCBookReviewRequest *)request
+{
+    NSURL *url = [NSURL URLWithString:[IYCURLUtil getBookReviewUrl]];
+    request.deviceType = [self getDeviceType:[self getPhoneModel]];
+    request.deviceToken = [self getDeviceToken];
+    DebugLog(@"request json: %@",[request getJSONString]);
+    [self initRequest:url withBody:[request getJSONString]];
+    
+    //ADD SESSION
+    NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+    NSString *sessionID = [NSString stringWithFormat:@"JSESSIONID=%@",[userdefaults objectForKey:KEY_SessionID]];
+    [self.request addRequestHeader:@"Cookie" value:sessionID];
+    
+    [self startAsynRequest];
+}
+
+#pragma mark -
+#pragma mark ASIHTTPRequestDelegate method
+- (void)requestFinished:(ASIHTTPRequest *)requestParam {
+    NSString *jsonString = [requestParam responseString];
+    DebugLog(@"response json:%@",jsonString);
+    
+    IYCBookReviewRequest *bookReviewList = [[IYCBookReviewRequest alloc] initWithJSONDictionary:[jsonString objectFromJSONString]];
+    
+    if (bookReviewList.errorCode == ResponseErrorCode_Success)
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidSuccess:)]) {
+            [self.delegate requestDidSuccess:bookReviewList];
+        }
+        else
+        {
+            if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+                [self.delegate requestDidFailed:bookReviewList];
+            }
+        }
+    }
+}
+
+- (void)requestFailed:(ASIHTTPRequest *)requestParam {
+    IYCBookReviewRequest *bookReviewList = [[IYCBookReviewRequest alloc] init];
+    bookReviewList.errorCode = ResponseErrorCode_RequestAccessFailed;
+    
+    DebugLog(@"error Message: %@", bookReviewList.errorMessage);
+    if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+        [self.delegate requestDidFailed:bookReviewList];
+    }
+}
+
+@end

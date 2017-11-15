@@ -1,0 +1,32 @@
+//
+//  IYCAppConfig.m
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-7-17.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCAppConfig.h"
+
+@implementation IYCAppConfig
+
+
++ (NSString *)getLastAppVersion
+{
+    return [[NSUserDefaults standardUserDefaults] stringForKey:KEY_APPVERSION];
+}
+
++ (NSString *)getCurrentAppVersion
+{
+    NSDictionary * appInfo = [[NSBundle mainBundle] infoDictionary];
+    NSString * version = [appInfo objectForKey:@"CFBundleVersion"];
+    return version;
+}
+
++ (void)resetAppVersion
+{
+    NSString * version = [IYCAppConfig getCurrentAppVersion];
+    [[NSUserDefaults standardUserDefaults] setObject:version forKey:KEY_APPVERSION];
+}
+
+@end

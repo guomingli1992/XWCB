@@ -1,0 +1,62 @@
+//
+//  IYCBookReview.m
+//  IYangCongReader
+//
+//  Created by Bella on 5/6/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCBookReview.h"
+
+@implementation IYCBookReview
+@synthesize bookReviewId = _bookReviewId;
+@synthesize reviewer = _reviewer;
+@synthesize comment = _comment;
+@synthesize commentTime = _commentTime;
+@synthesize title = _title;
+
+
+- (id) initWithJSONDictionary:(NSDictionary *)jsonDict
+{
+    if (self = [super init])
+    {
+        self.bookReviewId = [jsonDict objectForKey:@"bookReviewId"];
+        self.reviewer = [jsonDict objectForKey:@"reviewer"];
+        self.commentTime = [jsonDict objectForKey:@"commentTime"];
+        self.title = [jsonDict objectForKey:@"title"];
+        self.comment = [jsonDict objectForKey:@"comment"];
+        
+        //DebugLog(@"comment: %@", self.comment);
+        self.comment = [self.comment stringByReplacingOccurrencesOfString:@"<br />" withString:@"\n"];
+        self.comment = [self.comment stringByReplacingOccurrencesOfString:@"\\n" withString:@"\n"];
+        self.comment = [self.comment stringByReplacingOccurrencesOfString:@"&#39;" withString:@"'"];
+        self.comment = [self.comment stringByReplacingOccurrencesOfString:@"&#59;" withString:@";"];
+        self.comment = [self.comment stringByReplacingOccurrencesOfString:@"<p>" withString:@""];
+        self.comment = [self.comment stringByReplacingOccurrencesOfString:@"</p>" withString:@"\n"];
+    }
+    return self;
+}
+
+- (NSMutableDictionary *)getJSONDictinary {
+    
+    NSMutableDictionary *JSONDict = [NSMutableDictionary dictionary];
+    
+    if (self.title) {
+        [JSONDict setObject:self.title forKey:@"title"];
+    }
+    
+    if (self.comment) {
+        [JSONDict setObject:self.comment forKey:@"comment"];
+    }
+    
+    if (self.commentTime) {
+        [JSONDict setObject:self.commentTime forKey:@"commentTime"];
+    }
+    
+    return JSONDict;
+}
+
+
+
+
+@end

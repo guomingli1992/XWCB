@@ -1,0 +1,60 @@
+//
+//  IYCUpdateUserInfo.m
+//  IYangCongReader
+//
+//  Created by haley on 4/26/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCUpdateUserInfo.h"
+#import "IYCUpdateBook.h"
+@implementation IYCUpdateUserInfo
+@synthesize accountId;
+@synthesize bookListArray;
+- (NSString *)getJSONString {
+    
+    NSMutableDictionary *JSONDict = [super getJSONString];
+    
+    if (self.accountId) {
+        [JSONDict setObject:self.accountId forKey:@"accountId"];
+    }
+//    if (self.bookListArray) {
+//        NSMutableArray *infoArray = [NSMutableArray array];
+//        for (IYCUpdateBook *book in bookListArray) {
+//            [infoArray addObject:[book getJSONString]];
+//        }
+//        [JSONDict setObject:infoArray forKey:@"bookList"];
+//    }
+    if (self.bookListArray) {
+        NSMutableArray *infoArray = [NSMutableArray array];
+        for (IYCUpdateBook *book in bookListArray) {
+            [infoArray addObject:[book getJSONDictinary]];
+        }
+        [JSONDict setObject:infoArray forKey:@"bookList"];
+    }
+    if (self.deviceType) {
+        [JSONDict setObject:self.deviceType forKey:@"deviceType"];
+    }
+    
+    if (self.deviceToken) {
+        [JSONDict setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+   
+    NSMutableString *responseString = [NSMutableString stringWithString:JSONDict.JSONString];
+    NSString *character = nil;
+    for (int i = 0; i < responseString.length; i ++) {
+        character = [responseString substringWithRange:NSMakeRange(i, 1)];
+        if ([character isEqualToString:@"\\"])
+            [responseString deleteCharactersInRange:NSMakeRange(i, 1)];
+    }
+    NSLog(@"synchro request str:%@",responseString);
+    return responseString;
+}
+- (id)initWithJSONDictionary: (NSDictionary*)jsonDic
+{
+    self = [super initWithJSONDictionary:jsonDic];
+    
+    return self;
+}
+
+@end

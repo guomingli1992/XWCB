@@ -1,0 +1,139 @@
+/**
+ * js: namespace, it also can be called from Objective-C
+ */
+try {
+(function(window, $, undefined) {
+
+    // js
+    var js = window.js = {};
+    js.callbacks = {};
+	js.currentScreenY = -1;
+    js.selectionNode = {};
+    js.selectionString = "";
+    js.selectionRangeStartIndex = -1;
+    js.selectionRangeEndIndex = -1;
+    
+    js.getPoint = function(event) {
+        var touch = event.originalEvent.touches[0] || event.originalEvent.changedTouches[0] || null;
+        return touch ? {x: touch.pageX, y: touch.pageY} : null;
+	};
+	
+    js.markSelectedText = function() {
+		var selection = window.getSelection();
+		if(selection.toString() != '') {
+			var selRange = selection.getRangeAt(0);
+			js.selectionRangeStartIndex = selRange.startOffset;
+			js.selectionRangeEndIndex = selRange.endOffset;
+			var element = selRange.startContainer;
+			js.selectionNode = element;
+			var span = document.createElement("span");
+			$(span).addClass('kaijuan_mark_bgcolor');
+			$(span).attr("tag_type","kaijuan_tag");
+			selRange.surroundContents(span);
+			
+			var noteNode = $("<div class='kaijuan_note' style='position:absolute;z-index:10;'><image width='36' height='36' src='note.png'/></div>");
+			noteNode.css("top",js.currentScreenY - 20);
+			noteNode.css("left", 5);
+			$('body').append(noteNode);
+			//alert(js.selectionRangeStartIndex + "===" + js.selectionRangeEndIndex);
+			js.saveSelectedNodeInfo();
+ 
+ 
+			/*js.selectionString = selection.toString();
+			js.selectionRangeStartIndex = selRange.startOffset;
+			js.selectionRangeEndIndex = selRange.endOffset;
+ 
+			var value = js.selectionNode.nodeValue;
+			var span = document.createElement("span");
+			var text = document.createTextNode(value.substr(js.selectionRangeStartIndex,js.selectionString.length));
+			span.appendChild(text);
+			$(span).addClass('kaijuan_wave_line kaijuan_mark_bgcolor');
+			$(span).attr("tag_type","kaijuan_tag");
+			text = document.createTextNode(value.substr(js.selectionRangeStartIndex+js.selectionString.length));
+			js.selectionNode.deleteData(js.selectionRangeStartIndex, value.length - js.selectionRangeStartIndex);
+			var next = js.selectionNode.nextSibling;
+			js.selectionNode.parentNode.insertBefore(span, next);
+			js.selectionNode.parentNode.insertBefore(text, next);*/
+		}
+    };
+ 
+ js.underlineSelectedText = function() {
+ var selection = window.getSelection();
+ if(selection.toString() != '') {
+ var selRange = selection.getRangeAt(0);
+ js.selectionRangeStartIndex = selRange.startOffset;
+ js.selectionRangeEndIndex = selRange.endOffset;
+ var element = selRange.startContainer;
+ js.selectionNode = element;
+ var span = document.createElement("span");
+ $(span).addClass('kaijuan_wave_line');
+ $(span).attr("tag_type","kaijuan_tag");
+ selRange.surroundContents(span);
+ 
+ var noteNode = $("<div class='kaijuan_note' style='position:absolute;z-index:10;'><image width='36' height='36' src='note.png'/></div>");
+ noteNode.css("top",js.currentScreenY - 20);
+ noteNode.css("left", 5);
+ $('body').append(noteNode);
+ //alert(js.selectionRangeStartIndex + "===" + js.selectionRangeEndIndex);
+ js.saveSelectedNodeInfo();
+ 
+ 
+ /*js.selectionString = selection.toString();
+  js.selectionRangeStartIndex = selRange.startOffset;
+  js.selectionRangeEndIndex = selRange.endOffset;
+  
+  var value = js.selectionNode.nodeValue;
+  var span = document.createElement("span");
+  var text = document.createTextNode(value.substr(js.selectionRangeStartIndex,js.selectionString.length));
+  span.appendChild(text);
+  $(span).addClass('kaijuan_wave_line kaijuan_mark_bgcolor');
+  $(span).attr("tag_type","kaijuan_tag");
+  text = document.createTextNode(value.substr(js.selectionRangeStartIndex+js.selectionString.length));
+  js.selectionNode.deleteData(js.selectionRangeStartIndex, value.length - js.selectionRangeStartIndex);
+  var next = js.selectionNode.nextSibling;
+  js.selectionNode.parentNode.insertBefore(span, next);
+  js.selectionNode.parentNode.insertBefore(text, next);*/
+ }
+ };
+ 
+	js.saveSelectedNodeInfo = function () {
+		var infoObj = {};
+		var tagName = js.selectionNode.parentNode.tagName;
+		infoObj.tagName = tagName;
+		if (tagName.toLowerCase() != "span") {
+			infoObj.tagIndex = $(tagName).index(js.selectionNode.parentNode);
+		} else {
+			infoObj.tagIndex = $(tagName+"[tag_type!='kaijuan_tag']").index(js.selectionNode.parentNode);
+		}
+		infoObj.startIndex = js.selectionRangeStartIndex;
+		infoObj.endIndex = js.selectionRangeEndIndex;
+		cmd.saveSelectedNodeInfo(infoObj);
+		//return "tagName=" + infoObj.tagName + "&tagIndex=" + infoObj.tagIndex + "&startIndex=" + infoObj.startIndex + "&endIndex=" + infoObj.endIndex;
+	};
+ 
+	js.reSelectNode = function(tagName, tagIndex, startIndex, endIndex) {
+		//alert(tagName + "--" + tagIndex + "--" + startIndex + "--" + endIndex);
+		var node = {};
+		if (tagName.toLowerCase() != "span") {
+			node = $(tagName)[tagIndex];
+		} else {
+			node = $(tagName+"[tag_type!='kaijuan_tag']")[tagIndex];
+		}
+ 
+		var range = document.createRange();
+		range.selectNodeContents(node);
+		range.setStart(node.childNodes[0], startIndex);
+		range.setEnd(node.childNodes[0], endIndex);
+ 
+		var span = document.createElement("span");
+		$(span).addClass('kaijuan_mark_bgcolor');
+		$(span).attr("tag_type","kaijuan_tag");
+		range.surroundContents(span);
+	}
+ 
+})(this, jQuery);
+	
+}catch (error) {
+    alert("js.js error: " + error);
+}
+

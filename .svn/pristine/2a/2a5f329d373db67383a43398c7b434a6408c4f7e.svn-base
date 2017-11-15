@@ -1,0 +1,181 @@
+//
+//  IYCSecurityManager.m
+//  IYangCongReader
+//
+//  Created by haley on 5/6/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCSecurityManager.h"
+#import <CommonCrypto/CommonDigest.h>
+#import <CommonCrypto/CommonCryptor.h>
+#import <Security/Security.h>
+#import <zlib.h>
+#import "IYCCommon.h"
+@implementation IYCSecurityManager
+
+
+- (NSString *) decryptWithFilePath:(NSString *)filePath
+{
+    
+   userManager = [NSUserDefaults standardUserDefaults];
+    
+    NSData *tempsKeyData = [userManager objectForKey:@"ssKey"];;
+    NSData *tempServerKeyData = [userManager objectForKey:@"serverKey"];
+    
+    NSString *sKey =@"";
+//    if ([userManager objectForKey:@"theLastKey"]) {
+//        sKey=[userManager objectForKey:@"theLastKey"];
+//    }
+//    else
+        sKey=@"f8e9edb0af01e978e6a51b7cf24b4e1c";
+    tempServerKeyData=[IYCSecurityManager hexString2Byte:sKey];
+    
+   
+    if (tempServerKeyData && tempsKeyData) {
+        return [self encrypt:filePath key:tempsKeyData andServerKeyData:tempServerKeyData];
+    }
+    return nil;
+}
++ (NSData *)hexString2Byte:(NSString *)hexString{
+    int j=0;
+    Byte bytes[hexString.length];
+     ///ds key的Byte 数组， 8位
+    
+    for(int i=0;i<[hexString length];i++)
+        
+    {
+        
+        int int_ch; /// 两位16进制数转化后的10进制数
+        
+        unichar hex_char1 = [hexString characterAtIndex:i]; ////两位16进制数中的第一位(高位*16)
+        
+        int int_ch1;
+        
+        if(hex_char1 >= '0' && hex_char1 <='9')
+            
+            int_ch1 = (hex_char1-48)*16; //// 0 的Ascll - 48
+        
+        else if(hex_char1 >= 'A' && hex_char1 <='F')
+            
+            int_ch1 = (hex_char1-55)*16; //// A 的Ascll - 65
+        
+        else
+            
+            int_ch1 = (hex_char1-87)*16; //// a 的Ascll - 97
+        
+        i++;
+        
+        
+        
+        unichar hex_char2 = [hexString characterAtIndex:i]; ///两位16进制数中的第二位(低位)
+        
+        int int_ch2;
+        
+        if(hex_char2 >= '0' && hex_char2 <='9')
+            
+            int_ch2 = (hex_char2-48); //// 0 的Ascll - 48
+        
+        else if(hex_char1 >= 'A' && hex_char1 <='F')
+            
+            int_ch2 = hex_char2-55; //// A 的Ascll - 65
+        
+        else
+            
+            int_ch2 = hex_char2-87; //// a 的Ascll - 97
+        
+        
+        
+        int_ch = int_ch1+int_ch2;
+        
+        bytes[j] = int_ch; ///将转化后的数放入Byte数组里
+        
+        j++;
+        
+    }
+    
+    return [NSData dataWithBytes:bytes length:8];
+
+}
+- (NSString *)encrypt:(NSString *)filePath key:(NSData *) encryptOrDecryptKey andServerKeyData:(NSData *)serverKeyData
+{
+    
+//     Byte key[] = {0xfe, 0xb8, 0xf5, 0x6d, 0xec, 0x4a, 0xff, 0xc6};
+    size_t movedBytes = 0;
+    size_t bufferSize = (16 + kCCBlockSizeDES) & ~(kCCBlockSizeDES - 1);
+    
+    Byte *buffer = malloc(bufferSize * sizeof(Byte));
+    
+    memset(buffer, 0x0, bufferSize);
+    
+    CCCrypt(
+            kCCDecrypt,
+            kCCAlgorithmDES,
+            kCCOptionPKCS7Padding | kCCOptionECBMode,
+            encryptOrDecryptKey.bytes,
+            kCCKeySizeDES,
+            NULL,
+            serverKeyData.bytes,
+            16,
+            buffer,
+            bufferSize,
+            &movedBytes);
+    NSData *html = [[NSData alloc] initWithContentsOfFile:filePath];
+    NSString *htmlContent = [[NSString alloc] initWithData:html encoding:NSUTF8StringEncoding];
+    if ([htmlContent hasPrefix:@"<html>"]) {
+       free(buffer);
+        htmlContent = [htmlContent stringByReplacingOccurrencesOfString:@"stylesheet.css" withString:[NSString stringWithFormat:@"stylesheet.css?version=%@",[self currentTimeStr]]];
+       return htmlContent;
+    }
+    
+    //     [html writeToFile:[self pagePath] atomically:NO];
+    size_t movedBytes2 = 0;
+    size_t bufferSize2 = (html.length + kCCBlockSizeDES) & ~(kCCBlockSizeDES - 1);
+    
+    Byte *buffer2 = malloc(bufferSize2 * sizeof(Byte));
+    
+    memset(buffer2, 0x0, bufferSize2);
+//    CCCryptorStatus ccStatus;
+    CCCrypt(
+                     kCCDecrypt,
+                     kCCAlgorithmDES,
+                     kCCOptionPKCS7Padding | kCCOptionECBMode,
+                     buffer,
+                     kCCKeySizeDES,
+                     NULL,
+                     html.bytes,
+                     html.length,
+                     buffer2,
+                     bufferSize2,
+                     &movedBytes2);
+    
+    NSData *result = [NSData dataWithBytes:buffer2 length:(NSUInteger)movedBytes2];
+    
+//    [result writeToFile:filePath atomically:NO];
+   
+    free(buffer2);
+    free(buffer);
+    
+    NSString *strHtml = [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
+    strHtml = [strHtml stringByReplacingOccurrencesOfString:@"stylesheet.css" withString:[NSString stringWithFormat:@"stylesheet.css?version=%@",[self currentTimeStr]]];
+    return strHtml;
+}
+
+- (NSString *)currentTimeStr
+{
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    NSString *currentDateStr = [dateFormatter stringFromDate:[NSDate date]];
+    return currentDateStr;
+}
+
+- (NSString *)pagePath
+{
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *s = [paths objectAtIndex:0];
+    NSString *s1 = [s stringByAppendingPathComponent:@"haley.txt"];
+    NSString *documentsDirectory = [[NSString alloc] initWithString:s1];
+    return documentsDirectory;
+}
+
+@end

@@ -1,0 +1,79 @@
+//
+//  AppDelegate.h
+//  iyangcong
+//
+//  Created by lxm on 2016/11/29.
+//  Copyright © 2016年 FLTRP. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import <CoreData/CoreData.h>
+#import "UIColor+Hex.h"
+#import "NSDateHelper.h"
+#import "IYCColor.h"
+#import "IQKeyboardManager.h"
+#import "IQKeyboardReturnKeyHandler.h"
+#import "JsonRT.h"
+#import "IYCData.h"
+#import "IYCFileManager.h"
+#import "IYCDbHelper.h"
+#import "IYCNetSetting.h"
+#import "IYCFileManager.h"
+#import "IYCConfig.h"
+#import "IYCBookEdition.h"
+#import "Reachability.h"
+#import "IYCCheckNetwork.h"
+#import "IYCAccount.h"
+#import "IYCDBAction.h"
+#import "ZipArchive.h"
+#import "IYCDataModel.h"
+#import "IYCSecretKeyService.h"
+#import "IYCMD5Util.h"
+#import "IYCSecurityManager.h"
+#import "IYCSecretKey.h"
+#import "IYCDataMerge.h"
+#import "UINavigationController+WXSTransition.h"
+#import "WXApi.h"
+#import "WeiboSDK.h"
+#import <TencentOpenAPI/TencentOAuth.h>
+#import <TencentOpenAPI/TencentApiInterface.h>
+#import "IYCWordDBAction.h"
+
+@interface AppDelegate : UIResponder <UIApplicationDelegate,IYCServiceDelegate,WXApiDelegate,WeiboSDKDelegate> {
+    NSUserDefaults *userManager;
+    IYCSecretKeyService *keyservice;
+    IYCService *service;
+}
+@property (strong, nonatomic) NSString *isLoginIn;   //判断是否登录
+@property (strong, nonatomic) NSString *userId;   //判断是否登录
+
+@property (strong, nonatomic) UIWindow *window;
+@property (strong, nonatomic) UserInfo *userBean;
+
+@property (nonatomic, retain) NSMutableArray *array;
+@property (nonatomic, retain) NSString *name0;
+@property (nonatomic, retain) NSString *name1;
+@property (nonatomic, retain) NSNumber *sid1;//洋葱推荐id
+@property (nonatomic, retain) NSNumber *sid2;//新书上架id
+@property (nonatomic, retain) Reachability* hostReach;
+@property (nonatomic, assign) NSInteger noteFirstIndex;
+
+@property (nonatomic,strong) NSString *tmpBookId;
+
+@property(nonatomic, copy)NSString* ApnsToken;
+
+@property (nonatomic,strong)NSString *loginType;  //注册方式：1微信 2QQ 3微博 4豆瓣
+@property (strong, nonatomic) NSString *unionid;
+
+@property (strong, nonatomic) NSString *access_token;
+@property (strong, nonatomic) NSString *openid;
+@property (strong, nonatomic) NSString *imgurl;
+@property (strong, nonatomic) NSString *uid;
+
+@property (strong, nonatomic) NSString *wbtoken;
+@property (strong, nonatomic) NSString *wbRefreshToken;
+@property (strong, nonatomic) NSString *wbCurrentUserID;
+@property (strong,nonatomic) NSString *readingrecordlogid;    //阅读轨迹记录id
+@property (strong,nonatomic) NSString *studentUserId;         //是否是学生用户,0不是，1是
+@end
+

@@ -1,0 +1,116 @@
+//
+//  HomePageOneViewController.m
+//  iyangcong
+//
+//  Created by mingli 郭 on 2017/7/11.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "HomePageOneViewController.h"
+
+@interface HomePageOneViewController ()
+{
+    UIView*line;
+    UIView*view1;
+    UIView*view2;
+    UIView*notice;
+    UITableView*noticelist;
+}
+@end
+
+@implementation HomePageOneViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.navigationItem.title=@"主页";
+    [self creatview1];
+    [self loadbuttonItem];
+    [self creatnotice];
+    
+}
+
+-(void)creatview1{
+    view1=[[UIView alloc]initWithFrame:CGRectMake(15, 85, WIDTH1-30, 3*HEIGHT/10+20)];
+    view1.backgroundColor=[UIColor whiteColor];
+    [self.view addSubview:view1];
+    UIView*part1=[[UIView alloc]initWithFrame:CGRectMake(0, 0, WIDTH1/2-25, 3*HEIGHT/20)];
+    part1.layer.cornerRadius=9;
+    part1.layer.masksToBounds=YES;
+    part1.backgroundColor=[UIColor blueColor];
+    part1.userInteractionEnabled=YES;
+    UITapGestureRecognizer*click1=[[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(click1:)];
+    [part1 addGestureRecognizer:click1];
+    [view1 addSubview:part1];
+    UIView*part2=[[UIView alloc]initWithFrame:CGRectMake(WIDTH1/2-5, 0, WIDTH1/2-25, 3*HEIGHT/20)];
+    part2.layer.cornerRadius=9;
+    part2.layer.masksToBounds=YES;
+    part2.backgroundColor=[UIColor blueColor];
+    [view1 addSubview:part2];
+    UIView*part3=[[UIView alloc]initWithFrame:CGRectMake(0, 3*HEIGHT/20+20, WIDTH1/2-25, 3*HEIGHT/20)];
+    part3.layer.cornerRadius=9;
+    part3.layer.masksToBounds=YES;
+    part3.backgroundColor=[UIColor blueColor];
+    [view1 addSubview:part3];
+    UIView*part4=[[UIView alloc]initWithFrame:CGRectMake(WIDTH1/2-5, 3*HEIGHT/20+20, WIDTH1/2-25, 3*HEIGHT/20)];
+    part4.layer.cornerRadius=9;
+    part4.layer.masksToBounds=YES;
+    part4.backgroundColor=[UIColor blueColor];
+    [view1 addSubview:part4];
+    UIView*center=[[UIView alloc]initWithFrame:CGRectMake(WIDTH1/2-25-HEIGHT/20, HEIGHT/10, HEIGHT/10+20, HEIGHT/10+20)];
+    center.layer.cornerRadius=HEIGHT/20+10;
+    center.layer.masksToBounds=YES;
+    center.backgroundColor=[UIColor whiteColor];
+    [view1 addSubview:center];
+}
+
+-(void)click1:(UITapGestureRecognizer*)recognizer{
+    NSLog(@"111");
+}
+
+-(void)creatnotice{
+    notice=[[UIView alloc]initWithFrame:CGRectMake(0, 3*HEIGHT/10+120, WIDTH1, 40)];
+    notice.backgroundColor=[UIColor yellowColor];
+    [self.view addSubview:notice];
+    UILabel*noticetitle=[[UILabel alloc]initWithFrame:CGRectMake(15, 0, 100, 40)];
+    noticetitle.text=@"布告栏";
+    [notice addSubview:noticetitle];
+    UIImageView *loudspeaker=[self createImageViewFrame:CGRectMake(80, 0, 40, 40) imageName:@"loudspeaker"];
+    [notice addSubview:loudspeaker];
+}
+
+
+-(void)loadbuttonItem{
+    view2=[[UIView alloc]initWithFrame:CGRectMake(0, HEIGHT-50, WIDTH1, 50)];
+    view2.backgroundColor=[UIColor whiteColor];
+    [self.view addSubview:view2];
+    
+    line=[[UIView alloc] initWithFrame:CGRectMake(0, 0, WIDTH1, 0.5)];
+    line.backgroundColor=[UIColor colorWithRed:180.0/255 green:180.0/255 blue:180.0/255 alpha:1];
+    [view2 addSubview:line];
+    
+    NSArray *img=[[NSArray alloc] initWithObjects:@"homepage_press",@"manuscript_normal",@"plusmanuscript_normal",@"find_normal",@"mine_normal", nil];
+    NSArray *text=[[NSArray alloc] initWithObjects:@"主页",@"稿件",@"",@"发现",@"我的", nil];
+    for (int i=0; i<5; i++) {
+        
+        UIButton*btn=[[UIButton alloc] init];
+        btn.frame=CGRectMake(i*WIDTH1/5, 0.5, WIDTH1/5, 35);
+        btn.tag=100+i;
+        UIImageView *image1=[self createImageViewFrame:CGRectMake(WIDTH1/10-10, 7, 20, 20) imageName:[img objectAtIndex:i]];
+        [btn addSubview:image1];
+        btn.backgroundColor=[UIColor whiteColor];
+        [btn addTarget:self action:@selector(selectbtn:) forControlEvents:UIControlEventTouchUpInside];
+        [view2 addSubview:btn];
+        
+        UILabel *lab=[self createLabelFrame:CGRectMake(i*WIDTH1/5, 33, WIDTH1/5, 10) text:[text objectAtIndex:i] textColor:[UIColor colorWithHexString:textMainColor] textFont:[UIFont systemFontOfSize:10] textAlignment:NSTextAlignmentCenter numberOfLines:0];
+        [view2 addSubview:lab];
+        
+        if (i==0) {
+            lab.textColor=[UIColor colorWithHexString:mainColor];
+        }
+    }
+}
+- (void)selectbtn:(UIButton*)btn//TAB按钮切换的监听
+{
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"CHANGEMAINPAGE" object:[NSString stringWithFormat:@"%ld",(long)btn.tag]];
+}
+@end

@@ -1,0 +1,42 @@
+//
+//  IYCSecretKey.m
+//  IYangCongReader
+//
+//  Created by haley on 5/2/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCSecretKey.h"
+
+@implementation IYCSecretKey
+@synthesize key;
+
+- (NSString *)getJSONString {
+    
+    NSMutableDictionary *JSONDict = [super getJSONString];
+    
+    
+    if (self.deviceType) {
+        [JSONDict setObject:self.deviceType forKey:@"deviceType"];
+    }
+    
+    if (self.deviceToken) {
+        [JSONDict setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+    
+    return JSONDict.JSONString;
+}
+- (id)initWithJSONDictionary: (NSDictionary*)jsonDic;
+{
+    if (self = [super init])
+    {
+        self.errorCode = [[jsonDic objectForKey:@"errorCode"] intValue];
+        
+        self.key = [jsonDic objectForKey:@"Key"];
+        
+        
+    }
+    return self;
+}
+
+@end

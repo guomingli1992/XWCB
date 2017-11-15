@@ -1,0 +1,573 @@
+//
+//  IYCReactionToBook.m
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-8-15.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCReactionToBook.h"
+#import "UIImageView+WebCache.h"
+#import <QuartzCore/QuartzCore.h>
+#import "IYCBookReview.h"
+#import "IYCBookReviewRequest.h"
+#import "IYCBookReviewService.h"
+#import "IYCBookByIdService.h"
+#import "IYCCommon.h"
+#import "MBProgressHUD.h"
+#import "IYCCheckNetwork.h"
+
+@interface IYCReactionToBook()
+{
+    float minAbstractHeight;
+    float maxAbstractHeight;
+    BOOL _showWhole;
+    UITableView * tableView;
+    IYCBookReviewRequest * bookReviewRequest;
+    IYCBookReviewService * bookReviewService;
+    IYCBookByIdService * bookByIdService;
+    NSNumber * mTotal;
+    BOOL _loadingMore;
+    
+}
+@property (nonatomic, retain)UILabel * showTotalNumLable;
+@end
+
+@implementation IYCReactionToBook
+
+- (id)initWithBookId:(long)bookId andFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        NetworkStatus status = [IYCCheckNetwork curNetworkStatus];
+        
+        if (0==status)
+        {
+            UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"提示" message:@"当前网络状态不好，请检查后重试。" delegate:nil cancelButtonTitle:nil otherButtonTitles:@"确认", nil];
+            [alertView show];
+            return nil;
+        }
+        
+        IYCNavigationBar *navBar = [[IYCNavigationBar alloc] initWithFrame:CGRectMake(0, 0, self.frame.size.width, 44.0)];
+        navBar.delegate = self;
+        navBar.titleLabel.text = @"书评";
+        [self addSubview:navBar];
+       
+        
+        minAbstractHeight = 45;
+        
+        bookReviewArray = [[NSMutableArray alloc] init];
+        
+        tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 44, frame.size.width, frame.size.height-44)
+                                                 style:UITableViewStylePlain];
+        tableView.delegate = self;
+        tableView.dataSource = self;
+        tableView.showsVerticalScrollIndicator = NO;
+        tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+        [self addSubview:tableView];
+        
+        UIImageView *imageView = [[UIImageView alloc] initWithFrame:tableView.bounds];
+        [imageView setImage:[UIImage imageNamed:@"bookDetailBg.png"]];
+        [tableView setBackgroundView:imageView];
+        
+        mTotal = [NSNumber numberWithInt:0];
+        
+        [self queryBookById:bookId];
+    }
+    return self;
+}
+
+-(void)back{
+    [self removeFromSuperview];
+}
+
+
+//创建表格底部
+- (void) createTableFooter
+{
+    tableView.tableFooterView = nil;
+    UIView *tableFooterView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.frame.size.width, 40.0f)];
+    UILabel *loadMoreText = [[UILabel alloc] initWithFrame:CGRectMake(0.0f, 0.0f,  self.frame.size.width, 40.0f)];
+    [loadMoreText setCenter:tableFooterView.center];
+    [loadMoreText setFont:[UIFont fontWithName:@"Helvetica Neue" size:12]];
+    loadMoreText.backgroundColor = [UIColor clearColor];
+    [loadMoreText setText:@"上拉显示更多"];
+    [loadMoreText setTextAlignment:NSTextAlignmentCenter];
+    [tableFooterView addSubview:loadMoreText];
+    
+    tableView.tableFooterView = tableFooterView;
+}
+
+
+//开始加载数据
+- (void) loadDataBegin
+{
+    if (_loadingMore == NO)
+    {
+        _loadingMore = YES;
+        UIActivityIndicatorView *tableFooterActivityIndicator = [[UIActivityIndicatorView alloc] initWithFrame:CGRectMake(75.0f, 10.0f, 20.0f, 20.0f)];
+        [tableFooterActivityIndicator setActivityIndicatorViewStyle:UIActivityIndicatorViewStyleGray];
+        [tableFooterActivityIndicator startAnimating];
+        [tableView.tableFooterView addSubview:tableFooterActivityIndicator];
+        
+        bookReviewRequest.start = [NSNumber numberWithInt:[bookReviewArray count] + 1];
+        [self queryBookReview];
+    }
+}
+
+
+//加载数据完成
+- (void) loadDataEnd
+{
+    _loadingMore = NO;
+    tableView.tableFooterView = nil;
+    if (mTotal && [mTotal intValue] > [bookReviewArray count])
+    {
+        [self createTableFooter];
+    }
+}
+- (void)queryBookById:(long)bookId
+{
+    bookByIdService = [[IYCBookByIdService alloc] init];
+    bookByIdService.delegate = self;
+    IYCBookByIdRequest *request = [[IYCBookByIdRequest alloc] init];
+    request.bookId = [NSNumber numberWithLong:bookId];
+    [bookByIdService getBookById:request];
+    [MBProgressHUD showHUDAddedTo:self animated:YES];
+}
+
+- (void) queryBookReview
+{
+    bookReviewService = [[IYCBookReviewService alloc] init];
+    bookReviewService.delegate = self;
+    [bookReviewService getBookReview:bookReviewRequest];
+    [MBProgressHUD showHUDAddedTo:self animated:YES];
+}
+#pragma mark -
+#pragma mark service delegate
+- (void)requestDidSuccess:(id)data
+{
+    [MBProgressHUD hideAllHUDsForView:self animated:YES];
+    if ([data isKindOfClass:[IYCBookByIdRequest class]])
+    {
+        IYCBookByIdRequest *bookRequest = (IYCBookByIdRequest *)data;
+        readingBook = bookRequest.book;
+        maxAbstractHeight = [self computeSize:self.frame.size.width-40 font:[UIFont systemFontOfSize:12.0] text:[NSString stringWithFormat:@"书籍简介:%@", readingBook.bookChineseAbstract]];
+        [tableView reloadData];
+        if (bookReviewRequest) {
+            bookReviewRequest = nil;
+        }
+        bookReviewRequest = [[IYCBookReviewRequest alloc] init];
+        bookReviewRequest.bookId = [NSNumber numberWithLong:readingBook.bookServerId];
+        bookReviewRequest.start = [NSNumber numberWithInt:0];
+        bookReviewRequest.maximumSize = [NSNumber numberWithInt:1];
+        [self queryBookReview];
+        
+        bookByIdService.delegate = nil;
+        bookByIdService = nil;
+    }
+    else if([data isKindOfClass:[IYCBookReviewRequest class]])
+    {
+        IYCBookReviewRequest *response = (IYCBookReviewRequest *)data;
+        if (mTotal) {
+        }
+        mTotal = response.total;
+        if ([bookReviewRequest.start intValue] == 0)
+        {
+            NSString *title = [NSString stringWithFormat:@"(共%@条)", mTotal];
+            [self.showTotalNumLable setText:title];
+            bookReviewRequest.maximumSize = [NSNumber numberWithInt:3];
+        }
+        
+        for (int i = 0; i < [response.bookReviewList count]; i++)
+        {
+            IYCBookReview  *bookreview = [response.bookReviewList objectAtIndex:i];
+            [bookReviewArray addObject:bookreview];
+        }
+        [tableView reloadData];
+        [self loadDataEnd];
+        
+        bookReviewService.delegate = nil;
+        bookReviewService = nil;
+    }
+
+}
+
+
+- (void)requestDidFailed:(id)data
+{
+    [MBProgressHUD hideAllHUDsForView:self animated:YES];
+    [IYCCommon alterErrorMessage:data];
+    if ([data isKindOfClass:[IYCBookByIdRequest class]])
+    {
+        bookByIdService.delegate = nil;
+        bookByIdService = nil;
+    }
+    else if([data isKindOfClass:[IYCBookReviewRequest class]])
+    {
+        bookReviewService.delegate = nil;
+        bookReviewService = nil;
+    }
+}
+#pragma mark -
+#pragma mark tableview delegate
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    NSInteger rows = 4 + [bookReviewArray count];
+    return rows;
+}
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    UITableViewCell *cell = nil;
+    cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    if (indexPath.row == 0)
+    {
+        cell.contentView.backgroundColor = [UIColor clearColor];
+        [self setUpBookTitleCell:cell];
+        
+    }else if (indexPath.row == 1)
+    {
+        cell.contentView.backgroundColor = [UIColor clearColor];
+        [self setUpBookCoverCell:cell];
+        
+    }else if (indexPath.row == 2)
+    {
+        //----abstract
+        cell.contentView.backgroundColor = [UIColor clearColor];
+        [self setUpBookAbstractCell:cell];
+        
+    }else if (indexPath.row == 3)
+    {
+        cell.contentView.backgroundColor = [UIColor clearColor];
+        [self setUpBookTotalReviewCell:cell];
+    }
+    else
+    {
+        cell.contentView.backgroundColor = [UIColor clearColor];
+        [self setUpBookReviewCell:cell withIndexPath:indexPath];
+    }
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    CGFloat result = 150;
+    switch (indexPath.row) {
+        case 0:    //bookTitle:(chinese & english)
+            result = [self heightForChineseTitle] + [self heightForEnglishTitle] + 40;
+            break;
+        case 1:    //bookCover & button
+            result = 110;
+            break;
+        case 2:  //abstract
+        {
+            CGFloat height = minAbstractHeight;
+            if (maxAbstractHeight <= minAbstractHeight) {
+                height = maxAbstractHeight;
+            }
+            else
+            {
+                if (_showWhole)
+                {
+                    height = maxAbstractHeight;
+                }
+            }
+            
+            result = height + 40;
+            break; }
+        case 3:     //total bookReview
+            result = 40;
+            break;
+        default:    //bookreview detail
+        {
+            //show bookReview cell
+            if ([bookReviewArray count] > 0)
+            {
+                IYCBookReview *bookReivew = [bookReviewArray objectAtIndex:indexPath.row - 4];
+                result = [self computeSize:self.frame.size.width- 60 font:[UIFont systemFontOfSize:10.0] text:bookReivew.comment] + 80;
+            }
+            break;
+        }
+    }
+    return result;
+}
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
+{
+
+    // 下拉到最底部时显示更多数据
+    if(!_loadingMore && scrollView.contentOffset.y > ((scrollView.contentSize.height - scrollView.frame.size.height)))
+    {
+        if (mTotal && [mTotal intValue] > [bookReviewArray count]) {
+            [self loadDataBegin];
+        }
+    }
+    
+}
+
+#pragma mark -
+- (CGFloat)computeSize:(CGFloat)_width font:(UIFont *)_font text:(NSString *)_text
+{
+    CGSize newSize;
+    newSize = [_text sizeWithFont:_font constrainedToSize:CGSizeMake(_width, 1000) lineBreakMode:NSLineBreakByWordWrapping];
+    return newSize.height;
+}
+- (CGFloat)heightForChineseTitle
+{
+    CGFloat height = 0;
+    height = [self computeSize:280 font:[UIFont systemFontOfSize:16] text:readingBook.bookChineseTitle];
+    DebugLog(@"chinese height: %f", height);
+    return height;
+    
+}
+- (CGFloat)heightForEnglishTitle
+{
+    CGFloat height = 0;
+    height = [self computeSize:280 font:[UIFont systemFontOfSize:12] text:readingBook.bookEnglishTitle];
+    DebugLog(@"english height: %f", height);
+    return height;
+}
+#pragma mark -
+#pragma mark draw cells
+- (void)setUpBookTitleCell:(UITableViewCell *)cell
+{
+    CGFloat cheight = [self heightForChineseTitle];
+    CGFloat eheight = [self heightForEnglishTitle];
+    UILabel *chieseLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 20, 280, cheight)];
+    chieseLabel.backgroundColor = [UIColor clearColor];
+    chieseLabel.text = (readingBook.bookChineseTitle.length == 0) ? @" " : readingBook.bookChineseTitle;
+    chieseLabel.textColor = [UIColor colorWithRed:64.0/255.0 green:131.0/255.0 blue:169.0/255.0 alpha:1];
+    [chieseLabel setFont:[UIFont systemFontOfSize:16]];
+    chieseLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    chieseLabel.numberOfLines = 0;
+    [chieseLabel setShadowColor:[UIColor whiteColor]];
+    [chieseLabel setShadowOffset:CGSizeMake(0, 1)];
+    [cell addSubview:chieseLabel];
+    
+    UILabel *englishLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, cheight + 26, 280, eheight)];
+    englishLabel.backgroundColor = [UIColor clearColor];
+    englishLabel.text = (readingBook.bookEnglishTitle.length == 0) ? @" " : readingBook.bookEnglishTitle;
+    englishLabel.textColor = [UIColor colorWithRed:64.0/255.0 green:131.0/255.0 blue:169.0/255.0 alpha:1];
+    [englishLabel setFont:[UIFont systemFontOfSize:12]];
+    englishLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    englishLabel.numberOfLines = 0;
+    [englishLabel setShadowColor:[UIColor whiteColor]];
+    [englishLabel setShadowOffset:CGSizeMake(0, 1)];
+    [cell addSubview:englishLabel];
+    
+}
+- (void)setUpBookCoverCell:(UITableViewCell *)cell
+{
+    UIImageView *image =[[UIImageView alloc] initWithFrame:CGRectMake(23, 5, 75, 100)];
+    [image sd_setImageWithURL:[NSURL URLWithString:readingBook.bookThumbnailURL] placeholderImage:[UIImage imageNamed:@"defaultCover.png"]];
+    [cell addSubview:image];
+    
+    UILabel *autorLabel = [[UILabel alloc] initWithFrame:CGRectMake(116, 7, 184, 20)];
+    autorLabel.backgroundColor = [UIColor clearColor];
+    autorLabel.text = (readingBook.bookChineseAuthor.length == 0) ? @" " :[NSString stringWithFormat:@"作   者： %@",readingBook.bookChineseAuthor];
+    autorLabel.textColor = [UIColor colorWithRed:114.0/255.0 green:114.0/255.0 blue:114.0/255.0 alpha:1];
+    [autorLabel setFont:[UIFont systemFontOfSize:12]];
+    [autorLabel setShadowColor:[UIColor whiteColor]];
+    [autorLabel setShadowOffset:CGSizeMake(0, 1)];
+    [cell addSubview:autorLabel];
+    
+    UILabel *translatorLabel = [[UILabel alloc] initWithFrame:CGRectMake(116, 27, 184, 20)];
+    translatorLabel.backgroundColor = [UIColor clearColor];
+    translatorLabel.text = (readingBook.transtor.length == 0)? @" ": [NSString stringWithFormat:@"译   者： %@",readingBook.transtor];
+    translatorLabel.textColor = [UIColor colorWithRed:114.0/255.0 green:114.0/255.0 blue:114.0/255.0 alpha:1];
+    [translatorLabel setFont:[UIFont systemFontOfSize:12]];
+    [translatorLabel setShadowColor:[UIColor whiteColor]];
+    [translatorLabel setShadowOffset:CGSizeMake(0, 1)];
+    [cell addSubview:translatorLabel];
+    
+    UILabel *versionLabel = [[UILabel alloc] initWithFrame:CGRectMake(116, 47, 184, 20)];
+    versionLabel.backgroundColor = [UIColor clearColor];
+    versionLabel.text = (readingBook.readableVersion.length == 0)? @" " :[NSString stringWithFormat:@"版   本： %@",readingBook.readableVersion];
+    versionLabel.textColor = [UIColor colorWithRed:114.0/255.0 green:114.0/255.0 blue:114.0/255.0 alpha:1];
+    [versionLabel setFont:[UIFont systemFontOfSize:12]];
+    [versionLabel setShadowColor:[UIColor whiteColor]];
+    [versionLabel setShadowOffset:CGSizeMake(0, 1)];
+    [cell addSubview:versionLabel];
+    
+    UILabel *pressLabel = [[UILabel alloc] initWithFrame:CGRectMake(116, 67, 184, 20)];
+    pressLabel.backgroundColor = [UIColor clearColor];
+    pressLabel.text = (readingBook.bookPublisher.length == 0) ? @" ": [NSString stringWithFormat:@"出版社： %@",readingBook.bookPublisher];
+    pressLabel.textColor = [UIColor colorWithRed:114.0/255.0 green:114.0/255.0 blue:114.0/255.0 alpha:1];
+    [pressLabel setFont:[UIFont systemFontOfSize:12]];
+    [pressLabel setShadowColor:[UIColor whiteColor]];
+    [pressLabel setShadowOffset:CGSizeMake(0, 1)];
+    [cell addSubview:pressLabel];
+    
+    
+}
+- (void)setUpBookAbstractCell:(UITableViewCell *)cell
+{
+    CGFloat height = minAbstractHeight;
+    
+    if (maxAbstractHeight <= minAbstractHeight) {
+        height = maxAbstractHeight;
+    }
+    else
+    {
+        if (_showWhole)
+        {
+            height = maxAbstractHeight;
+        }
+    }
+    DebugLog(@"max: %f min: %f hei: %f", maxAbstractHeight,  minAbstractHeight ,height);
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, 10, self.frame.size.width- 40, height)];
+    self.showTotalNumLable = label;
+    [label setTextAlignment:NSTextAlignmentLeft];
+    label.text = [NSString stringWithFormat:@"书籍简介:%@",readingBook.bookChineseAbstract];
+    [label setTextColor:[UIColor colorWithRed:77.0/255.0 green:77.0/255.0 blue:77.0/255.0 alpha:1]];
+    label.numberOfLines = 0;
+    [label setFont:[UIFont systemFontOfSize:12.0]];
+    label.lineBreakMode = NSLineBreakByTruncatingTail;
+    label.userInteractionEnabled = YES;
+    [label setBackgroundColor:[UIColor clearColor]];
+    [cell addSubview:label];
+    
+    UIButton *expandButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    expandButton.frame = CGRectMake(230, height + 20, 50, 20);
+    [expandButton addTarget:self action:@selector(hideAbstract:) forControlEvents:UIControlEventTouchUpInside];
+    [cell addSubview:expandButton];
+    
+    NSString *textContent = _showWhole ? @"收起" : @"展开全部";
+    UILabel *expandLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 50, 20)];
+    [expandLabel setBackgroundColor:[UIColor clearColor]];
+    [expandLabel setTextAlignment:NSTextAlignmentRight
+     ];
+    expandLabel.textColor =[UIColor colorWithRed:83.0/255.0 green:71.0/255.0 blue:65.0/255.0 alpha:1.0];
+    expandLabel.text = textContent;
+    [expandLabel setFont:[UIFont systemFontOfSize:9.0]];
+    [expandButton addSubview:expandLabel];
+    
+    UILabel *lineLabel = [[UILabel alloc] init];
+    [lineLabel setBackgroundColor:[UIColor colorWithRed:83.0/255.0 green:71.0/255.0 blue:65.0/255.0 alpha:0.5]];
+    CGRect lineFrame =  _showWhole ? CGRectMake(30, 13, 19, 1): CGRectMake(12, 13, 38, 1);
+    lineLabel.frame = lineFrame;
+    [expandButton addSubview:lineLabel];
+    
+    NSString *imageName = _showWhole ? @"upArrow.png" : @"downArrow.png";
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectMake(284, height + 27, 8, 6)];
+    [imageView setImage:[UIImage imageNamed:imageName]];
+    [cell addSubview:imageView];
+    
+}
+- (void)setUpBookTotalReviewCell: (UITableViewCell *)cell
+{
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, self.frame.size.width, 1)];
+    [imageView setImage:[UIImage imageNamed:@"bookDetailLine.png"]];
+    [imageView.layer setShadowOffset:CGSizeMake(0, 5)];
+    [imageView.layer setShadowOpacity:1];
+    [imageView.layer setShadowRadius:2];
+    [imageView.layer setShadowColor:[UIColor whiteColor].CGColor];
+    [cell addSubview:imageView];
+    
+    UIColor *color = [UIColor colorWithRed:153.0/255.0 green:153.0/255.0 blue:153.0/255.0 alpha:1];
+    UILabel *bookreviewLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 10, 30, 20)];
+    bookreviewLabel.backgroundColor =[UIColor clearColor];
+    [bookreviewLabel setTextColor:color];
+    [bookreviewLabel setTextAlignment:NSTextAlignmentLeft];
+    bookreviewLabel.text = @"书评";
+    
+    [bookreviewLabel setFont:[UIFont systemFontOfSize:10.0]];
+    [bookreviewLabel setShadowColor:[UIColor whiteColor]];
+    [bookreviewLabel setShadowOffset:CGSizeMake(0, 1)];
+    [cell addSubview:bookreviewLabel];
+    
+    UILabel *numLabel = [[UILabel alloc] initWithFrame:CGRectMake(50, 10, 80, 20)];
+    numLabel.backgroundColor =[UIColor clearColor];
+    [numLabel setTextAlignment:NSTextAlignmentLeft];
+    numLabel.text = [NSString stringWithFormat:@"(共%@条)", mTotal];
+    [numLabel setTextColor:color];
+    [numLabel setFont:[UIFont systemFontOfSize:9.0]];
+    [numLabel setShadowColor:[UIColor whiteColor]];
+    [numLabel setShadowOffset:CGSizeMake(0, 1)];
+    [cell addSubview:numLabel];
+    
+
+}
+
+- (void)setUpBookReviewCell: (UITableViewCell *)cell withIndexPath:(NSIndexPath *)indexPath
+{
+    if ([bookReviewArray count] == 0) {
+        return;
+    }
+    DebugLog(@"indexpath row: %d", indexPath.row);
+    IYCBookReview *bookreview = [bookReviewArray objectAtIndex:indexPath.row - 4];
+    UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 0, 200, 20)];
+    [nameLabel setTextColor:[UIColor colorWithRed:77.0/255.0 green:77.0/255.0 blue:77.0/255.0 alpha:1]];
+    nameLabel.text = bookreview.reviewer;
+    nameLabel.font = [UIFont systemFontOfSize:10.0];
+    nameLabel.backgroundColor = [UIColor clearColor];
+    [nameLabel setShadowColor:[UIColor whiteColor]];
+    [nameLabel setShadowOffset:CGSizeMake(0, 1)];
+    [cell addSubview:nameLabel];
+    
+    UILabel *timeLabel = [[UILabel alloc] initWithFrame:CGRectMake(200, 0, 99, 20)];
+    timeLabel.backgroundColor = [UIColor blueColor];
+    [timeLabel setTextColor:[UIColor colorWithRed:153.0/255.0 green:153.0/255.0 blue:153.0/255.0 alpha:1]];
+    [timeLabel setTextAlignment:NSTextAlignmentRight];
+    timeLabel.text = bookreview.commentTime;
+    timeLabel.font = [UIFont systemFontOfSize:9.0];
+    timeLabel.backgroundColor = [UIColor clearColor];
+    [cell addSubview:timeLabel];
+    
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, 30, self.frame.size.width- 60, 30)];
+    [titleLabel setTextColor:[UIColor colorWithRed:64.0/255.0 green:131.0/255.0 blue:169.0/255.0 alpha:1]];
+    titleLabel.backgroundColor = [UIColor clearColor];
+    titleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+    titleLabel.font = [UIFont systemFontOfSize:12.0];
+    titleLabel.text = bookreview.title;
+    
+    [cell addSubview:titleLabel];
+    
+    CGFloat commentHeight = [self computeSize:self.frame.size.width- 60 font:[UIFont systemFontOfSize:10.0] text:bookreview.comment];
+    
+    UILabel *commentLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, 60, self.frame.size.width- 60, commentHeight)];
+    [commentLabel setTextColor:[UIColor colorWithRed:77.0/255.0 green:77.0/255.0 blue:77.0/255.0 alpha:1]];
+    commentLabel.backgroundColor = [UIColor clearColor];
+    commentLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    commentLabel.numberOfLines = 0;
+    commentLabel.font = [UIFont systemFontOfSize:10.0];
+    commentLabel.text = bookreview.comment;
+    
+    [cell addSubview:commentLabel];
+    
+    UIImageView *imageView1 = [[UIImageView alloc] initWithFrame:CGRectMake(20, 20, self.frame.size.width- 40,  20)];
+    [imageView1 setImage:[UIImage imageNamed:@"comment_1.png"]];
+    [cell addSubview:imageView1];
+    [cell sendSubviewToBack:imageView1];
+    
+    UIImageView *imageView2 = [[UIImageView alloc] initWithFrame:CGRectMake(20, 40, self.frame.size.width- 40,  commentHeight + 10)];
+    [imageView2 setImage:[UIImage imageNamed:@"comment_2.png"]];
+    [cell addSubview:imageView2];
+    [cell sendSubviewToBack:imageView2];
+    
+    UIImageView *imageView3 = [[UIImageView alloc] initWithFrame:CGRectMake(20, commentHeight + 50, self.frame.size.width- 40,  17)];
+    [imageView3 setImage:[UIImage imageNamed:@"comment_3.png"]];
+    [cell addSubview:imageView3];
+    [cell sendSubviewToBack:imageView3];
+    
+    
+}
+
+- (void)hideAbstract:(id)sender
+{
+    _showWhole = !_showWhole;
+    [tableView reloadData];
+}
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect
+{
+    // Drawing code
+}
+*/
+
+@end

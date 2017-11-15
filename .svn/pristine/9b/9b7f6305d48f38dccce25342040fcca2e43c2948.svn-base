@@ -1,0 +1,52 @@
+//
+//  IYCCommon.h
+//  IYangCongReader
+//
+//  Created by Bella on 4/11/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCSynchroService.h"
+#import "IYCConfig.h"
+@class IYCRequest;
+@class IYCLoginService;
+@class IYCSynchroService;
+@class IYCUpdateBook;
+@interface IYCCommon : NSObject <IYCServiceDelegate>
+{
+    NSUserDefaults *userManager;
+    
+    IYCLoginService      *loginService;
+    IYCSynchroService    *syncService;
+}
+
++ (IYCCommon *)sharedCommon;
+
++ (BOOL)isAccountLogin;
+
++ (void)alterErrorMessage:(IYCRequest*)request;
+
++ (void)alterNoNetwork;
+
+- (void)updateUserInfoFromServerByOne:(IYCUpdateBook*)book;
+
+- (void)updateUserInfoFromServer;
+
+//delete book and related book's info
++ (BOOL)deleteBookData: (long)bookId;
+
++ (int)getDownloadErrorCode:(long)bookId;
+
++ (void)updateBookCoverForDownloadBook;
+
++ (void)encodeBase64forFile:(NSString*)filePath;
+
++ (NSString *)decodeBase64forFile:(NSString*)filePath;
+
++ (NSString *)currentTimeStr;
+
++ (IYCFONTSIZE)fontSizeOfCurrentAccount;
+
+- (void)getappId;
+@end

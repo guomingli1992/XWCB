@@ -1,0 +1,62 @@
+//
+//  ManuscriptViewController.m
+//  iyangcong
+//
+//  Created by mingli 郭 on 2017/7/11.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "ManuscriptViewController.h"
+
+@interface ManuscriptViewController ()
+{
+    UIView*line;
+    
+    UIView *view2;
+
+}
+@end
+
+@implementation ManuscriptViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self loadbuttonItem];
+}
+-(void)loadbuttonItem
+{
+    view2=[[UIView alloc]initWithFrame:CGRectMake(0, HEIGHT-50, WIDTH1, 50)];
+    view2.backgroundColor=[UIColor whiteColor];
+    [self.view addSubview:view2];
+    
+    line=[[UIView alloc] initWithFrame:CGRectMake(0, 0, WIDTH1, 0.5)];
+    line.backgroundColor=[UIColor colorWithRed:180.0/255 green:180.0/255 blue:180.0/255 alpha:1];
+    [view2 addSubview:line];
+    
+    NSArray *img=[[NSArray alloc] initWithObjects:@"homepage_normal",@"manuscript_press",@"plusmanuscript_normal",@"find_normal",@"mine_normal", nil];
+    NSArray *text=[[NSArray alloc] initWithObjects:@"主页",@"稿件",@"",@"发现",@"我的", nil];
+    for (int i=0; i<5; i++) {
+        
+        UIButton*btn=[[UIButton alloc] init];
+        btn.frame=CGRectMake(i*WIDTH1/5, 0.5, WIDTH1/5, 35);
+        btn.tag=100+i;
+        UIImageView *image1=[self createImageViewFrame:CGRectMake(WIDTH1/10-10, 7, 20, 20) imageName:[img objectAtIndex:i]];
+        [btn addSubview:image1];
+        btn.backgroundColor=[UIColor whiteColor];
+        [btn addTarget:self action:@selector(selectbtn:) forControlEvents:UIControlEventTouchUpInside];
+        [view2 addSubview:btn];
+        
+        UILabel *lab=[self createLabelFrame:CGRectMake(i*WIDTH1/5, 33, WIDTH1/5, 10) text:[text objectAtIndex:i] textColor:[UIColor colorWithHexString:textMainColor] textFont:[UIFont systemFontOfSize:10] textAlignment:NSTextAlignmentCenter numberOfLines:0];
+        [view2 addSubview:lab];
+        
+        if (i==1) {
+            lab.textColor=[UIColor colorWithHexString:mainColor];
+        }
+    }
+}
+- (void)selectbtn:(UIButton*)btn//TAB按钮切换的监听
+{
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"CHANGEMAINPAGE" object:[NSString stringWithFormat:@"%ld",(long)btn.tag]];
+}
+
+@end

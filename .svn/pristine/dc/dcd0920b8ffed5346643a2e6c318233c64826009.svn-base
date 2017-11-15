@@ -1,0 +1,19 @@
+//
+//  IYCAccount.m
+//  IYangCongReader
+//
+//  Created by haley on 4/15/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCAccount.h"
+
+@implementation IYCAccount
+
+//@synthesize bookmark;
+@synthesize accountID = _accountID;
+@synthesize fontSize,brightness,nightMode;
+@synthesize readingProgress;
+@synthesize lastReadTime = _lastReadTime;
+
+@end

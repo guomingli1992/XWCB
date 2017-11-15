@@ -1,0 +1,15 @@
+//
+//  IYCGetAppIDResp.h
+//  IYangCongReader
+//
+//  Created by MaTeng on 14-10-11.
+//  Copyright (c) 2014年 IYangCong. All rights reserved.
+//
+
+#import "IYCRequest.h"
+
+@interface IYCGetAppIDResp : IYCRequest
+@property (nonatomic,retain)NSString *QqAppID;
+
+- (id)initWithJSONDictionary: (NSDictionary*)jsonDic;
+@end

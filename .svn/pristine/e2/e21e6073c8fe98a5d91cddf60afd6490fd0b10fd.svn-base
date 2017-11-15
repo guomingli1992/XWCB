@@ -1,0 +1,13 @@
+//
+//  IYCParseBook.m
+//  IYangCongReader
+//
+//  Created by she-mac on 6/24/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCParseBook.h"
+
+@implementation IYCParseBook
+
+@end

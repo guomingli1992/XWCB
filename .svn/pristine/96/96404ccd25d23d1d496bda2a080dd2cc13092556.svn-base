@@ -1,0 +1,146 @@
+//
+//  QPURLUtil.m
+//  Reader
+//
+//  Created by Ian on 13-3-8.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCURLUtil.h"
+#import "IYCPlistUtil.h"
+
+@implementation IYCURLUtil
+
+
++ (NSString *)getDownloadUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/Download.svc/DownloadBook"];
+}
+
++ (NSString *)getLoginUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/AccountService.svc/Login"];
+}
++ (NSString *)getBookListUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/SearchService.svc/GetBookList"];
+   // return nil;
+}
+
++ (NSString *)getSearchKeyWords{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/Search/FrequencyKeywords"];
+}
+
++ (NSString *)getRecommendBookList{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/Page/Home"];
+}
+
++ (NSString *)getSpecialBookList{
+    return  [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/Node/Books"];
+}
+
++ (NSString *)getBookReviewUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/SearchService.svc/GetBookReview"];
+}
+
++ (NSString *)getBannerUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/SearchService.svc/GetBanner"];
+}
++ (NSString *)getCatalogUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/SearchService.svc/GetCatalog"];
+}
++ (NSString *)getCongradientUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/Congradient.svc/CongradientUserInfo"];
+}
+
++ (NSString *)getUploadadUserInfoUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/Congradient.svc/UplodadUserInfo"];
+}
+
++ (NSString *)getTagUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/entry/tag/get"];
+}
++ (NSString *)getHotKeyUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/entry/hotkeys/get"];
+}
++ (NSString *)getSecretKey {
+
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/EncryptKey/SecretKey"];
+}
+
++ (NSString *)getRegisterUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/AccountService.svc/Register"];
+}
+
++ (NSString *)getBookByIdUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/SearchService.svc/GetBookById"];
+}
+
++ (NSString *)getBookBuyUrl{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingFormat:@"/Congradient.svc/GetBookBuy"];
+}
+
++ (NSString *)getUploadadBookReviewUrl {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/BookReview.svc/UploadBookReview"];
+}
+
++ (NSString *)getVersion {
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/Version.svc/VersionController"];
+}
+
++ (NSString *)getApnsToken{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/APNSService.svc/UploadApnsToken"];
+}
+
++ (NSString *)getIosProductUrl{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingFormat:@"/PayService.svc/IosProduct"];
+}
+
++ (NSString *)getOrderUrl{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingFormat:@"/PayService.svc/order"];
+}
+
++ (NSString *)getIosPayResultUrl{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingFormat:@"/PayService.svc/IosPayResult"];
+}
+
++ (NSString *)getIosRestoreUrl{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingFormat:@"/PayService.svc/IosRestore"];
+}
+
++ (NSString *)getBookByProductIdUrl
+{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingFormat:@"/SearchService.svc/BookDetail"];
+}
+
++ (NSString *)getThirdPartLoginUrl
+{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/AccountService.svc/ThirdPartyLogin"];
+}
+
++ (NSString *)SendExperienceDataUrl
+{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/ExperienceService.svc/SendExperienceList"];
+}
++ (NSString *)getExperienceInfoUrl
+{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/ExperienceService.svc/GetExperienceInfo"];
+}
++ (NSString *)getQqAppID
+{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/AccountService.svc/GetAppID"];
+}
++ (NSString *)saveNoteUrl
+{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/SaveService.svc/SaveBookMinutes"];
+}
++ (NSString *)getNoteUrl
+{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/SearchService.svc/GetAllMinutesByBookId"];
+}
++ (NSString *)deleteOneNoteUrl
+{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/DeleteService.svc/DeleteMinuteById"];
+}
++ (NSString *)deleteNoteByOffsetUrl
+{
+    return [[IYCPlistUtil getWebServiceHost] stringByAppendingString:@"/DeleteService.svc/DeleteMinuteByOff"];
+}
+@end

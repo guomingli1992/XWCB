@@ -1,0 +1,23 @@
+//
+//  IYCNoteContentView.h
+//  IYangCongReader
+//
+//  Created by 马腾 on 15/7/24.
+//  Copyright (c) 2015年 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@protocol IYCNoteContentDelegate <NSObject>
+
+- (void) finishedEditContent:(UITextView *)textView;
+
+
+@end
+
+@class IYCNote;
+@interface IYCNoteContentView : UIView
+- (instancetype)initWithFrame:(CGRect)frame withNote:(IYCNote *)note withDelegate:(id)delegate;
+
+
+@end

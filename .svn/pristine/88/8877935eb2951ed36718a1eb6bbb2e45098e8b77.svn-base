@@ -1,0 +1,4165 @@
+//
+//  IYCReadingViewController.m
+//  IYangCongReader
+//
+//  Created by haley on 3/22/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+//#import "BookReviewViewController.h"
+#import "ViewSelectView.h"
+#import "IYCReadingViewController.h"
+#import "IYCEPub.h"
+#import "IYCChapter.h"
+#import "IYCParagraph.h"
+#import "IYCBottomViewController.h"
+#import "IYCSearchResult.h"
+#import "IYCSearchReadingViewController.h"
+#import "IYCDBAction.h"
+#import "Reachability.h"
+#import "MBProgressHUD.h"
+#import "IYCFileManager.h"
+#import "IYCCurrentBookState.h"
+#import "IYCBookMark.h"
+#import "NSDateHelper.h"
+//#import "IYCWeiboViewController.h"
+#import "IYCCommon.h"
+#import "IYCEventManager.h"
+#import "IYCTranslationViewController.h"
+#import "IYCNoteViewController.h"
+#import "IYCLoginService.h"
+#import "IYCUserInfo.h"
+#import "AppDelegate.h"
+//笔记
+//#import "CoinMainViewController.h"
+#import "IYCNote.h"
+#import "IYCSaveNoteReq.h"
+#import "IYCSaveNoteResp.h"
+#import "IYCNoteService.h"
+#import "IYCGetNoteReq.h"
+#import "IYCGetNoteResp.h"
+#import "IYCDeleteNoteReq.h"
+#import "IYCDeleteNoteResp.h"
+#import "QueryLocalWord.h"
+#import "ShareSelectView.h"
+#import <TencentOpenAPI/QQApiInterface.h>
+#define DOUBAN_SHARE_TAG 1001
+#import <TencentOpenAPI/TencentOAuth.h>
+#import <TencentOpenAPI/TencentApiInterface.h>
+#define TrialViewHeight 28
+#define BUY_TAG 500
+//#import "WatchVideoViewController.h"
+#define COIN_TAG 1010
+@interface IYCReadingViewController ()<CAAnimationDelegate,TencentSessionDelegate,MWPhotoBrowserDelegate>
+{
+    TencentOAuth *_tencentOAuth;
+    UIButton *btnRead;
+    UIView *nightModeView;
+    IYCContentViewController *contentViewController;
+    NSDictionary *readyNewWordDict;
+    NSInteger starttime;
+    NSString *recodeTag;
+    UIView *tranView;
+    NSDictionary *wordDict;       //查询部分单词缓存
+    NSMutableArray *sentenceDictArray;   //句对内容缓存
+    UIView *wordView;             //查词视图
+    UIView *sentenceView;         //句对视图
+    
+    NSMutableString *newWordStr;
+    IYCData *dataChinese;
+    IYCData *dataEnglish;
+    
+    int changeChapterIndex;       //需要分页的章节号
+    float changeChapterOffset;    //首页需要加留白的长度
+    int jumpToPageID;            //分页以后要跳到哪一页
+    IYCParagraph *topParagraph;  //换语言后的顶头段对象
+    IYCParagraph *topParagraphAfterChange; //换语言前的顶头段
+    int iParsed;
+    int jParsed;     //检测相应版本是否已解析完全
+    BOOL allParsed;
+    UIButton *addWord;
+    UIView *topView;
+    IYCBottomViewController *bottomViewController;
+    
+    BOOL menuHidden;
+    int count;                 //微调函数调整循环次数
+    int oldChapterID;          //纪录上一次章节号来刷新目录中应该禁止点击的章节
+    IYCSearchReadingViewController *searchReadingViewController;
+    
+    //    IYCWeiboViewController *weiboViewController;
+    CGRect settedWebViewFrame;
+    int oldSegmentTag;
+    NSString *bookMarkString;
+    int prevValue;
+    int saveValue;
+    int lineInParagraph;  //顶头行在顶头段是顶头段的第几行
+    MBProgressHUD *progressHud;
+    UIView *trialView;
+    UIView *lastPageView;
+    
+    UITapGestureRecognizer *tapGesture;
+    UISwipeGestureRecognizer* rightSwipeRecognizer;
+    UISwipeGestureRecognizer* leftSwipeRecognizer;
+    
+    IYCNote * noteToSwitch;
+    IYCBookMark * bookMarkToSwitch;
+    
+    BOOL isDeleteNote;
+    IYCNoteService *noteServer;
+    
+    IYCLoginService *service;
+    
+    IYCExperienceService *experience;
+    NSString *bookPriceStr;
+    NSString *coinStr;
+    NSNotification *noti;
+    UITapGestureRecognizer *labelTapGestureRecognizer2;
+    AVPlayer *player;
+    AVPlayerItem * songItem;
+    
+    NSDictionary *resDict;
+}
+
+@property (nonatomic, retain) NSString *bookMarkString;
+@property (nonatomic, retain) IYCBook *readingChangeBook;
+@property (nonatomic) int swipeGestureType; //0:无; 1:卷页; 2:推入; 3:揭开; 4:覆盖
+@property (nonatomic, retain) NSMutableArray *experiences;
+@property (nonatomic, strong)NSMutableArray *photos;
+@end
+
+@implementation IYCReadingViewController
+@synthesize currentIndex;
+@synthesize chineseEpubPath;
+@synthesize englishEpubPath;
+@synthesize bookMarkString;
+@synthesize swipeGestureType;
+@synthesize startTime;
+@synthesize endTime;
+@synthesize isBack;
+@synthesize experiences;
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+    }
+    return self;
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [self.navigationController setNavigationBarHidden:YES];
+    [[UIApplication sharedApplication] setStatusBarHidden:YES];
+    [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleDefault];
+    [self.navigationController setNeedsStatusBarAppearanceUpdate];
+    
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(changeLanguageEdition:) name:@"changeLanguage" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(findExplanation:) name:@"findExplanation" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(pushWebViewToRight:) name:@"pushWebViewToRight" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(jumpToContent:) name:@"jumpToContent" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(gotoBookMark:) name:@"gotoBookMark" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(searchView:) name:@"gotoSearchView" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(ShareView:) name:@"gotoShareView" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(refreshViews) name:@"hangUp" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(turnToNoteView:) name:@"gotoNoteView" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(turnToNote:) name:@"turnToNote" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(ModelChanged:)
+                                                 name:@"NOTIFICATION_MODELCHANGED"
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(pageModelChanged:)
+                                                 name:@"NOTIFICATION_PAGEMODELCHANGED"
+                                               object:nil];
+    //    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(StopTime) name:@"Inactive" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(StopTime) name:@"Enterbackground" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(StartTime) name:@"EnterForeground" object:nil];
+    
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(showNewWordView:) name:@"showNewWordView" object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(missNewWordView:) name:@"missNewWordView" object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(videoPlayByUrl:) name:@"videoPlayByUrl" object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(audioPlayByUrl:) name:@"audioPlayByUrl" object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(imagePlayByUrl:) name:@"imagePlayByUrl" object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(refreshContent:) name:@"refreshContent" object:nil];
+
+
+}
+
+
+-(void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleDefault animated:NO];
+    [[UIApplication sharedApplication] setStatusBarHidden:NO];
+
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"changeLanguage" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"findExplanation" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"pushWebViewToRight" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"jumpToContent" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"gotoBookMark" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"gotoSearchView" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"gotoShareView" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"hangUp" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"gotoNoteView" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"turnToNote" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"NOTIFICATION_MODELCHANGED" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"NOTIFICATION_PAGEMODELCHANGED" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"Enterbackground" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"EnterForeground" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"showNewWordView" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"missNewWordView" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"videoPlayByUrl" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"audioPlayByUrl" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"imagePlayByUrl" object:nil];
+
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIMenuControllerWillShowMenuNotification object:nil];
+    [[NSNotificationCenter defaultCenter]removeObserver:self name:NOTIFICATION_REFRESHWEBVIEW object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIMenuControllerWillHideMenuNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"shareSelectedText" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"searchSelectedText" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"createNote" object:nil];
+
+    
+    
+    
+}
+//-(void)viewDidAppear:(BOOL)animated
+//{
+//    self.currentIndex = [self.currentBookEdition.pageArray indexOfObject:contentViewController.page];
+//    IYCCurrentBookState *bookS = [[IYCDBAction sharedDBAction] queryBookState:self.readingBook.bookId accountID:self.readingBook.bookAccount.accountID];
+//    if(bookS && bookS.lastReadTime != nil){
+//        self.currentIndex = bookS.pageNumber;
+//    }
+//    bottomViewController.slider.value = self.currentIndex + 1;
+//    bottomViewController.pageLabel.text = [NSString stringWithFormat:@"Page %d/%d",self.currentIndex + 1,self.currentBookEdition.pageArray.count];
+//    contentViewController.pagelabel.text = @"";
+//}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    [self StartTime];
+    
+    isDeleteNote = NO;
+    
+    //先删除上次笔记
+    
+    //    long accoutId = [[[NSUserDefaults standardUserDefaults] objectForKey:@"userId" ] longLongValue];
+    //
+    //    NSArray *deleteArray = [[IYCDBAction sharedDBAction] selectHaveDeleteNoteWithBookId:self.readingBook.bookServerId AccountId:accoutId];
+    //
+    //
+    //    if (deleteArray.count != 0) {
+    //        IYCDeleteNoteReq *deleteReq = [[IYCDeleteNoteReq alloc] init];
+    //        deleteReq.acountId = [NSNumber numberWithLong:accoutId];
+    //
+    //        isDeleteNote = YES;
+    //        deleteReq.minutes = [self readyForUpload:deleteArray];
+    //
+    //        noteServer = [[IYCNoteService alloc] init];
+    //        [noteServer setType:IYCNOTESERVICE_TYPE_DELETEONENOTE];
+    //        noteServer.delegate = self;
+    //        [noteServer deleteNote:deleteReq];
+    //
+    //    }else{
+    //        //获取笔记
+    //        IYCGetNoteReq *req = [[IYCGetNoteReq alloc] init];
+    //        req.acountId = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId" ];
+    //        req.bookId = [NSNumber numberWithLong:self.readingBook.bookServerId];
+    //
+    //        noteServer = [[IYCNoteService alloc] init];
+    //        noteServer.delegate = self;
+    //        [noteServer setType:IYCNOTESERVICE_TYPE_GETNOTE];
+    //        [noteServer getNote:req];
+    //
+    //
+    //    }
+    
+    
+    NSMutableArray *array = [[NSMutableArray alloc] init];
+    self.experiences = array;
+    
+    
+
+    self.changeEditionTimes = 0;
+    changeChapterOffset = 0;
+    changeChapterIndex = -1;
+    count = 0;
+    prevValue = self.currentIndex + 1;
+    saveValue = self.currentIndex + 1;
+    jumpToPageID = 0;
+    self.pushedToRight = NO;
+    self.swipeGestureType = [[[NSUserDefaults standardUserDefaults] objectForKey:KEY_GestureType] intValue];
+    iParsed = 0;
+    jParsed = 0;
+    allParsed = NO;
+    isBack = NO;
+    
+    [[UIApplication sharedApplication] setStatusBarHidden:YES];
+    
+    self.view.frame = CGRectMake(0, 0, WIDTH1, [UIScreen mainScreen].bounds.size.height);
+    NSString *nightModeStr=[[NSUserDefaults standardUserDefaults] objectForKey:@"nightMode"];
+    if ([nightModeStr isEqualToString:@"6"]) {
+        self.view.backgroundColor = NIGHT_COLOR_BACK;
+    }
+    else if ([nightModeStr isEqualToString:@"1"]){
+        self.view.backgroundColor = DAY_COLOR_BACK1;
+    }
+    else if ([nightModeStr isEqualToString:@"2"]){
+        self.view.backgroundColor = DAY_COLOR_BACK2;
+    }
+    else if ([nightModeStr isEqualToString:@"3"]){
+        self.view.backgroundColor = DAY_COLOR_BACK3;
+    }
+    else if ([nightModeStr isEqualToString:@"4"]){
+        self.view.backgroundColor = DAY_COLOR_BACK4;
+    }
+    else if ([nightModeStr isEqualToString:@"5"]){
+        self.view.backgroundColor = DAY_COLOR_BACK5;
+    }
+    contentViewController = [[IYCContentViewController alloc] init];
+    contentViewController.theWebView.myDelegate = self;
+    contentViewController.page = [self.currentBookEdition.pageArray objectAtIndex:self.currentIndex];
+    oldChapterID = contentViewController.page.chapterId;
+    contentViewController.pageNum = self.currentIndex;
+    
+    contentViewController.readingBook = self.readingBook;
+    contentViewController.langType = self.currentLang;
+    contentViewController.changeChapterIndex = changeChapterIndex;
+    contentViewController.changeChapterOffset = changeChapterOffset;
+    contentViewController.canChange = self.canChange;
+    
+    [self.view addSubview:contentViewController.view];
+    settedWebViewFrame = contentViewController.theWebView.frame;
+    
+    rightSwipeRecognizer = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(gotoNextPage)];
+    [rightSwipeRecognizer setDirection:UISwipeGestureRecognizerDirectionLeft];
+    
+    leftSwipeRecognizer = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(gotoPrevPage)];
+    [leftSwipeRecognizer setDirection:UISwipeGestureRecognizerDirectionRight];
+    
+    [self.view addGestureRecognizer:rightSwipeRecognizer];
+    [self.view addGestureRecognizer:leftSwipeRecognizer];
+    
+    //add top and bottom view on the reading page
+    [self initTopAndBottomMenu];
+    
+    tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(triggerMenu:)];
+    tapGesture.delegate = self;
+    [self.view addGestureRecognizer:tapGesture];
+    tapGesture.cancelsTouchesInView = NO;
+    [self setBookMarkStatus:self.readingBook.bookId];
+    [self startreadinRecordBegin];
+    
+    
+}
+- (void)StartTime{
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    self.startTime = [formatter stringFromDate:[NSDate date]];
+    starttime=[[NSDate date] timeIntervalSince1970];
+}
+
+- (void)startreadinRecordBegin {
+    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] intValue]!=0&&[IYCCheckNetwork isServiceAvailable]) {
+        NSString *semesterId;
+        if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"semesterId"] intValue]==0) {
+            semesterId=@"";
+        }
+        else
+            semesterId=[NSString stringWithFormat:@"%@",[[NSUserDefaults standardUserDefaults] objectForKey:@"semesterId"]];
+        NSDictionary *dict=@{@"semesterid":semesterId,@"bookid":[NSNumber numberWithLong:self.readingBook.bookServerId],@"language":[NSNumber numberWithInt:self.currentLang],@"startsegmentid":_paraId,@"userid":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]};
+        
+        //        NSDictionary *dict=@{@"bookid":[NSNumber numberWithLong:self.readingBook.bookServerId],@"language":[NSNumber numberWithInt:self.currentLang],@"startsegmentid":_paraId,@"userid":@"323235"};
+        
+        [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/sentencecontroller/reading_orbit_record_begin" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+            if ([[dic objectForKey:@"statusCode"] intValue]==-1) {
+                AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+                delegate.studentUserId=@"0";
+                delegate.readingrecordlogid=@"0";
+            }
+            else {
+                AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+                delegate.studentUserId=@"1";
+                delegate.readingrecordlogid=[NSString stringWithFormat:@"%@",[[dic objectForKey:@"data"] objectForKey:@"readingrecordlogid"]];
+                recodeTag=@"1";
+                _timer = [NSTimer scheduledTimerWithTimeInterval:600.0 target:self selector:@selector(endreadinRecordBegin) userInfo:nil repeats:NO];
+                
+            }
+        } WithFailurBlock:^(NSError *error) {
+        }];
+    }
+}
+
+- (void)endreadinRecordBegin {
+    
+    AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+    
+    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] intValue]!=0&&[IYCCheckNetwork isServiceAvailable]) {
+        
+        NSInteger endtime=[[NSDate date] timeIntervalSince1970];
+        
+        NSDictionary *dict=@{@"bookid":[NSNumber numberWithLong:self.readingBook.bookServerId],@"language":[NSNumber numberWithInt:self.currentLang],@"endsegmentid":_paraId,@"userid":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"readingrecordlogid":delegate.readingrecordlogid,@"start_time":self.startTime,@"reading_long":[NSString stringWithFormat:@"%li",endtime-starttime],@"terminal":@"2",@"end_time":self.endTime};
+        
+        //        NSDictionary *dict=@{@"bookid":[NSNumber numberWithLong:self.readingBook.bookServerId],@"language":[NSNumber numberWithInt:self.currentLang],@"endsegmentid":_paraId,@"userid":@"323235",@"readingrecordlogid":delegate.readingrecordlogid,@"end_time":@"1",@"reading_long":@"1"};
+        
+        [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/sentencecontroller/record" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+            if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+                delegate.readingrecordlogid=@"0";
+                if ([recodeTag isEqualToString:@"1"]) {
+                    [self startreadinRecordBegin];
+                }
+            }
+        } WithFailurBlock:^(NSError *error) {
+        }];
+    }
+}
+
+- (void)StopTime{
+    
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    NSDate *date1 = [formatter dateFromString:self.startTime];
+    NSDate *date2 = [NSDate date];
+    self.endTime = [formatter stringFromDate:date2];
+    NSTimeInterval aTimer = [date2 timeIntervalSinceDate:date1];
+    readingLong = aTimer;
+    
+    [self UploadExperience];
+    [self uploadNote];
+    
+    if(isBack == NO){
+        //[self saveReadingProgress];
+        [self saveReadingProgressByOne];
+    }
+    
+    
+    
+}
+- (void)uploadNote
+{
+    //    NSArray *noteList = [[IYCDBAction sharedDBAction] selectNotesByBookID:self.readingBook.bookServerId AccountId:[[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] longLongValue] ChapterIndex:-1 noteStatus:NOTESTATUES_TYPE_ALLEXCEPT];
+    //
+    //    if (noteList.count == 0) {
+    //        NSLog(@"没有新笔记");
+    //        return;
+    //    }
+    //
+    //    long accountId = [[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] longLongValue];
+    //
+    //
+    //    IYCSaveNoteReq *saveReq = [[IYCSaveNoteReq alloc] init];
+    //    saveReq.acountId = [NSNumber numberWithLongLong:accountId];
+    //    saveReq.minutes = [self readyForUpload:noteList];
+    //
+    //    noteServer = [[IYCNoteService alloc] init];
+    //    [noteServer setType:IYCNOTESERVICE_TYPE_SAVENOTE];
+    //    noteServer.delegate = self;
+    //    [noteServer sendNote:saveReq];
+    
+}
+- (void)UploadExperience{
+    
+    //    [self.experiences removeAllObjects];
+    //    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    //    [dic setObject:self.startTime forKey:@"startTime"];
+    //    [dic setObject:self.endTime forKey:@"endTime"];
+    //    [dic setObject:[NSNumber numberWithInt:readingLong] forKey:@"readingLong"];
+    //    [dic setObject:[NSNumber numberWithInt:self.currentLang] forKey:@"language"];
+    //    [dic setObject:[NSNumber numberWithLong:self.readingBook.bookServerId] forKey:@"bookId"];
+    //    NSMutableArray *array = [[NSUserDefaults standardUserDefaults]objectForKey:@"experiences"];
+    //    if (array.count != 0) {
+    //        [self.experiences addObjectsFromArray:array];
+    //    }
+    //    [self.experiences addObject:dic];
+    //
+    //
+    //
+    //    switch ([[Reachability reachabilityForInternetConnection] currentReachabilityStatus])
+    //    {
+    //        case NotReachable: {
+    //            NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+    //            [userdefaults setObject:self.experiences forKey:@"experiences"];
+    //            [userdefaults synchronize];
+    //
+    //        }
+    //            break;
+    //        default:{
+    //            NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+    //            [userdefaults setObject:nil forKey:@"experiences"];
+    //            [userdefaults synchronize];
+    //        }
+    //            break;
+    //
+    //
+    //    }
+    //
+    //    IYCExperienceReq *request = [[IYCExperienceReq alloc] init];
+    //    request.acountId = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"];
+    //    request.experiences = self.experiences;
+    //
+    //    experience = [[IYCExperienceService alloc] init];
+    //    experience.delegate = self;
+    //    [experience SendExperience:request];
+    
+    
+}
+- (NSMutableArray *)readyForUpload:(NSArray *)list
+{
+    NSMutableArray *temp = [[NSMutableArray alloc] init];
+    
+    
+    for (IYCNote * note in list) {
+        NSMutableDictionary *dic = [[NSMutableDictionary alloc]init];
+        [dic setObject:[NSNumber numberWithLong:note.bookID] forKey:@"bookId"];
+        //        if (note.noteStatus != NOTESTATUES_TYPE_UNUPLOADED) {
+        //            [dic setObject:[NSNumber numberWithInt:note.noteID] forKey:@"id"];
+        //        }
+        if (note.noteStatus == NOTESTATUES_TYPE_CHANGED) {
+            [dic setObject:[NSNumber numberWithInt:note.noteServerID] forKey:@"id"];
+        }
+        
+        [dic setObject:[NSNumber numberWithLong:note.startParagraphId] forKey:@"segmentId"];
+        [dic setObject:note.selectString forKey:@"content"];
+        [dic setObject:note.noteContent forKey:@"note"];
+        if (!isDeleteNote) {
+            [dic setObject:@1 forKey:@"status"];
+            [dic setObject:note.modifyTime forKey:@"lastModified"];
+            
+        }else{
+            [dic setObject:@0 forKey:@"status"];
+            [dic setObject:[IYCCommon currentTimeStr] forKey:@"lastModified"];
+            
+        }
+        [dic setObject:[NSNumber numberWithInt:note.language] forKey:@"languageType"];
+        [dic setObject:[NSNumber numberWithInt:note.startOffset] forKey:@"startOffset"];
+        [dic setObject:[NSNumber numberWithInt:note.endOffset] forKey:@"endOffset"];
+        [dic setObject:[NSNumber numberWithLong:note.chapterID] forKey:@"chapterId"];
+        [temp addObject:dic];
+        
+    }
+    return temp;
+    
+}
+
+#pragma mark- IYCRequestDelegate
+- (void)requestDidSuccess:(id)data
+{
+    if ([data isKindOfClass:[IYCExperienceResp class]]) {
+        NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+        [userdefaults setObject:nil forKey:@"experiences"];
+        [userdefaults synchronize];
+        [self.experiences removeAllObjects];
+        
+        
+    }
+    if ([data isKindOfClass:[IYCUserInfo class]]) {
+        IYCUserInfo *userInfo = (IYCUserInfo *)data;
+        NSUserDefaults *userDefault = [NSUserDefaults standardUserDefaults];
+        //        [userDefault setObject:userInfo.accountId forKey:KEY_AccountID];
+        //
+        //        [userDefault setObject:userInfo.accountName forKey:KEY_AccountName];
+        //        [userDefault setObject:userInfo.email forKey:KEY_Email];
+        [userDefault setObject:userInfo.sessionId forKey:KEY_SessionID];
+        [userDefault synchronize];
+    }
+    if ([data isKindOfClass:[IYCSaveNoteResp class]]) {
+        //        IYCSaveNoteResp *resp = (IYCSaveNoteResp *)data;
+        //        for (IYCNote * note in resp.minuteList) {
+        //            note.noteStatus = NOTESTATUES_TYPE_UPLOADED;
+        //            [[IYCDBAction sharedDBAction] updateNote:note];
+        //        }
+        
+        
+    }
+    if ([data isKindOfClass:[IYCGetNoteResp class]]) {
+        //        IYCGetNoteResp *resp = (IYCGetNoteResp *)data;
+        //
+        //        NSArray *tempLocalList = [[IYCDBAction sharedDBAction] selectNotesByBookID:self.readingBook.bookServerId AccountId:[[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] longLongValue] ChapterIndex:-1 noteStatus:NOTESTATUES_TYPE_UPLOADED];
+        //
+        //        //先查找服务器已经删掉的笔记
+        //        for (IYCNote *tempWebNote in resp.minutes) {
+        ////            BOOL isExist = NO;
+        //            for (IYCNote *tempLocalNote in tempLocalList) {
+        //                if (tempLocalNote.noteServerID == tempWebNote.noteID) {
+        ////                    isExist = YES;
+        //                    continue;
+        //
+        //                }else{
+        //                    [[IYCDBAction sharedDBAction] deleteNoteByServerId:tempLocalNote.noteServerID];
+        //                }
+        //            }
+        ////            if (!isExist) {
+        //////                long accountId = [[[NSUserDefaults standardUserDefaults] objectForKey:KEY_AccountID] longLongValue];
+        ////                [[IYCDBAction sharedDBAction] deleteNoteByServerId:tempWebNote.noteID];
+        ////
+        ////            }
+        //
+        //
+        //        }
+        //
+        //        //本地所有笔记包括各种状态
+        //        NSArray *localNoteList = [[IYCDBAction sharedDBAction] selectNotesByBookID:self.readingBook.bookServerId AccountId:[[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] longLongValue] ChapterIndex:-1 noteStatus:NOTESTATUES_TYPE_ALL];
+        //
+        //
+        //        for (IYCNote * webNote in resp.minutes) {
+        //            if (localNoteList.count == 0) {
+        //                webNote.status = 1; //默认是有用的
+        //                webNote.noteStatus = NOTESTATUES_TYPE_UNUPLOADED;//默认是没有上传
+        //                [[IYCDBAction sharedDBAction] insertNote:webNote];
+        //
+        //                webNote.noteStatus = NOTESTATUES_TYPE_UPLOADED;
+        //                [[IYCDBAction sharedDBAction] updateNote:webNote];
+        //
+        //            }else{
+        //                BOOL flag = NO;
+        //
+        //                for (IYCNote *loaclNote in localNoteList) {
+        //
+        //                    if (webNote.noteID == loaclNote.noteServerID) { //如果有匹配的
+        //                        flag = YES;
+        //
+        //                        NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+        //                        [dateFormatter setDateFormat:@"yyyy/MM/dd HH:mm:ss"];
+        //                        NSDate *localNoteTime = [dateFormatter dateFromString:loaclNote.modifyTime];
+        //                        NSDate *webNoteTime = [dateFormatter dateFromString:webNote.modifyTime];
+        //
+        //                        if ([webNoteTime timeIntervalSince1970] == [localNoteTime timeIntervalSince1970]) {
+        //                            continue;
+        //                        }
+        //
+        //
+        //                        if ([webNoteTime timeIntervalSince1970] > [localNoteTime timeIntervalSince1970]) {
+        //                            webNote.noteStatus = NOTESTATUES_TYPE_UPLOADED;
+        //                            [[IYCDBAction sharedDBAction] updateNote:webNote];
+        //
+        //                        }else{
+        //                            loaclNote.noteStatus = NOTESTATUES_TYPE_CHANGED;
+        //                            [[IYCDBAction sharedDBAction] updateNote:loaclNote];
+        //
+        //                        }
+        //
+        //
+        //                    }else{
+        //                        continue;
+        //                    }
+        //
+        //
+        //                }
+        //                if (!flag) {
+        //                    webNote.noteStatus = NOTESTATUES_TYPE_UPLOADED;
+        //                    [[IYCDBAction sharedDBAction] insertNote:webNote];
+        //                    [[IYCDBAction sharedDBAction] updateNote:webNote];
+        //                }
+        //            }
+        //        }
+        //    }
+        //    if ([data isKindOfClass:[IYCDeleteNoteResp class]]) {
+        //        NSLog(@"删除成功");
+        //        long accountId = [[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] longLongValue];
+        //
+        //        [[IYCDBAction sharedDBAction] deleteIYCDeleteNoteWithBookId:self.readingBook.bookServerId andAccountId:accountId];
+        //
+        //        isDeleteNote = NO;
+        //
+        //        //获取笔记
+        ////        IYCGetNoteReq *req = [[IYCGetNoteReq alloc] init];
+        ////        req.acountId = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"];
+        ////        req.bookId = [NSNumber numberWithLong:self.readingBook.bookServerId];
+        ////
+        ////        noteServer = [[IYCNoteService alloc] init];
+        ////        noteServer.delegate = self;
+        ////        [noteServer setType:IYCNOTESERVICE_TYPE_GETNOTE];
+        ////        [noteServer getNote:req];
+        //
+    }
+    
+    
+    
+}
+
+- (void)requestDidFailed:(id)data
+{
+    IYCExperienceReq *request = (IYCExperienceReq*)data;
+    if (request.errorCode == 3) {
+        //        NSUserDefaults *userDefault = [NSUserDefaults standardUserDefaults];
+        //        service = [[IYCLoginService alloc] init];
+        //        service.delegate = self;
+        //        [service getLoginByEmail:[userDefault objectForKey:KEY_Email] password:[userDefault objectForKey:KEY_Password]];
+        //        [service autorelease];
+    }
+}
+
+- (UIImageView *)createImageViewFrame:(CGRect)frame imageName:(NSString *)imageName {
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
+    imageView.image = [UIImage imageNamed:imageName];
+    return imageView;
+}
+
+- (UIButton *)createBtnFrame:(CGRect)frame title:(NSString *)title bgImageName:(NSString *)bgImageName target:(id)target action:(SEL)action {
+    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn.frame = frame;
+    [btn setTitle:title forState:UIControlStateNormal];
+    [btn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [btn setBackgroundImage:[UIImage imageNamed:bgImageName] forState:UIControlStateNormal];
+    [btn addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
+    return btn;
+}
+
+
+- (void)initTopAndBottomMenu {
+    NSArray *array1 = [[NSBundle mainBundle] loadNibNamed:@"IYCTopView" owner:self options:nil];
+    topView = [array1 objectAtIndex:0];
+    topView.frame = CGRectMake(0, 0, WIDTH1, 64);
+    [self.view addSubview:topView];
+    
+    UIButton *backBtn=[self createBtnFrame:CGRectMake(0, 20, 50, 44) title:@"" bgImageName:@"" target:self action:@selector(backAction:)];
+    [topView addSubview:backBtn];
+    
+    UIImageView *btnView=[self createImageViewFrame:CGRectMake(20, 11.25f, 11.5f, 21.5f) imageName:@"返回图标"];
+    [backBtn addSubview:btnView];
+    if (self.canChange) {
+        if (self.currentLang == IYCLanguageChinese) {
+            self.segmentBgView.image = [UIImage imageNamed:@"中英切换"];
+            oldSegmentTag = 1;
+        } else {
+            self.segmentBgView.image = [UIImage imageNamed:@"中英切换2"];
+            oldSegmentTag = 2;
+        }
+    }
+    else {
+        if (self.currentLang == IYCLanguageChinese) {
+            self.segmentBgView.image = [UIImage imageNamed:@"中英切换中"];
+            oldSegmentTag = 1;
+        } else {
+            self.segmentBgView.image = [UIImage imageNamed:@"中英切换英"];
+            oldSegmentTag = 2;
+        }
+    }
+
+    
+    bottomViewController = [[IYCBottomViewController alloc] initWithNibName:@"IYCBottomMenuView" bundle:nil];
+    bottomViewController.readingVC = self;
+    bottomViewController.currentLanguage = self.currentLang;
+    bottomViewController.readingBook = self.readingBook;
+    bottomViewController.currentChapterId = contentViewController.page.chapterId;
+    bottomViewController.edition = self.currentLang;
+    bottomViewController.bookId = self.readingBook.bookId;
+    bottomViewController.accountId = self.readingBook.bookAccount.accountID;
+    bottomViewController.delegate = self;
+    bottomViewController.view.frame = CGRectMake(0, [UIScreen mainScreen].bounds.size.height, WIDTH1, [UIScreen mainScreen].bounds.size.height - 64);
+    
+    [bottomViewController.slider addTarget:self action:@selector(sliderValueChanged) forControlEvents:UIControlEventValueChanged];
+    [bottomViewController.slider addTarget:self action:@selector(sliderValueChangeEnd) forControlEvents:UIControlEventTouchUpInside];
+    [bottomViewController.slider addTarget:self action:@selector(sliderValueChangeEnd) forControlEvents:UIControlEventTouchUpOutside];
+    [bottomViewController.backReadButton addTarget:self action:@selector(backRead) forControlEvents:UIControlEventTouchUpInside];
+    bottomViewController.slider.minimumValue = 1;
+    bottomViewController.slider.maximumValue = self.currentBookEdition.pageArray.count;
+    NSString *nightModeStr=[[NSUserDefaults standardUserDefaults] objectForKey:@"nightMode"];
+    if ([nightModeStr isEqualToString:@"6"]) {
+        bottomViewController.nightModelBG.backgroundColor = NIGHT_COLOR_BACK;
+        bottomViewController.bottomViewBg.backgroundColor= NIGHT_COLOR_BACK;
+        bottomViewController.pageModelBG.backgroundColor= NIGHT_COLOR_BACK;
+        bottomViewController.contentMenuViewBg.backgroundColor= NIGHT_COLOR_BACK;
+        bottomViewController.MoreVIew.backgroundColor=NIGHT_COLOR_BACK;
+        self.readingBannerImg.image=[UIImage imageNamed:@"阅读器banner2"];
+    }
+    else {
+        bottomViewController.nightModelBG.backgroundColor = [UIColor whiteColor];
+        bottomViewController.bottomViewBg.backgroundColor= [UIColor whiteColor];
+        bottomViewController.pageModelBG.backgroundColor= [UIColor whiteColor];
+        bottomViewController.contentMenuViewBg.backgroundColor= [UIColor whiteColor];
+        bottomViewController.MoreVIew.backgroundColor= [UIColor whiteColor];
+        self.readingBannerImg.image=[UIImage imageNamed:@"阅读器banner"];
+        
+    }
+    [bottomViewController.theSearchBtn addTarget:self action:@selector(searchAction:) forControlEvents:UIControlEventTouchUpInside];
+    
+    [bottomViewController.theVoiceBtn addTarget:self action:@selector(voiceAction:) forControlEvents:UIControlEventTouchUpInside];
+
+    
+    bottomViewController.slider.value = self.currentIndex + 1;
+    bottomViewController.pageLabel.text = [NSString stringWithFormat:@"Page %d/%lu",self.currentIndex + 1,self.currentBookEdition.pageArray.count];
+    contentViewController.pagelabel.text = @"";
+    bottomViewController.bookId = self.readingBook.bookId;
+    bottomViewController.canClicked = NO;
+    
+    float version = [[UIDevice currentDevice].systemVersion floatValue];
+    if (version<7) {
+        bottomViewController.nightModeSlider.frame = CGRectMake(35, 16, 150, 10);
+    }else
+    {
+        bottomViewController.nightModeSlider.frame = CGRectMake(35, 10, 150, 10);
+    }
+    bottomViewController.nightModeSlider.minimumValue = 0.2;
+    bottomViewController.nightModeSlider.maximumValue = 1.0;
+    float brightness = [[NSUserDefaults standardUserDefaults] floatForKey:@"brightness"];
+    if (brightness < 0.1) {
+        bottomViewController.nightModeSlider.value = 1.0f;
+    }else{
+        bottomViewController.nightModeSlider.value = [[NSUserDefaults standardUserDefaults] floatForKey:@"brightness"];
+    }
+    [bottomViewController.nightModeSlider addTarget:self action:@selector(nightModeSliderValueChanged) forControlEvents:UIControlEventValueChanged];
+    
+    [self.view addSubview:bottomViewController.view];
+    
+    nightModeView = [[UIView alloc] initWithFrame:self.view.frame];
+    nightModeView.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:(1- bottomViewController.nightModeSlider.value)];
+    nightModeView.userInteractionEnabled = NO;
+    [self.view addSubview:nightModeView];
+    
+    NSString *firstRead = [[NSUserDefaults standardUserDefaults] objectForKey:@"firstRead"];
+    UIImage *firstImg = nil;
+    if ([UIScreen mainScreen].bounds.size.height > 481) {
+        firstImg = [UIImage imageNamed:@"firstRead-568.png"];
+    }else{
+        firstImg = [UIImage imageNamed:@"firstRead.png"];
+    }
+    
+    if (![firstRead isEqualToString:@"Yes"]) {
+        btnRead = [UIButton buttonWithType:UIButtonTypeCustom];
+        btnRead.frame = self.view.frame;
+        [btnRead setBackgroundImage:firstImg forState:UIControlStateNormal];
+        //[btnRead setBackgroundColor:[UIColor colorWithPatternImage:firstImg]];
+        [btnRead addTarget:self action:@selector(removeRead) forControlEvents:UIControlEventTouchUpInside];
+        [self.view addSubview:btnRead];
+    }
+    
+//    trialView = [[UIView alloc] initWithFrame:CGRectMake(0, -TrialViewHeight, WIDTH1, TrialViewHeight)];
+//    [trialView setBackgroundColor:[UIColor colorWithRed:66.0/255.0 green:33.0/255.0 blue:11.0/255.0 alpha:0.5]];
+//    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(5, 5, 230, TrialViewHeight-10)];
+//    label.text = @"当前为试读，购买本书只需";
+//    label.textColor = [UIColor whiteColor];
+//    label.font = [UIFont boldSystemFontOfSize:14.0];
+//    label.textAlignment = NSTextAlignmentCenter;
+//    [label setBackgroundColor:[UIColor clearColor]];
+//    
+//    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+//    [button setBackgroundImage:[UIImage imageNamed:@"freeButton.png"] forState:UIControlStateNormal];
+//    button.frame = CGRectMake(230, 4.5, 65, TrialViewHeight - 9);
+//    button.titleLabel.font = [UIFont boldSystemFontOfSize:12.0];
+//    [button setTitle:@"点击获取" forState:UIControlStateNormal];
+//    [button setTitleShadowColor:[UIColor whiteColor] forState:UIControlStateNormal];
+//    [button setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+//    [button addTarget:self action:@selector(buyOrDownload) forControlEvents:UIControlEventTouchUpInside];
+//    
+//    [trialView addSubview:label];
+//    [trialView addSubview:button];
+//    
+//    [self.view addSubview:trialView];
+    
+    
+    
+    
+    if (self.readingBook.bookType == 1) {
+        trialView.hidden = YES;
+        [_buyBtn setHidden:YES];
+    }
+    
+    menuHidden = YES;
+}
+
+- (IBAction)buyNewBtn:(id)sender {
+    NSLog(@"1");
+    
+    AppDelegate *delegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
+    NSDictionary *dicttt=@{@"bookId":[NSNumber numberWithLong:self.readingBook.bookServerId],@"userId":delegate.userId,@"deviceType":@"2"};
+    [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"appbook/getorbook" WithParams:dicttt WithSuccessBlock:^(NSDictionary *dic) {
+        
+        if ([[NSString stringWithFormat:@"%@",[dic objectForKey:@"data"]] intValue]!=0) {
+            NSDictionary *dict=@{@"bookId":[NSNumber numberWithLong: self.readingBook.bookServerId],@"deviceType":@"2"};
+            [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"appbook/getbookdetail" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+                if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+                    NSDictionary *bookInfoDict=[dic objectForKey:@"data"];
+                    bookPriceStr=@"0";
+                    if ([[bookInfoDict objectForKey:@"free_status"] intValue]==0) {
+                        bookPriceStr=@"0";
+                    }
+                    else if ([[bookInfoDict objectForKey:@"free_status"] intValue]==-1) {
+                        if ([[bookInfoDict objectForKey:@"special_status"] intValue]==0) {
+                            bookPriceStr=[NSString stringWithFormat:@"%@",[bookInfoDict objectForKey:@"special_price"]];
+                        }
+                        else if ([[bookInfoDict objectForKey:@"special_status"] intValue]==-1) {
+                            bookPriceStr=[NSString stringWithFormat:@"%@",[bookInfoDict objectForKey:@"price"]];
+                        }
+                    }
+                    if ([bookPriceStr floatValue]>0.0) {
+                        [self queryNowCoin];
+                    }
+                    else {
+                        UIAlertView *alertview=[[UIAlertView alloc] initWithTitle:@"提示" message:@"此书免费，快去下载吧~"
+                                                                         delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+                        
+                        [alertview performSelectorOnMainThread: @selector(show)
+                                                    withObject: nil
+                                                 waitUntilDone: YES];
+
+                    }
+                    
+                    
+                }
+            } WithFailurBlock:^(NSError *error) {
+                
+            }];
+        }else{
+            UIAlertView *alertview=[[UIAlertView alloc] initWithTitle:@"提示" message:@"您已购买此书，快去云书架下载吧~"
+                                                             delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+
+            [alertview performSelectorOnMainThread: @selector(show)
+                                        withObject: nil
+                                     waitUntilDone: YES];
+        }
+        
+    } WithFailurBlock:^(NSError *error) {
+        
+    }];
+
+    
+    
+
+
+}
+
+- (void)queryNowCoin {
+    
+    NSDictionary *dict=@{@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"deviceType":@"2"};
+    
+    [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/personCenter/getusercoinvalue" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+        if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+            coinStr=[NSString stringWithFormat:@"%@",[[dic objectForKey:@"data"] objectForKey:@"coin"]];
+            if ([coinStr floatValue]>=[bookPriceStr floatValue]) {
+                UIAlertView *alertview=[[UIAlertView alloc] initWithTitle:@"提示" message:[NSString stringWithFormat:@"本次购买需要花费%.2f洋葱币，你还有%.2f洋葱币，是否继续？",[bookPriceStr floatValue],[coinStr floatValue]]
+                                                                 delegate:nil cancelButtonTitle:@"取消" otherButtonTitles:@"支付", nil];
+                alertview.delegate=self;
+                alertview.tag=BUY_TAG;
+                //[alertview show];修复闪屏
+                [alertview performSelectorOnMainThread: @selector(show)
+                                            withObject: nil
+                                         waitUntilDone: YES];
+                
+            }
+            else {
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"提示" message:[NSString stringWithFormat:@"本次购买需要花费%.2f洋葱币，你还有%.2f洋葱币，快去充值吧~",[bookPriceStr floatValue],[coinStr floatValue]] delegate:nil cancelButtonTitle:@"取消" otherButtonTitles:@"充值", nil];
+                alert.delegate = self;
+                alert.tag = COIN_TAG;
+                [alert performSelectorOnMainThread:@selector(show) withObject:nil waitUntilDone:YES];
+            }
+            
+        }
+    } WithFailurBlock:^(NSError *error) {
+    }];
+
+}
+
+- (void)buyBookByCoin {
+
+    NSDictionary *dict=@{@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"deviceType":@"2",@"bookIds":[NSNumber numberWithLong:self.readingBook.bookServerId],@"orderInfo":@"",@"orderType":@"0",@"payResult":@"1",@"payType":@"6",@"totalPrice":[NSString stringWithFormat:@"%.2f",[bookPriceStr floatValue]]};
+    
+    [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"payController/saveAppPayResult" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+        if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+            UIAlertView *alertview=[[UIAlertView alloc] initWithTitle:@"提示" message:@"购买图书成功，快去云书架下载吧~"
+                                                             delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil, nil];
+            
+            [alertview performSelectorOnMainThread: @selector(show)
+                                        withObject: nil
+                                     waitUntilDone: YES];
+            
+        }
+    } WithFailurBlock:^(NSError *error) {
+    }];
+    
+}
+
+
+- (void)buyOrDownload {
+    UIAlertView *alert=[[UIAlertView alloc] initWithTitle:@""
+                                                  message:@"确认下载全书吗？"
+                                                 delegate:self
+                                        cancelButtonTitle:@"取消"
+                                        otherButtonTitles:@"确认",nil];
+    [alert show];
+}
+
+#pragma mark ------UIAlertViewDeletgate Methods----------
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (alertView.tag==BUY_TAG) {
+        if (buttonIndex==1) {
+            [self buyBookByCoin];
+        }
+    }
+    else if (alertView.tag==COIN_TAG) {
+        if (buttonIndex==1) {
+            [self.navigationController setNavigationBarHidden:NO];
+//            CoinMainViewController *vc = [[CoinMainViewController alloc]init];
+//            [self.navigationController pushViewController:vc animated:YES];
+        }
+    }
+    else if (buttonIndex == 1) {
+        // jump and download whole book
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"buyOrDownloadOfficialBook" object:[NSNumber numberWithLong:self.readingBook.bookId]];
+        [self backAction:nil];
+    }
+
+    
+}
+
+- (void) dimissAlert:(UIAlertView *)alert {
+    if(alert){
+        [alert dismissWithClickedButtonIndex:[alert cancelButtonIndex] animated:YES];
+    }
+}
+
+
+//切换语言触发方法
+- (void)changeLanguageEdition:(NSNotification *)notification {
+    [self StopTime];
+    
+    [self StartTime];
+    
+    [self refreshViews];
+    
+    if (allParsed == NO) {
+        //[self showAlertPage:@"对应版本正在加载中..."];
+        contentViewController.langType = self.currentLang;
+        return;
+    }
+    
+    //    progressHud = [[MBProgressHUD alloc] initWithView:self.navigationController.view];
+    //    [self.navigationController.view addSubview:progressHud];
+    //    progressHud.label.text = @"请稍等";
+    //    [progressHud showAnimated:NO];
+    
+    IYCLanguageType langT = [[notification object] intValue];
+    
+    self.currentLang = langT;
+    
+    if (langT == IYCLanguageEnglish) {
+        oldSegmentTag = 2;
+    } else {
+        oldSegmentTag = 1;
+    }
+    
+    bottomViewController.currentLanguage = self.currentLang;
+    [bottomViewController.tableView reloadData];
+    
+    int para = [self locateParagraphAfterChangeLanguage:contentViewController.page.chapterId];
+    
+    if ([self judgeFirstPage:para]) {
+        
+        [self firstPageChange:self.currentLang withPage:0];
+    } else {
+        
+        [self calculateThing:para];
+    }
+}
+
+- (void)analyzeAnotherEdition:(IYCLanguageType)lang {
+    IYCChapter *tChapter = nil;
+    
+    if ([self.readingBook.chineseBookEdition.chapters count] != 0) {
+        tChapter = [self.readingBook.chineseBookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+    } else {
+        tChapter = [self.readingBook.englishBookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+    }
+    
+    
+    if (lang == IYCLanguageChinese) {
+        if ([self.readingBook.chineseBookEdition.chapters count] == 0) {
+            dataChinese =[[IYCData alloc] init];
+            dataChinese.fChapterId = tChapter.serverChapterId;
+            dataChinese.bookId = (int)self.readingBook.bookId;
+            
+            BOOL epubvalidE = [dataChinese loadEpub:[NSURL fileURLWithPath:self.chineseEpubPath] withLanguageType:IYCLanguageChinese withFontSize:100 withChapterIndex:-1];
+            
+            if (epubvalidE == NO) {
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"本书文件无效" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+                [alert show];
+                [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+                
+            } else {
+                dataChinese.delegate = self;
+                self.readingBook.chineseBookEdition.chapters = dataChinese.loadedEpub.spineArray;
+            }
+        }
+    } else {
+        if ([self.readingBook.englishBookEdition.chapters count] == 0) {
+            dataEnglish =[[IYCData alloc] init];
+            dataEnglish.fChapterId = tChapter.serverChapterId;
+            dataEnglish.bookId = (int)self.readingBook.bookId;
+            
+            BOOL epubvalidE = [dataEnglish loadEpub:[NSURL fileURLWithPath:self.englishEpubPath] withLanguageType:IYCLanguageEnglish withFontSize:100 withChapterIndex:-1];
+            
+            if (epubvalidE == NO) {
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"本书文件无效" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+                [alert show];
+                [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+            } else {
+                dataEnglish.delegate = self;
+                self.readingBook.englishBookEdition.chapters = dataEnglish.loadedEpub.spineArray;
+            }
+        }
+    }
+}
+
+- (void) openBook:(NSMutableArray *)spinArray withLanguageType:(IYCLanguageType)lang {
+    
+    
+    if (lang == IYCLanguageChinese) {
+        [self.readingBook.chineseBookEdition.pageArray addObjectsFromArray:spinArray];
+        if ([self.readingBook.chineseBookEdition.chapters count] == 1) {
+            self.readingBook.chineseBookEdition.allFilesParsed = YES;
+            dataChinese.delegate = nil;
+//            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"本书已加载完毕" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+//            [alert show];
+//            [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.0];
+            allParsed = YES;
+        }
+    } else {
+        [self.readingBook.englishBookEdition.pageArray addObjectsFromArray:spinArray];
+        if ([self.readingBook.englishBookEdition.chapters count] == 1) {
+            self.readingBook.englishBookEdition.allFilesParsed = YES;
+            dataEnglish.delegate = nil;
+//            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"本书已加载完毕" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+//            [alert show];
+//            [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.0];
+            allParsed = YES;
+        }
+    }
+}
+
+- (void) chapterPaginationFinished:(IYCChapter *)chapter andLocation:(NSString *)location {
+    NSRange rang = NSMakeRange(0, [chapter.pageArray count]);
+    NSIndexSet *indexSet = [NSIndexSet indexSetWithIndexesInRange:rang];
+    
+    if (chapter.lType == IYCLanguageChinese) {
+        
+        if ([location isEqualToString:@"before"]) {
+            [self.readingBook.chineseBookEdition.pageArray insertObjects:chapter.pageArray atIndexes:indexSet];
+        } else {
+            [self.readingBook.chineseBookEdition.pageArray addObjectsFromArray:chapter.pageArray];
+        }
+        
+        iParsed ++;
+        
+        if (iParsed == [self.readingBook.chineseBookEdition.chapters count] - 1) {
+            self.readingBook.chineseBookEdition.allFilesParsed = YES;
+            dataChinese.delegate = nil;
+            if (self.canChange) {
+                if (jParsed == 0) {
+                    [self analyzeAnotherEdition:IYCLanguageEnglish];
+                    
+                } else {
+                    allParsed = YES;
+                }
+            }
+        }
+        
+    } else {
+        
+        if ([location isEqualToString:@"before"]) {
+            [self.readingBook.englishBookEdition.pageArray insertObjects:chapter.pageArray atIndexes:indexSet];
+            
+        } else {
+            [self.readingBook.englishBookEdition.pageArray addObjectsFromArray:chapter.pageArray];
+            
+            if (self.readingChangeBook)
+                [self.readingChangeBook.englishBookEdition.pageArray addObjectsFromArray:chapter.pageArray];
+        }
+        
+        jParsed ++;
+        
+        if(jParsed == [self.readingBook.englishBookEdition.chapters count] - 1) {
+            self.readingBook.englishBookEdition.allFilesParsed = YES;
+            dataEnglish.delegate = nil;
+            //[self showAlertPage:@"英文部分已加载完毕"];
+            if (self.canChange) {
+                if (iParsed == 0) {
+                    [self analyzeAnotherEdition:IYCLanguageChinese];
+                } else {
+                    //[self showAlertPage:@"对应版本已加载完毕"];
+                    allParsed = YES;
+                }
+            }
+        }
+    }
+}
+
+//判断顶头段是否为某一章的第一段，如果是则不用重新分页
+- (BOOL)judgeFirstPage:(int)para {
+    
+    BOOL firstPage = NO;
+    
+    IYCChapter *tChapter = nil;
+    
+    if (self.currentLang == IYCLanguageChinese) {
+        tChapter = [self.readingBook.englishBookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+    } else {
+        tChapter = [self.readingBook.chineseBookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+    }
+    if (tChapter.paragraphArray.count>0) {
+        IYCParagraph *parag = [tChapter.paragraphArray objectAtIndex:0];
+        
+        if (parag.paragraphId == para) {
+            firstPage = YES;
+        } else {
+            firstPage = NO;
+        }
+        return firstPage;
+    }
+    else
+        return 0;
+}
+
+- (void)firstPageChange:(IYCLanguageType)changeToLang withPage:(int)pageC {
+    int bigPage = pageC;
+    
+    if (changeToLang == IYCLanguageChinese) {
+        for (int i = 0; i < contentViewController.page.chapterId; i++) {
+            IYCChapter *chapter = [self.readingBook.chineseBookEdition.chapters objectAtIndex:i];
+            bigPage = bigPage + chapter.pageCount;
+        }
+        
+        contentViewController.langType = IYCLanguageChinese;
+        contentViewController.changeChapterIndex = -1;
+        contentViewController.changeChapterOffset = 0;
+        contentViewController.pageNum = bigPage;
+        contentViewController.page = [self.readingBook.chineseBookEdition.pageArray objectAtIndex:bigPage];
+        self.currentBookEdition = self.readingBook.chineseBookEdition;
+    } else {
+        for (int i = 0; i < contentViewController.page.chapterId; i++) {
+            IYCChapter *chapter = [self.readingBook.englishBookEdition.chapters objectAtIndex:i];
+            bigPage = bigPage + chapter.pageCount;
+        }
+        
+        contentViewController.langType = IYCLanguageEnglish;
+        contentViewController.changeChapterIndex = -1;
+        contentViewController.changeChapterOffset = 0;
+        contentViewController.pageNum = bigPage;
+        contentViewController.page = [self.readingBook.englishBookEdition.pageArray objectAtIndex:bigPage];
+        self.currentBookEdition = self.readingBook.englishBookEdition;
+    }
+    
+    self.currentIndex = bigPage;
+    contentViewController.pagelabel.text = [NSString stringWithFormat:@"%d",self.currentIndex + 1];
+    
+    if (progressHud) {
+        [progressHud removeFromSuperview];
+    }
+    
+    contentViewController.allParsed = allParsed;
+    [contentViewController webViewRefresh:contentViewController.page];
+    //[self setBookMarkStatus:self.readingBook.bookId];
+    self.changeEditionTimes = 0;
+}
+
+- (void)calculateThing:(int)para {
+    
+    //确定顶头段对象
+    IYCBookEdition *temp = nil;
+    if (self.currentLang == IYCLanguageChinese) {
+        temp = self.readingBook.chineseBookEdition;
+    } else {
+        temp = self.readingBook.englishBookEdition;
+    }
+    
+    IYCChapter *chapter = [temp.chapters objectAtIndex:contentViewController.page.chapterId];
+    
+    changeChapterIndex = chapter.chapterIndex;
+    
+    for (int i = 0; i < [chapter.paragraphArray count]; i++) {
+        IYCParagraph *parag = [chapter.paragraphArray objectAtIndex:i];
+        if (parag.paragraphId == para ) {
+            topParagraphAfterChange = parag;
+            break;
+        }
+    }
+    
+    IYCChapter *chapter1 = [temp.chapters objectAtIndex:contentViewController.page.chapterId];
+    
+    IYCPage *pageStart = [chapter1.pageArray objectAtIndex:topParagraphAfterChange.paragraphStartPage];
+    
+    
+    int pageHeight = [UIScreen mainScreen].bounds.size.height - 100;
+    
+    float offset = (int)(pageStart.pageOffsetH + pageHeight - topParagraphAfterChange.paragraphStartOffset) % pageHeight;
+    
+    if (offset < 0 || offset > pageHeight - 1) {
+        offset = 0;
+    }
+    
+    changeChapterOffset = offset;
+    
+    if (changeChapterOffset == 0) {
+        [self firstPageChange:self.currentLang withPage:topParagraphAfterChange.paragraphStartPage];
+    }else {
+        int jumpToPageID1 = topParagraphAfterChange.paragraphStartPage + 1;
+        
+        int jumpToPageID2 = 0;
+        
+        for (int i = 0;i < contentViewController.page.chapterId ; i++ ) {
+            IYCChapter *chapter2 = [temp.chapters objectAtIndex:i];
+            jumpToPageID2 =jumpToPageID2 + chapter2.pageCount;
+        }
+        
+        jumpToPageID = jumpToPageID1 + jumpToPageID2;
+        
+        //[self adjustOffset:chapter.spinePath];
+        [self startReadingAfterRepage];
+    }
+}
+
+- (int)locateParagraphAfterChangeLanguage:(int)chapterId {
+    IYCChapter *chapter = [[self achieveCurrentEdition].chapters objectAtIndex:chapterId];
+    NSArray *paragraphA = [chapter.paragraphEndDict objectForKey:[NSString stringWithFormat:@"%d",contentViewController.page.pageId]];
+    DebugLog(@"locateParagraphAfterChangeLanguage======%@",[paragraphA objectAtIndex:0]);
+    
+    return [[paragraphA objectAtIndex:0] intValue];
+}
+
+- (int)locateParagraph:(int)chapterId {
+    IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:chapterId];
+    NSArray *paragraphA = [chapter.paragraphEndDict objectForKey:[NSString stringWithFormat:@"%d",contentViewController.page.pageId]];
+    DebugLog(@"locateParagraph======%@",[paragraphA objectAtIndex:0]);
+    _paraId=[NSString stringWithFormat:@"%@",[paragraphA objectAtIndex:0]];
+    return [[paragraphA objectAtIndex:0] intValue];
+}
+
+- (void)makeSureTopParagraph {
+    int para = [self locateParagraph:contentViewController.page.chapterId];
+    
+    IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+    
+    changeChapterIndex = chapter.chapterIndex;
+    
+    for (int i = 0; i < [chapter.paragraphArray count]; i++) {
+        if (para==0) {
+            topParagraph=[chapter.paragraphArray objectAtIndex:0];
+            break;
+        }
+        else {
+            IYCParagraph *parag = [chapter.paragraphArray objectAtIndex:i];
+            if (parag.paragraphId == para ) {
+                topParagraph = parag;
+                break;
+            }
+        }
+    }
+}
+
+- (IYCBookEdition *)achieveCurrentEdition {
+    
+    if (self.changeEditionTimes != 0) {
+        if (self.currentLang == IYCLanguageChinese) {
+            return self.readingChangeBook.englishBookEdition;
+        } else {
+            return self.readingChangeBook.chineseBookEdition;
+        }
+    }
+    
+    if (self.currentLang == IYCLanguageChinese) {
+        return self.readingBook.englishBookEdition;
+        
+    } else {
+        return self.readingBook.chineseBookEdition;
+    }
+}
+
+- (void)exchangeAnimate:(NSInteger)add{
+    [tranView removeFromSuperview];
+    CATransition *animation = [CATransition animation];
+    animation.delegate = self;
+    animation.duration = 0.2;
+    animation.timingFunction = UIViewAnimationCurveEaseInOut;
+    
+    switch (self.swipeGestureType) {
+        case 1:
+            animation.type = @"pageCurl";
+            break;
+        case 2:
+            animation.type = kCATransitionPush;
+            break;
+        case 3:
+            animation.type = kCATransitionReveal;
+            break;
+        case 4:
+            animation.type = kCATransitionMoveIn;
+            break;
+        default:
+            break;
+    }
+    
+    switch (add) {
+        case 0:
+            animation.subtype = kCATransitionFromLeft;
+            break;
+        case 1:
+            animation.subtype = kCATransitionFromRight;
+            break;
+        default:
+            break;
+    }
+    [[self.view layer] addAnimation:animation forKey:@"animation"];
+}
+
+#pragma mark ------Add Last Page View-------
+
+- (void)initLastPageView {
+    lastPageView = [[UIView alloc] initWithFrame:CGRectOffset(self.view.frame, WIDTH1, 0)];
+    lastPageView.backgroundColor = [UIColor whiteColor];
+    
+    UILabel *llabel = [[UILabel alloc] initWithFrame:CGRectMake(50, 50, 220, 100)];
+    NSString *string = @"已经是本书最后一页\n您可以";
+    llabel.text = [string stringByReplacingOccurrencesOfString:@"\\n" withString:@"\n"];
+    llabel.numberOfLines = 0;
+    llabel.textAlignment = NSTextAlignmentCenter;
+    [lastPageView addSubview:llabel];
+    
+    UIButton *button1 = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    button1.frame = CGRectMake(40, 180, 220, 50);
+    [button1 setTitle:@"撰写读后感" forState:UIControlStateNormal];
+    [button1 addTarget:self action:@selector(writeNote) forControlEvents:UIControlEventTouchDown];
+    
+    UIButton *button2 = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    button2.frame = CGRectOffset(button1.frame, 0, 70);
+    [button2 setTitle:@"看看其他书" forState:UIControlStateNormal];
+    [button2 addTarget:self action:@selector(seeOtherBooks) forControlEvents:UIControlEventTouchDown];
+    
+    UIButton *button3 = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    button3.frame = CGRectOffset(button2.frame, 0, 70);
+    [button3 setTitle:@"分享至.." forState:UIControlStateNormal];
+    [button3 addTarget:self action:@selector(shareTo) forControlEvents:UIControlEventTouchDown];
+    
+    UIButton *button4 = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    button4.frame = CGRectMake(10, 5, 80, 50);
+    [button4 setTitle:@"cancel" forState:UIControlStateNormal];
+    [button4 addTarget:self action:@selector(cancelPage) forControlEvents:UIControlEventTouchDown];
+    
+    [lastPageView addSubview:button1];
+    [lastPageView addSubview:button2];
+    [lastPageView addSubview:button3];
+    [lastPageView addSubview:button4];
+    
+    [self.view addSubview:lastPageView];
+}
+-(void)lastViewDidDisappear
+{
+    [self addAllGestures];
+}
+-(void)reactionAfterReading
+{
+    UIView * detail = [[IYCReactionToBook alloc] initWithBookId:self.readingBook.bookServerId andFrame:self.view.bounds];
+    [self.view addSubview:detail];
+}
+-(void)backToShelf
+{
+    
+    //    [[UIApplication sharedApplication] setStatusBarHidden:NO];
+    [self backAction:nil];
+}
+- (void)addLastPageView {
+//    if (self.readingBook.bookType==IYCBookType_TrialVersion) {
+//        ViewSelectView *view = [[ViewSelectView alloc] initWithFrame:CGRectMake(0, 0, 260, 260) withType:2];
+//        view.parentVC = self;
+//        
+//        [self lew_presentPopupView:view animation:[LewPopupViewAnimationFade new] dismissed:^{
+//            if (![view.tap isEqualToString:@"-1"]) {
+//                if ([view.tap isEqualToString:@"0"]) {
+//                    [self buyNewBtn:view.tap];
+//                }
+//                else if ([view.tap isEqualToString:@"1"]) {
+//                    [self.navigationController setNavigationBarHidden:NO];
+//                    BookReviewViewController *vc=[[BookReviewViewController alloc]init];
+//                    vc.bookId=[NSString stringWithFormat:@"%ld",self.readingBook.bookServerId];
+//                    [self.navigationController pushViewController:vc animated:YES];
+//                }
+//                else if ([view.tap isEqualToString:@"2"]) {
+//                    [self backAction:view.tap];
+//                }
+//            }
+//        }];
+//
+//    }
+//    else {
+//        ViewSelectView *view = [[ViewSelectView alloc] initWithFrame:CGRectMake(0, 0, 260, 200) withType:1];
+//        view.parentVC = self;
+//        
+//        [self lew_presentPopupView:view animation:[LewPopupViewAnimationFade new] dismissed:^{
+//            if (![view.tap isEqualToString:@"-1"]) {
+//                if ([view.tap isEqualToString:@"0"]) {
+//                    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]) {
+//                        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"您还未登录~" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+//                        [alert show];
+//                        [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+//                    }
+//                    else {
+//                        [self.navigationController setNavigationBarHidden:NO];
+//                        BookReviewViewController *vc=[[BookReviewViewController alloc]init];
+//                        vc.bookId=[NSString stringWithFormat:@"%ld",self.readingBook.bookServerId];
+//                        [self.navigationController pushViewController:vc animated:YES];
+//                    }
+//                }
+//                else if ([view.tap isEqualToString:@"1"]) {
+//                    [self backAction:view.tap];
+//                }
+//
+//            }
+//        }];
+//        
+////        IYCLastView * lastView = [[IYCLastView alloc] initWithFrame:self.view.bounds];
+////        lastView.delegate = self;
+////        [self.view addSubview:lastView];
+////        [self removeAllGestures];
+//    }
+}
+
+- (void)cancelPage {
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationDuration:0.2];
+    [UIView setAnimationCurve:UIViewAnimationCurveEaseOut];
+    lastPageView.frame = CGRectOffset(lastPageView.frame, WIDTH1, 0);
+    [UIView setAnimationTransition:UIViewAnimationTransitionFlipFromLeft forView:lastPageView cache:NO];
+    [UIView commitAnimations];
+    
+    [self addAllGestures];
+}
+
+- (void)writeNote {
+    DebugLog(@"write note after reading");
+}
+
+- (void)seeOtherBooks {
+    DebugLog(@"see other books");
+}
+
+- (void)shareTo {
+    DebugLog(@"share to weibo");
+}
+
+#pragma mark ------Swipe Methods-------
+
+- (void) gotoNextPage {
+    DebugLog(@"NextPage");
+    
+    NSString *firstRead = [[NSUserDefaults standardUserDefaults] objectForKey:@"firstRead"];
+    if (![firstRead isEqualToString:@"Yes"]) {
+        return;
+    }
+    
+    IYCBookEdition *bookEdition = self.currentBookEdition;
+    
+    self.currentIndex = (int)[bookEdition.pageArray indexOfObject:contentViewController.page];
+    
+    if (self.currentIndex == [bookEdition.pageArray count]-1) {
+        if (contentViewController.page.chapterId == [self.currentBookEdition.chapters count] - 1) {
+            //[self showAlertPage:@"您已翻到最后一页"];
+            [self addLastPageView];
+            return;
+        } else {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"加载中..." delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+            [alert show];
+            [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+        }
+        
+    } else {
+        BOOL refresh = [self pagesInChapter:@"next"];
+        
+        self.currentIndex = self.currentIndex + 1;
+        
+        if (refresh) {
+            IYCChapter *chapter = [bookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+            contentViewController.page = [chapter.pageArray objectAtIndex:contentViewController.page.pageId + 1];
+            [self settingOthers:bookEdition];
+            [contentViewController jumpToPageInChapter];
+            [self setBookMarkStatus:self.readingBook.bookId];
+        } else {
+            
+            IYCChapter *chapter = [bookEdition.chapters objectAtIndex:contentViewController.page.chapterId + 1];
+            contentViewController.page = [chapter.pageArray objectAtIndex:0];
+            [self settingOthers:bookEdition];
+            contentViewController.allParsed = allParsed;
+            [contentViewController webViewRefresh:contentViewController.page];
+        }
+    }
+    
+    [self exchangeAnimate:1];
+}
+
+- (void) gotoPrevPage {
+    DebugLog(@"PrevPage");
+    
+    NSString *firstRead = [[NSUserDefaults standardUserDefaults] objectForKey:@"firstRead"];
+    if (![firstRead isEqualToString:@"Yes"]) {
+        return;
+    }
+    
+    IYCBookEdition *bookEdition = self.currentBookEdition;
+    self.currentIndex = (int)[bookEdition.pageArray indexOfObject:contentViewController.page];
+    if (self.currentIndex == 0 ) {
+        if (contentViewController.page.chapterId == 0) {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"您已翻到第一页" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+            [alert show];
+            [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+            
+            return;
+        } else {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"加载中..." delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+            [alert show];
+            [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+        }
+    } else {
+        BOOL refresh = [self pagesInChapter:@"pre"];
+        
+        self.currentIndex = self.currentIndex - 1;
+        
+        if (refresh) {
+            IYCChapter *chapter = [bookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+            contentViewController.page = [chapter.pageArray objectAtIndex:contentViewController.page.pageId - 1];
+            
+            [self settingOthers:bookEdition];
+            
+            [contentViewController jumpToPageInChapter];
+            [self setBookMarkStatus:self.readingBook.bookId];
+        } else {
+            
+            IYCChapter *chapter = [bookEdition.chapters objectAtIndex:contentViewController.page.chapterId - 1];
+            contentViewController.page = [chapter.pageArray lastObject];
+            [self settingOthers:bookEdition];
+            contentViewController.allParsed = allParsed;
+            [contentViewController webViewRefresh:contentViewController.page];
+        }
+    }
+    [self exchangeAnimate:0];
+}
+
+- (void)settingOthers:(IYCBookEdition *)edition {
+    if ([self chapterChanged] == YES) {
+        bottomViewController.currentChapterId = contentViewController.page.chapterId;
+        bottomViewController.edition = self.currentLang;
+        [bottomViewController.tableView reloadData];
+    }
+    
+    contentViewController.pageNum = self.currentIndex;
+    if (edition.allFilesParsed == YES) {
+        contentViewController.pagelabel.text = [NSString stringWithFormat:@"%d",self.currentIndex + 1];
+    }
+    contentViewController.langType = edition.languageType;
+}
+
+- (BOOL)chapterChanged {
+    
+    if (contentViewController.page.chapterId != oldChapterID) {
+        oldChapterID = contentViewController.page.chapterId;
+        return YES;
+    }
+    
+    return NO;
+}
+
+
+- (BOOL)pagesInChapter:(NSString *)string {
+    IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+    
+    int currentIdInChapter = contentViewController.page.pageId;
+    
+    BOOL isOrNot = NO;
+    
+    if ([string isEqualToString:@"next"]) {
+        if (currentIdInChapter < chapter.pageCount - 1) {
+            isOrNot = YES;
+        } else {
+            isOrNot = NO;
+        }
+    } else {
+        if (currentIdInChapter > 0) {
+            isOrNot = YES;
+        } else {
+            isOrNot = NO;
+        }
+    }
+    
+    return isOrNot;
+}
+- (void)refreshByFont
+{
+    if (dataEnglish) {
+        dataEnglish.delegate = nil;
+        //[dataEnglish release];
+    }
+    
+    if (dataChinese) {
+        dataChinese.delegate = nil;
+        //[dataChinese release];
+    }
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"hangUp" object:nil];
+    //    [[NSNotificationCenter defaultCenter] postNotificationName:NOTIFICATION_STOPPAGING object:nil];
+    
+    [self.navigationController popViewControllerAnimated:NO];
+}
+- (IBAction)backAction:(id)sender {
+    [UIApplication sharedApplication].idleTimerDisabled =NO;
+    isBack = YES;
+    //delete the book
+    [self StopTime];
+    NSString * strChinesePath = [NSString stringWithFormat:@"%@/%ld",[IYCFileManager getBookSavePath:self.readingBook.bookId],self.readingBook.bookId];
+    
+    [[NSFileManager defaultManager] removeItemAtPath:strChinesePath error:nil];
+    
+    if (dataEnglish) {
+        dataEnglish.delegate = nil;
+        //[dataEnglish release];
+    }
+    
+    if (dataChinese) {
+        dataChinese.delegate = nil;
+        //[dataChinese release];
+    }
+    
+    
+    //    IYCSynchroService *synchroService = [[IYCSynchroService alloc] init];
+    //    synchroService.delegate = self;
+    //    [synchroService uploadToServer:self.readingBook.bookAccount.accountID andBookList:nil];
+    //    NSArray *array = [[IYCDBAction sharedDBAction]queryBookByAccountId:self.readingBook.bookAccount.accountID];
+    //    IYCSynchroService *syncService = [[IYCSynchroService alloc]init];
+    //    syncService.delegate = self;
+    //    DebugLog(@"%@\n%@",self.readingBook.bookAccount.accountID,array);
+    //    [syncService uploadToServer:self.readingBook.bookAccount.accountID andBookList:array];
+    recodeTag=@"0";
+    [self endreadinRecordBegin];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"hangUp" object:nil];
+    
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"RefreshBook" object:nil];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"ExitReadingEvent" object:nil];
+    [[NSNotificationCenter defaultCenter] postNotificationName:NOTIFICATION_STOPPAGING object:self userInfo:nil];
+    
+    [self saveReadingProgress];
+
+    AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+    
+    delegate.readingrecordlogid=@"0";
+    
+}
+
+- (NSString *)applicationDocumentsDirectory {
+    
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
+    return basePath;
+}
+
+- (void)refreshViews {
+    [[UIApplication sharedApplication] setStatusBarHidden:YES];
+    self.view.frame = CGRectMake(0, 0, WIDTH1, [UIScreen mainScreen].bounds.size.height);
+    NSString *nightModeStr=[[NSUserDefaults standardUserDefaults] objectForKey:@"nightMode"];
+    if ([nightModeStr isEqualToString:@"6"]) {
+        self.view.backgroundColor = NIGHT_COLOR_BACK;
+        contentViewController.view.backgroundColor = NIGHT_COLOR_BACK;
+        contentViewController.theWebView.backgroundColor = NIGHT_COLOR_BACK;
+    }
+    else if ([nightModeStr isEqualToString:@"1"]){
+        self.view.backgroundColor = DAY_COLOR_BACK1;
+        contentViewController.view.backgroundColor = DAY_COLOR_BACK1;
+        contentViewController.theWebView.backgroundColor = DAY_COLOR_BACK1;
+    }
+    else if ([nightModeStr isEqualToString:@"2"]){
+        self.view.backgroundColor = DAY_COLOR_BACK2;
+        contentViewController.view.backgroundColor = DAY_COLOR_BACK2;
+        contentViewController.theWebView.backgroundColor = DAY_COLOR_BACK2;
+    }
+    else if ([nightModeStr isEqualToString:@"3"]){
+        self.view.backgroundColor = DAY_COLOR_BACK3;
+        contentViewController.view.backgroundColor = DAY_COLOR_BACK3;
+        contentViewController.theWebView.backgroundColor = DAY_COLOR_BACK3;
+    }
+    else if ([nightModeStr isEqualToString:@"4"]){
+        self.view.backgroundColor = DAY_COLOR_BACK4;
+        contentViewController.view.backgroundColor = DAY_COLOR_BACK4;
+        contentViewController.theWebView.backgroundColor = DAY_COLOR_BACK4;
+    }
+    else if ([nightModeStr isEqualToString:@"5"]){
+        self.view.backgroundColor = DAY_COLOR_BACK5;
+        contentViewController.view.backgroundColor = DAY_COLOR_BACK5;
+        contentViewController.theWebView.backgroundColor = DAY_COLOR_BACK5;
+    }
+    topView.frame = CGRectMake(0, -64, WIDTH1, 64);
+    bottomViewController.view.frame = CGRectMake(0, [UIScreen mainScreen].bounds.size.height, WIDTH1, [UIScreen mainScreen].bounds.size.height - 64);
+    trialView.frame = CGRectMake(0,-TrialViewHeight, WIDTH1, TrialViewHeight);
+    [self addAllGestures];
+    self.swipeGestureType = [[[NSUserDefaults standardUserDefaults] objectForKey:KEY_GestureType] intValue];
+    
+    if (self.pushedToRight == YES) {
+        contentViewController.theWebView.frame = settedWebViewFrame;
+        self.pushedToRight = NO;
+    }
+    
+    menuHidden = YES;
+    
+}
+-(void)revertTapGesture:(CGPoint )tmpTapPoint
+{
+    [self doSthWithPoint:tmpTapPoint isGesture:YES];
+}
+- (void)doSthWithPoint:(CGPoint)point isGesture:(BOOL)isGesture{
+    
+    if (self.currentBookEdition.allFilesParsed == YES) {
+        bottomViewController.canClicked = YES;
+    }
+    
+    [bottomViewController sendHidden];
+    NSLog(@"%f %f",point.x,point.y);
+    if (isGesture)
+    {
+        if (point.x > WIDTH1/3 && point.x < WIDTH1/3*2 && point.y>64) {
+            
+            if (self.canChange) {
+                if (self.currentLang == IYCLanguageChinese) {
+                    self.segmentBgView.image = [UIImage imageNamed:@"中英切换"];
+                } else {
+                    self.segmentBgView.image = [UIImage imageNamed:@"中英切换2"];
+                }
+            }
+            else {
+                if (self.currentLang == IYCLanguageChinese) {
+                    self.segmentBgView.image = [UIImage imageNamed:@"中英切换中"];
+                } else {
+                    self.segmentBgView.image = [UIImage imageNamed:@"中英切换英"];
+                }
+            }
+
+            
+            if (menuHidden == YES) {
+                [UIView beginAnimations:nil context:nil];
+                [UIView setAnimationDuration:0.4];
+                //                [[UIApplication sharedApplication] setStatusBarHidden:NO];
+                topView.frame = CGRectOffset(topView.frame, 0, topView.frame.size.height);
+                bottomViewController.view.frame = CGRectOffset(bottomViewController.view.frame, 0, - bottomViewController.view.frame.size.height);
+                bottomViewController.slider.maximumValue = self.currentBookEdition.pageArray.count;
+                self.currentIndex = (int)[self.currentBookEdition.pageArray indexOfObject:contentViewController.page];
+                bottomViewController.slider.value = self.currentIndex + 1;
+                bottomViewController.pageLabel.text = [NSString stringWithFormat:@"Page %d/%lu",self.currentIndex + 1,self.currentBookEdition.pageArray.count];
+                bottomViewController.edition = self.currentLang;
+                trialView.frame = CGRectMake(0, 64, WIDTH1, TrialViewHeight);
+                menuHidden = NO;
+                [self removeAllGestures];
+                [UIView commitAnimations];
+                
+                [[UIApplication sharedApplication] setStatusBarHidden:![UIApplication sharedApplication].statusBarHidden withAnimation:UIStatusBarAnimationFade];
+                [UIView beginAnimations:nil context:nil];
+                [UIView setAnimationDuration:0.4];
+                [UIView setAnimationCurve:UIViewAnimationCurveLinear];
+                if(self.navigationController.navigationBar.alpha==0.0)
+                    self.navigationController.navigationBar.alpha=1.0;
+                else
+                    self.navigationController.navigationBar.alpha=0.0;
+                [UIView commitAnimations];
+                
+            } else {
+                [self hideTopAndBottomMenu];
+            }
+            
+        } else if (point.x < WIDTH1/3  && point.y>64) {
+            [self gotoPrevPage];
+        } else if (point.x > WIDTH1/3*2  && point.y>64) {
+            [self gotoNextPage];
+        }
+        
+    }
+    else {
+        [self hideTopAndBottomMenu];
+    }
+    
+}
+
+- (void)triggerMenu:(UITapGestureRecognizer *)gestureRecognizer
+{
+    CGPoint touchPoint = [gestureRecognizer locationInView:self.view];
+    if (touchPoint.x>=tranView.frame.origin.x&&touchPoint.x<=(tranView.frame.origin.x+tranView.frame.size.width)&&touchPoint.y>=tranView.frame.origin.y&&touchPoint.y<=(tranView.frame.origin.y+tranView.frame.size.height)) {
+        
+    }
+    else
+        [tranView removeFromSuperview];
+    
+    if (gestureRecognizer) {
+        if (CGRectContainsPoint(contentViewController.theWebView.frame, touchPoint)) {
+            [contentViewController.theWebView holdTapGesture:touchPoint];
+            return;
+        }
+        [self doSthWithPoint:touchPoint isGesture:YES];
+    }else{
+        [self doSthWithPoint:touchPoint isGesture:NO];
+    }
+}
+
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    //    AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+    //    UIWindow *windows2=delegate.window;
+    //    UITouch *touch=touches.anyObject;
+    //    CGPoint location2=[touch locationInView:windows2];
+    //    NSLog(@"%@",NSStringFromCGPoint(location2));
+    
+    NSSet *allTouches = [event allTouches];    //返回与当前接收者有关的所有的触摸对象
+    UITouch *touch = [allTouches anyObject];   //视图中的所有对象
+    CGPoint point = [touch locationInView:[touch view]]; //返回触摸点在视图中的当前坐标
+    int x = point.x;
+    int y = point.y;
+    NSLog(@"touch (x, y) is (%d, %d)", x, y);
+}
+
+- (void)hideTopAndBottomMenu {
+    
+    [[UIApplication sharedApplication] setStatusBarHidden:![UIApplication sharedApplication].statusBarHidden withAnimation:UIStatusBarAnimationFade];
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationDuration:0.5];
+    [UIView setAnimationCurve:UIViewAnimationCurveLinear];
+    if(self.navigationController.navigationBar.alpha==0.0)
+        self.navigationController.navigationBar.alpha=1.0;
+    else
+        self.navigationController.navigationBar.alpha=0.0;
+    [UIView commitAnimations];
+    
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationDuration:0.5];
+    topView.frame = CGRectOffset(topView.frame, 0, -topView.frame.size.height);
+    bottomViewController.view.frame = CGRectOffset(bottomViewController.view.frame, 0, bottomViewController.view.frame.size.height);
+    bottomViewController.edition = self.currentLang;
+    contentViewController.theWebView.frame = settedWebViewFrame;
+    trialView.frame = CGRectMake(0, -TrialViewHeight, WIDTH1, TrialViewHeight);
+    self.pushedToRight = NO;
+    menuHidden = YES;
+    
+    [self addAllGestures];
+    
+    [UIView commitAnimations];
+    
+    [self refreshViews];
+}
+
+- (void)removeAllGestures {
+    [self.view removeGestureRecognizer:tapGesture];
+    [self.view removeGestureRecognizer:rightSwipeRecognizer];
+    [self.view removeGestureRecognizer:leftSwipeRecognizer];
+}
+
+- (void)addAllGestures {
+    [self.view addGestureRecognizer:tapGesture];
+    [self.view addGestureRecognizer:rightSwipeRecognizer];
+    [self.view addGestureRecognizer:leftSwipeRecognizer];
+}
+
+#pragma -
+#pragma UIGestureRecognizerDelegate Methods
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    if ([otherGestureRecognizer isKindOfClass:[UITapGestureRecognizer class]]) {
+        return YES;
+    }
+    return NO;
+}
+
+//- (void)adjustOffset:(NSString *)path {
+//    UIWebView *webView = [[UIWebView alloc] initWithFrame:CGRectMake(0, 0, 320, [UIScreen mainScreen].bounds.size.height - 100 )];
+//    webView.delegate = self;
+//    NSURLRequest* urlRequest = [NSURLRequest requestWithURL:[NSURL fileURLWithPath:path]];
+//    [webView loadRequest:urlRequest];
+//}
+
+#pragma -
+#pragma UIWebViewDelegate Methods
+//- (void)webViewDidFinishLoad:(UIWebView *)webView
+//{
+//    count = count + 1;
+//
+//    NSString *varMySheet = @"var mySheet = document.styleSheets[0];";
+//    NSString *addCSSRule =  @"function addCSSRule(selector, newRule) {"
+//    "if (mySheet.addRule) {"
+//    "mySheet.addRule(selector, newRule);"								// For Internet Explorer
+//    "} else {"
+//    "ruleIndex = mySheet.cssRules.length;"
+//    "mySheet.insertRule(selector + '{' + newRule + ';}', ruleIndex);"   // For Firefox, Chrome, etc.
+//    "}"
+//    "}";
+//
+//    NSString *insertRule1 = [NSString stringWithFormat:@"addCSSRule('html', 'padding: 0px; height: %fpx; -webkit-column-gap: 0px; -webkit-column-width: %fpx;')", webView.frame.size.height, webView.frame.size.width];
+//    NSString *insertRule2 = [NSString stringWithFormat:@"addCSSRule('p', 'text-align: justify;text-indent:1em;margin-bottom:0px;')"];
+//    NSString *setTextSizeRule = [NSString stringWithFormat:@"addCSSRule('body', '-webkit-text-size-adjust: %d%%;margin-top: 0px;margin-bottom: 0px;margin-left: 20px;margin-right: 20px;')", self.readingBook.bookAccount.fontSize ];
+//
+//    [webView stringByEvaluatingJavaScriptFromString:varMySheet];
+//
+//    [webView stringByEvaluatingJavaScriptFromString:addCSSRule];
+//
+//    [webView stringByEvaluatingJavaScriptFromString:insertRule1];
+//
+//    [webView stringByEvaluatingJavaScriptFromString:insertRule2];
+//
+//    [webView stringByEvaluatingJavaScriptFromString:setTextSizeRule];
+//
+//    NSString * addDivString = [NSString stringWithFormat:@"var div = document.createElement(\"div\");div.setAttribute(\"id\", \"aaa\");div.style.height = \"%f\";var firstchild=document.body.firstElementChild; document.body.insertBefore(div,firstchild);",changeChapterOffset];
+//       [webView stringByEvaluatingJavaScriptFromString:addDivString];
+//
+//    NSString *string = [NSString stringWithFormat:@"document.getElementById(\"%d\").offsetTop",topParagraphAfterChange.paragraphId];
+//
+//    float distance = [[webView stringByEvaluatingJavaScriptFromString:string] floatValue];
+//
+//    int place = (int)distance % (int)webView.frame.size.height;
+//    if (place > 30 && count < 5) {
+//       if ( place < webView.frame.size.height/2 && changeChapterOffset - 1 > 0) {
+//         changeChapterOffset = changeChapterOffset - 1;
+//       }
+//
+//        if(place > webView.frame.size.height/2 ) {
+//       changeChapterOffset = changeChapterOffset + 1;
+//       }
+//
+//         [webView reload];
+//
+//    } else {
+//
+//     [self startReadingAfterRepage];
+//     [webView dealloc];
+//      count = 0;
+//    }
+//
+//}
+
+//- (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
+//   [webView dealloc];
+//}
+
+- (void)startReadingAfterRepage {
+    
+    //     int fontsize = self.readingBook.bookAccount.fontSize;
+    IYCBook *changeBook = [self.readingBook copy];
+    self.readingChangeBook = changeBook;
+    
+    IYCBookEdition *bookEdition = nil;
+    
+    if (self.currentLang == IYCLanguageChinese) {
+        bookEdition = self.readingChangeBook.chineseBookEdition;
+        bookEdition.allFilesParsed = YES;
+    } else {
+        bookEdition = self.readingChangeBook.englishBookEdition;
+        bookEdition.allFilesParsed = YES;
+    }
+    
+    
+    IYCChapter *chapter = [bookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+    chapter.isParseParagraph = YES;
+    [chapter setDelegate:self];
+    
+    NSString *changeString = [NSString stringWithFormat:@"var div = document.createElement(\"div\");div.setAttribute(\"id\", \"%d\");div.style.height = \"%f\";var firstchild=document.body.firstElementChild; document.body.insertBefore(div,firstchild);",chapter.chapterIndex, changeChapterOffset];
+    
+    [chapter loadChapterWithWindowSize:CGRectMake(0, 0, WIDTH1, [UIScreen mainScreen].bounds.size.height - 100 ) fontPercentSize:100 withLanguageType:self.currentLang withChangeChapterIndex:chapter.chapterIndex withString:changeString];
+}
+
+- (void) chapterDidFinishLoad:(IYCChapter *)chapter{
+    self.changeEditionTimes ++;
+    
+    IYCBookEdition *temp = nil;
+    
+    if (self.currentLang == IYCLanguageChinese) {
+        temp = self.readingChangeBook.chineseBookEdition;
+    } else {
+        temp = self.readingChangeBook.englishBookEdition;
+    }
+    
+    [temp.chapters replaceObjectAtIndex:chapter.chapterIndex withObject:chapter];
+    
+    NSMutableArray *pArray = temp.pageArray;
+    [pArray removeAllObjects];
+    for (int i = 0; i < [temp.chapters count]; i++) {
+        IYCChapter *tchapter = [temp.chapters objectAtIndex:i];
+        for (int j = 0; j < [tchapter.pageArray count]; j++) {
+            IYCPage *page = [tchapter.pageArray objectAtIndex:j];
+            [pArray addObject:page];
+        }
+    }
+    
+    self.currentBookEdition = temp;
+    contentViewController.page = [temp.pageArray objectAtIndex:jumpToPageID];
+    contentViewController.langType = self.currentLang;
+    self.currentIndex = jumpToPageID;
+    contentViewController.pageNum = self.currentIndex;
+    contentViewController.pagelabel.text = [NSString stringWithFormat:@"%d",self.currentIndex + 1];
+    contentViewController.changeChapterIndex = changeChapterIndex;
+    contentViewController.changeChapterOffset = changeChapterOffset;
+    contentViewController.allParsed = allParsed;
+    [contentViewController webViewRefresh:contentViewController.page];
+    //[self setBookMarkStatus:self.readingBook.bookId];
+    
+    if (progressHud) {
+        [progressHud removeFromSuperview];
+    }
+}
+
+#pragma Search function related methods
+
+- (void)searchView:(NSNotification *)notification
+{
+    
+    NSString *string = notification.object;
+    if (searchReadingViewController == nil) {
+        
+        searchReadingViewController = [[IYCSearchReadingViewController alloc] init];
+        searchReadingViewController.view.frame = CGRectMake(0, 0, WIDTH1, HEIGHT1);
+        
+    }
+    
+    searchReadingViewController.bookTitle.text = self.readingBook.bookChineseTitle;
+    searchReadingViewController.currentBookEdition = self.currentBookEdition;
+    self.modalPresentationStyle = UIModalPresentationCurrentContext;
+    [self presentViewController:searchReadingViewController animated:YES completion:nil];
+    searchReadingViewController.currentLang = self.currentLang;
+    searchReadingViewController.delegate = self;
+    searchReadingViewController.readingVC = self;
+    //    searchReadingViewController.mySearchBar.text = string;
+    [searchReadingViewController setSearchText:string];
+}
+
+- (void)voiceAction:(id)sender {
+    ShareSelectView *view = [ShareSelectView defaultPopupView];
+    view.parentVC = self;
+    
+    [self lew_presentPopupView:view animation:[LewPopupViewAnimationFade new] dismissed:^{
+        if (![view.selectShareType isEqualToString:@""]) {
+            [self shareToOther:view.selectShareType];
+            if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]) {
+                dispatch_queue_t queue =  dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+                dispatch_async(queue, ^{
+                    NSDictionary *dict=@{@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]};
+                    [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"personCenter/saveUserShareCoinValue" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+                    } WithFailurBlock:^(NSError *error) {
+                    }];
+                });
+            }
+
+        }
+    }];
+}
+
+- (IBAction)shareToAction:(id)sender {
+    ShareSelectView *view = [ShareSelectView defaultPopupView];
+    view.parentVC = self;
+    
+    [self lew_presentPopupView:view animation:[LewPopupViewAnimationFade new] dismissed:^{
+        if (![view.selectShareType isEqualToString:@""]) {
+            [self shareToOther:view.selectShareType];
+            if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]) {
+                dispatch_queue_t queue =  dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+                dispatch_async(queue, ^{
+                    NSDictionary *dict=@{@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]};
+                    [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"personCenter/saveUserShareCoinValue" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+                    } WithFailurBlock:^(NSError *error) {
+                    }];
+                });
+            }
+            
+        }
+    }];
+}
+
+
+- (IBAction)searchAction:(id)sender
+{
+    DebugLog(@"searchaction");
+    
+    if (self.currentBookEdition.allFilesParsed == YES) {
+        
+        //    self.view.userInteractionEnabled = NO;
+        if (searchReadingViewController == nil) {
+            
+            searchReadingViewController = [[IYCSearchReadingViewController alloc] init];
+            searchReadingViewController.view.frame = CGRectMake(0, 0, WIDTH1, HEIGHT1);
+            
+        }
+        searchReadingViewController.bookTitle.text = self.readingBook.bookChineseTitle;
+        searchReadingViewController.currentBookEdition = self.currentBookEdition;
+        self.modalPresentationStyle = UIModalPresentationCurrentContext;
+        [self presentViewController:searchReadingViewController animated:YES completion:nil];
+        searchReadingViewController.currentLang = self.currentLang;
+        searchReadingViewController.delegate = self;
+        searchReadingViewController.readingVC = self;
+        [searchReadingViewController setSearchText:@""];
+    }
+}
+- (void) loadSpine:(int)spineIndex atPageIndex:(int)pageIndex highlightSearchResult:(IYCSearchResult*)theResult
+{
+    
+    [searchReadingViewController hideSearchReadingView];
+    
+    self.currentIndex = pageIndex;
+    contentViewController.page = [self.currentBookEdition.pageArray objectAtIndex:self.currentIndex];
+    
+    contentViewController.pageNum = self.currentIndex + 1;
+    contentViewController.pagelabel.text = [NSString stringWithFormat:@"%d",self.currentIndex + 1];
+    contentViewController.langType = self.currentBookEdition.languageType;
+    contentViewController.allParsed = allParsed;
+    [contentViewController webViewRefresh:contentViewController.page];
+    
+    [self exchangeAnimate:1];
+    //[self setBookMarkStatus:self.readingBook.bookId];
+    
+}
+
+//目录跳到指定章
+- (void) jumpToContent:(NSNotification *)notification {
+    
+    [self triggerMenu:nil];
+    
+    if (self.currentLang == IYCLanguageChinese) {
+        self.currentBookEdition = self.readingBook.chineseBookEdition;
+    } else {
+        self.currentBookEdition = self.readingBook.englishBookEdition;
+    }
+    
+    int chapterID = [[notification object] intValue];
+    
+    IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:chapterID];
+    
+    contentViewController.page = [chapter.pageArray objectAtIndex:0];
+    
+    int pagenumber = 0;
+    for (int i = 0; i < chapterID ; i++) {
+        IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:i];
+        pagenumber = pagenumber + chapter.pageCount;
+    }
+    
+    self.currentIndex = pagenumber;
+    contentViewController.pageNum = self.currentIndex;
+    contentViewController.pagelabel.text = [NSString stringWithFormat:@"%d",self.currentIndex + 1];
+    
+    if ([self chapterChanged] == YES) {
+        bottomViewController.currentChapterId = contentViewController.page.chapterId;
+        bottomViewController.edition = self.currentLang;
+        [bottomViewController.tableView reloadData];
+    }
+    
+    contentViewController.allParsed = allParsed;
+    [contentViewController webViewRefresh:contentViewController.page];
+    
+}
+
+- (void) refreshContent:(NSNotification *)notification {
+}
+
+- (void)findExplanation:(NSNotification *)notification {
+    if ([self getToInt:[[notification object] objectForKey:@"string"]]>200) {
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"字符数超过200" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+        [alert show];
+        [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+    }
+    else {
+        
+        NSDictionary *dict=[notification object];
+        if ([IYCCheckNetwork isServiceAvailable]) {
+            IYCTranslationViewController *vc=[[IYCTranslationViewController alloc]init];
+            
+            AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+            if ([delegate.studentUserId isEqualToString:@"0"]) {
+                [vc setreadingRecordLogId:@"0"];
+            }
+            else if ([delegate.studentUserId isEqualToString:@"1"]){
+                [vc setreadingRecordLogId:delegate.readingrecordlogid];
+            }
+            [vc setKeyWordStr:[dict objectForKey:@"string"]];
+            [vc setParaId:[dict objectForKey:@"paraId"]];
+            [vc setBookId:[NSString stringWithFormat:@"%li",_readingBook.bookServerId]];
+            [self presentViewController:vc animated:YES completion:^{
+            }];
+        }
+        else {
+            UIReferenceLibraryViewController *referenceLibraryViewController =
+            [[UIReferenceLibraryViewController alloc] initWithTerm:[dict objectForKey:@"string"]];
+            [self presentViewController:referenceLibraryViewController
+                               animated:YES
+                             completion:nil];
+        }
+    }
+}
+
+-(BOOL)IsChinese:(NSString *)str {
+    for(int i=0; i< [str length];i++){
+        int a = [str characterAtIndex:i];
+        if( a > 0x4e00 && a < 0x9fff)
+        {
+            return YES;
+        }
+    }
+    return NO;
+}
+
+- (NSInteger)getToInt:(NSString*)strtemp
+{
+    NSStringEncoding enc = CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingGB_18030_2000);
+    NSData* da = [strtemp dataUsingEncoding:enc];
+    return [da length];
+}
+
+//点目录时阅读界面右挪
+- (void)pushWebViewToRight:(NSNotification *)notification {
+    int number = -1;
+    
+    if (notification) {
+        number =  [[notification object] intValue];
+    }
+    
+    if (number == 0) {
+        contentViewController.theWebView.frame = CGRectOffset(settedWebViewFrame, 284, 0);
+        trialView.frame = CGRectMake(0, -TrialViewHeight, WIDTH1,TrialViewHeight );
+        self.pushedToRight = YES;
+    } else {
+        contentViewController.theWebView.frame = settedWebViewFrame;
+        trialView.frame = CGRectMake(0, 64, WIDTH1,TrialViewHeight );
+        self.pushedToRight = NO;
+    }
+}
+
+- (void)sliderValueChanged {
+    
+    int page = bottomViewController.slider.value - 1;
+    
+    self.currentIndex = page;
+    
+    contentViewController.page = [self.currentBookEdition.pageArray objectAtIndex:self.currentIndex];
+    contentViewController.pageNum = self.currentIndex;
+    contentViewController.pagelabel.text = [NSString stringWithFormat:@"%d",self.currentIndex + 1];
+    bottomViewController.pageLabel.text = [NSString stringWithFormat:@"Page %d/%lu",self.currentIndex + 1,self.currentBookEdition.pageArray.count];
+    bottomViewController.edition = self.currentLang;
+}
+
+- (void) sliderValueChangeEnd{
+    DebugLog(@"prevValue in sliderValueChangeEnd ========== %d",prevValue);
+    if(saveValue != bottomViewController.slider.value){
+        prevValue = saveValue;
+        saveValue = bottomViewController.slider.value;
+    }
+    
+    if ([self chapterChanged] == YES) {
+        bottomViewController.currentChapterId = contentViewController.page.chapterId;
+        bottomViewController.edition = self.currentLang;
+        [bottomViewController.tableView reloadData];
+    }
+    
+    //[self saveReadingProgress];
+    
+    contentViewController.allParsed = allParsed;
+    [contentViewController webViewRefresh:contentViewController.page];
+    //[self setBookMarkStatus:self.readingBook.bookId];
+}
+
+//返回到之前阅读的页数
+- (void)backRead {
+    
+    bottomViewController.slider.value = prevValue;
+    self.currentIndex = prevValue - 1;
+    
+    prevValue = saveValue;
+    saveValue = bottomViewController.slider.value;
+    
+    contentViewController.page = [self.currentBookEdition.pageArray objectAtIndex:self.currentIndex];
+    contentViewController.pageNum = self.currentIndex;
+    
+    contentViewController.pagelabel.text = [NSString stringWithFormat:@"%d",self.currentIndex + 1];
+    bottomViewController.pageLabel.text = [NSString stringWithFormat:@"Page %d/%lu",self.currentIndex + 1,self.currentBookEdition.pageArray.count];
+    bottomViewController.edition = self.currentLang;
+    if ([self chapterChanged] == YES) {
+        bottomViewController.currentChapterId = contentViewController.page.chapterId;
+        bottomViewController.edition = self.currentLang;
+        [bottomViewController.tableView reloadData];
+    }
+    
+    contentViewController.allParsed = allParsed;
+    [contentViewController webViewRefresh:contentViewController.page];
+}
+
+- (IBAction)segmentAction:(id)sender {
+    
+    if (self.canChange == YES) {
+        
+        if (allParsed == NO) {
+            //[self showAlertPage:@"对应版本正在加载中..."];
+            return;
+        }
+        UIButton *button = (UIButton *)sender;
+        
+        if (button.tag == 1) {
+            self.segmentBgView.image = [UIImage imageNamed:@"中英切换"];
+        } else {
+            self.segmentBgView.image = [UIImage imageNamed:@"中英切换2"];
+        }
+        
+        if (button.tag != oldSegmentTag) {
+            
+            IYCLanguageType langType;
+            if (self.currentLang == IYCLanguageChinese) {
+                langType = IYCLanguageEnglish;
+            } else {
+                langType = IYCLanguageChinese;
+            }
+            
+            self.currentLang = langType;
+            contentViewController.langType = langType;
+            
+            NSNotification *notification = [NSNotification notificationWithName:@"" object:[NSNumber numberWithInt:langType]];
+            
+            [self changeLanguageEdition:notification];
+            oldSegmentTag = (int)button.tag;
+        }
+        
+        
+    } else {
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"抱歉,本书没有对应译文版本" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+        [alert show];
+        [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+    }
+    
+}
+
+- (void)setBookMarkStatus:(long)bookID
+{
+    int paragraphID = [self locateParagraph:contentViewController.page.chapterId];
+    NSString *userID = self.readingBook.bookAccount.accountID;
+    
+    
+    if ([userID intValue] > 0 || [userID isEqualToString:@"0"]) {
+        IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+        for (int j = 0; j < [chapter.paragraphArray count] ; j++) {
+            IYCParagraph *paragraph = [chapter.paragraphArray objectAtIndex:j];
+            if (paragraph.paragraphId >= paragraphID) {
+                NSMutableArray * result= [[IYCDBAction sharedDBAction]queryBookmarkBy:paragraph.paragraphId andBookID:bookID andAccountID:userID andedition:self.currentLang];
+                
+                if ([result count]>0 ) {
+                    for (int i =0; i< [result count]; i++) {
+                        IYCBookMark * bookmark = [result objectAtIndex:i];
+                        
+                        float pageHeight = [UIScreen mainScreen].bounds.size.height - 100;
+                        float pageThisStartOff = contentViewController.page.pageOffsetH;
+                        float offset = paragraph.paragraphStartOffset + bookmark.paragraphOffset*(paragraph.paragraphEndOffset-paragraph.paragraphStartOffset);
+                        
+                        if((offset-pageThisStartOff>-0.01) && offset-(pageThisStartOff + pageHeight)<-0.01) {
+                            [bottomViewController setBookMarkState:YES];
+                            [contentViewController setBookMarkState:YES];
+                            return;
+                        }
+                    }
+                }
+                
+            }
+        }
+        [contentViewController setBookMarkState:NO];
+        [bottomViewController setBookMarkState:NO];
+        
+    }
+    
+}
+
+
+- (void)updateBookMarkState:(BOOL)isShow
+{
+    [contentViewController setBookMarkState:isShow];
+    [self doFavorite:isShow];
+}
+
+- (void)doFavorite:(BOOL)addMarkOrDelete
+{
+    NSDateFormatter *favDate = [[NSDateFormatter alloc] init];
+    [favDate setDateStyle:NSDateFormatterNoStyle];
+    [favDate setAMSymbol:@"AM"];
+    [favDate setPMSymbol:@"PM"];
+    [favDate setDateFormat:@"YYYY-MM-dd HH:mm:ss"];
+    [self makeSureTopParagraph];
+    NSString *favDateString = [favDate stringForObjectValue:[NSDate date]];
+    NSString *userID = self.readingBook.bookAccount.accountID;
+    if (addMarkOrDelete) {
+        
+        IYCBookMark *bookMark = [[IYCBookMark alloc] init];
+        bookMark.bookServerId = self.readingBook.bookId;
+        bookMark.paragraphId = topParagraph.paragraphId;
+        bookMark.bookMarkServerId=0;
+        bookMark.bookMarkStatus=0;
+        bookMark.markPosition = [self calculateParaProgress];
+        bookMark.paragraphOffset = (contentViewController.page.pageOffsetH-topParagraph.paragraphStartOffset)/(topParagraph.paragraphEndOffset-topParagraph.paragraphStartOffset);
+        bookMark.log = self.bookMarkString;
+        bookMark.chapterId = contentViewController.page.chapterId;
+        
+        int markID = 1;
+        
+        if ([[IYCDBAction sharedDBAction]getMaxBookMark] != 0) {
+            markID = [[IYCDBAction sharedDBAction]getMaxBookMark] + 1;
+        }
+        bookMark.lineNumber = lineInParagraph;
+        bookMark.markId =  markID;
+        bookMark.markTime = favDateString;
+        bookMark.accountId = userID;
+        bookMark.edition = self.currentLang;
+        [[IYCDBAction sharedDBAction] saveBookmark:bookMark];
+        
+        if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] intValue]!=0&&[IYCCheckNetwork isServiceAvailable]) {
+            IYCBook *tempBook=[[IYCDBAction sharedDBAction] queryBookByID:bookMark.bookServerId];
+            NSDictionary *dict=@{@"bookid":[NSNumber numberWithLong:tempBook.bookServerId],@"chapterid":[NSNumber numberWithInt:bookMark.chapterId],@"segmentid":[NSNumber numberWithInt:bookMark.paragraphId],@"languagetype":[NSNumber numberWithInt:bookMark.edition],@"type":@"1",@"userid":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"content":bookMark.log,@"edition":[NSNumber numberWithInt: bookMark.edition ]};
+            
+            [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/commentscontroller/addExcerpt" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+                if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+                    bookMark.bookMarkStatus=1;
+                    if (![[[dic objectForKey:@"data"] objectForKey:@"bookmarkid"] isEqual:[NSNull null]]) {
+                        bookMark.bookMarkServerId=[[[dic objectForKey:@"data"] objectForKey:@"bookmarkid"] intValue];
+                    }
+                    [[IYCDBAction sharedDBAction] updataBookmark:bookMark];
+                }
+            } WithFailurBlock:^(NSError *error) {
+            }];
+        }
+    } else {
+        NSMutableArray *arry=[[IYCDBAction sharedDBAction] queryBookmark:self.readingBook.bookId accountID:[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] edition:self.currentLang];
+        IYCBookMark *bookmarkk=[arry objectAtIndex:0];
+        [[IYCDBAction sharedDBAction] deleteBookmarkByAccount:userID andPargraphId:topParagraph.paragraphId];
+        
+        if (bookmarkk.bookMarkServerId&&[[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] intValue]!=0&&[IYCCheckNetwork isServiceAvailable]) {
+            NSDictionary *dict=@{@"bookmarkid":[NSNumber numberWithInt:bookmarkk.bookMarkServerId]};
+            
+            [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/commentscontroller/delbookmarkbyid" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+                if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+                }
+            } WithFailurBlock:^(NSError *error) {
+            }];
+        }
+ 
+    }
+    
+}
+
+//计算顶头段在本页之前有多少字
+- (long)calculateParaProgress {
+    int wordCount = 0;
+    
+    IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+    
+    for (int i = 0; i < contentViewController.page.chapterId; i++) {
+        IYCChapter * chapterTemp = [self.currentBookEdition.chapters objectAtIndex:i];
+        wordCount = wordCount + (int) chapterTemp.totalWordsInChapter;
+    }
+    
+    [self makeSureTopParagraph];
+    
+    for (int j = 0; j < chapter.paragraphArray.count; j++) {
+        IYCParagraph *paragraph = [chapter.paragraphArray objectAtIndex:j];
+        if(paragraph.paragraphId < topParagraph.paragraphId){
+            wordCount = wordCount + paragraph.stringCount;
+        }else{
+            break;
+        }
+    }
+    
+    int fHalf = ( contentViewController.page.pageOffsetH - topParagraph.paragraphStartOffset ) / 25; //顶头段在本页之前有几行
+    if (fHalf < 1) {
+        fHalf = 0;
+    }
+    
+    lineInParagraph = fHalf + 1;
+    int totalLines = (topParagraph.paragraphEndOffset - topParagraph.paragraphStartOffset) / 25; //顶头段一共有几行
+    if (totalLines == 0) {
+        totalLines = 1;
+    }
+    
+    float percentInPara = (float)fHalf / (float)totalLines;
+    
+    if (percentInPara == 1) {
+        percentInPara = 0.9;
+    }
+    
+    int numberInPara = (int) topParagraph.paragString.length;
+    
+    
+    int numberF = numberInPara * percentInPara;
+    
+    if (topParagraph.paragString.length - 1 < numberF) {
+        self.bookMarkString = @"";
+    } else {
+        self.bookMarkString = [topParagraph.paragString substringFromIndex:numberF]; //书签应该显示的字
+    }
+    
+    DebugLog(@"self.bookMarkString ==== %@",self.bookMarkString);
+    
+    
+    
+    return (wordCount + numberF);
+}
+
+//保存阅读进度－－针对当前正在读的书
+-(void) saveReadingProgressByOne{
+    IYCCurrentBookState *bookState = [[IYCCurrentBookState alloc] init];
+    
+    IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+    bookState.bookId = self.readingBook.bookId;
+    bookState.serverBookId = self.readingBook.bookServerId;
+    bookState.accountId = self.readingBook.bookAccount.accountID;
+    bookState.lastReadTime = [NSDate stringFromDate:[NSDate date]];
+    bookState.languageType = self.currentBookEdition.languageType;
+    double schedule = ((double)[self calculateParaProgress]/(double)[self.currentBookEdition getTotalWordsInBook]);
+    //阅读进度
+    if (self.currentIndex+1 == self.currentBookEdition.pageArray.count){
+        schedule = 1.00;
+    }
+    
+    
+    bookState.readSchedule = schedule;
+    bookState.chapterNo = chapter.serverChapterId;
+    bookState.paragraphNo = topParagraph.paragraphId;
+    bookState.lineNo = lineInParagraph;
+    bookState.pageNumber = contentViewController.page.pageId;
+    bookState.changeTimes = self.changeEditionTimes;
+    bookState.lastOprationTime = bookState.lastReadTime;
+    [self makeSureTopParagraph];
+    bookState.paragraphSchedule = (contentViewController.page.pageOffsetH-topParagraph.paragraphStartOffset)/(topParagraph.paragraphEndOffset-topParagraph.paragraphStartOffset);
+    
+    [[IYCDBAction sharedDBAction] saveCurrentState:bookState];
+    
+    
+    IYCUpdateBook *book = [[IYCUpdateBook alloc] init];
+    book.bookId = self.readingBook.bookServerId;
+    book.paragraphNo = topParagraph.paragraphId;
+    book.chapterNo = chapter.serverChapterId;
+    book.timestamp = [NSDate stringFromDate:[NSDate date]];
+    book.readShedule = schedule;
+    book.languageType = self.currentBookEdition.languageType;
+    
+    [[IYCCommon sharedCommon] updateUserInfoFromServerByOne:book];
+    
+}
+
+//保存阅读进度
+- (void) saveReadingProgress{
+    IYCCurrentBookState *bookState = [[IYCCurrentBookState alloc] init];
+    [self makeSureTopParagraph];
+
+    IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:contentViewController.page.chapterId];
+    
+    bookState.bookId = self.readingBook.bookId;
+    bookState.serverBookId = self.readingBook.bookServerId;
+    bookState.accountId = self.readingBook.bookAccount.accountID;
+    bookState.lastReadTime = [NSDate stringFromDate:[NSDate date]];
+    bookState.languageType = self.currentBookEdition.languageType;
+    double schedule = ((double)[self calculateParaProgress]/(double)[self.currentBookEdition getTotalWordsInBook]);
+    //阅读进度
+    if (self.currentIndex+1 == self.currentBookEdition.pageArray.count){
+        schedule = 1.00;
+    }
+    
+    
+    bookState.readSchedule = schedule;
+    bookState.chapterNo = chapter.serverChapterId;
+    bookState.paragraphNo = topParagraph.paragraphId;
+    bookState.lineNo = lineInParagraph;
+    //bookState.pageNumber = contentViewController.page.pageId;
+    //    IYCBookEdition *bookEdition = self.currentBookEdition;
+    //bookState.pageNumber = [bookEdition.pageArray indexOfObject:contentViewController.page];
+    bookState.pageNumber = contentViewController.page.pageId;
+    bookState.changeTimes = self.changeEditionTimes;
+    bookState.lastOprationTime = bookState.lastReadTime;
+    bookState.paragraphSchedule = (contentViewController.page.pageOffsetH-topParagraph.paragraphStartOffset)/(topParagraph.paragraphEndOffset-topParagraph.paragraphStartOffset);
+    
+    [[IYCDBAction sharedDBAction] saveCurrentState:bookState];
+    if ([IYCCheckNetwork isServiceAvailable]&&![[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]) {
+//        [self upReadingRecord:bookState];
+        [NSThread detachNewThreadSelector:@selector(upReadingRecord:) toTarget:self withObject:bookState];
+    }
+    else {
+    }
+    [self.navigationController popViewControllerAnimated:YES];
+
+//    [[IYCCommon sharedCommon] updateUserInfoFromServer];
+}
+
+- (void)turnToNote:(NSNotification *)notification
+{
+    [self triggerMenu:nil];
+    
+    NSDictionary * info = notification.userInfo;
+    IYCNote * note = [info objectForKey:@"note"];
+    if (noteToSwitch) {
+        noteToSwitch = nil;
+    }
+    noteToSwitch = note;
+    
+    AppDelegate *appdelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    NSInteger index = appdelegate.noteFirstIndex;
+    
+    int pageNumber = 0;
+    for (int i = 0; i < (note.chapterID - index); i++) {
+        IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:i];
+        pageNumber = pageNumber + chapter.pageCount;
+    }
+    
+    self.currentIndex = pageNumber;
+    
+    contentViewController.pageNum = self.currentIndex;
+    contentViewController.pagelabel.text = [NSString stringWithFormat:@"%d",self.currentIndex + 1];
+    contentViewController.page = [self.currentBookEdition.pageArray objectAtIndex:self.currentIndex];
+    
+    if ([self chapterChanged] == YES) {
+        bottomViewController.currentChapterId = contentViewController.page.chapterId;
+        [bottomViewController.tableView reloadData];
+    }
+    
+    contentViewController.allParsed = allParsed;
+    [contentViewController webViewRefresh:contentViewController.page];
+    [[NSNotificationCenter defaultCenter] postNotificationName:NOTIFICATION_REFRESHWEBVIEW object:nil];
+
+}
+
+- (void)upReadingRecord:(IYCCurrentBookState *)bookstate {
+//    MBProgressHUD *MBP=[MBProgressHUD showHUDAddedTo:self.view animated:YES];
+//    MBP.label.text=@"上传阅读进度中~";
+    NSDictionary *dict=@{@"userid":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"bookid":[NSString stringWithFormat:@"%ld",bookstate.serverBookId],@"terminal":@"2",@"segmentid":[NSString stringWithFormat:@"%i",bookstate.paragraphNo],@"progress":[NSString stringWithFormat:@"%f",bookstate.readSchedule],@"languagetype":[NSString stringWithFormat:@"%i",bookstate.languageType],@"chapterid":[NSString stringWithFormat:@"%i",bookstate.chapterNo]};
+    [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"sentencecontroller/app/insertBrowserRecord" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+        if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+            NSLog(@"上传阅读进度成功 %@",dic);
+        }
+//        [self.navigationController popViewControllerAnimated:YES];
+//        [MBP hideAnimated:YES];
+    } WithFailurBlock:^(NSError *error) {
+//        [self.navigationController popViewControllerAnimated:YES];
+//        [MBP hideAnimated:YES];
+    }];
+
+    
+    [NSThread exit];
+}
+
+- (void)gotoBookMark:(NSNotification *)notification
+{
+    [self triggerMenu:nil];
+    
+    NSDictionary *dict = notification.object;
+    IYCBookMark * bookmark = [dict objectForKey:@"bookmark"];
+    
+    //self.currentIndex = [self shouldJumpToPage:bookmark];
+    if (bookMarkToSwitch) {
+        bookMarkToSwitch = nil;
+    }
+    bookMarkToSwitch = bookmark;
+    
+    int pageNumber = 0;
+    for (int i = 0; i < bookmark.chapterId; i++) {
+        IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:i];
+        pageNumber = pageNumber + chapter.pageCount;
+    }
+    self.currentIndex = pageNumber;
+    
+    contentViewController.pageNum = self.currentIndex;
+    contentViewController.pagelabel.text = [NSString stringWithFormat:@"%d",self.currentIndex + 1];
+    contentViewController.page = [self.currentBookEdition.pageArray objectAtIndex:self.currentIndex];
+    
+    if ([self chapterChanged] == YES) {
+        bottomViewController.currentChapterId = contentViewController.page.chapterId;
+        [bottomViewController.tableView reloadData];
+    }
+    
+    contentViewController.allParsed = allParsed;
+    [contentViewController webViewRefresh:contentViewController.page];
+    
+    //      [bottomViewController setBookMarkState:YES];
+    //    [contentViewController setBookMarkState:YES];
+}
+- (void)switchToPageInChapter
+{
+    if (noteToSwitch) {
+        self.currentIndex = [self pageOfNote:noteToSwitch];
+        noteToSwitch = nil;
+    }else if(bookMarkToSwitch){
+        self.currentIndex = [self shouldJumpToPage:bookMarkToSwitch];
+        bookMarkToSwitch = nil;
+    }else{
+        return;
+    }
+    
+    IYCBookEdition *bookEdition = self.currentBookEdition;
+    NSLog(@"%d",self.currentIndex);
+    contentViewController.page = [self.currentBookEdition.pageArray objectAtIndex:self.currentIndex];;
+    [self settingOthers:bookEdition];
+    [contentViewController jumpToPageInChapter];
+    [self setBookMarkStatus:self.readingBook.bookId];
+}
+- (int)shouldJumpToPage:(IYCBookMark *)bookmark {
+    
+    int page = [self calculatePageNeedToTurnTo:bookmark.chapterId paragraphId:bookmark.paragraphId block:^float(IYCParagraph *para) {
+        
+        double offset = para.paragraphStartOffset + bookmark.paragraphOffset*(para.paragraphEndOffset-para.paragraphStartOffset);
+        return offset;
+    }];
+    return page;
+}
+- (int)pageOfNote:(IYCNote *)note
+{
+    AppDelegate *appdelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    NSInteger index = appdelegate.noteFirstIndex;
+    
+    int page = [self calculatePageNeedToTurnTo:(int)(note.chapterID - index) paragraphId:note.startParagraphId block:^float(IYCParagraph *para) {
+        double offset = ((double)note.startOffset/para.paragString.length)*(para.paragraphEndOffset-para.paragraphStartOffset)+para.paragraphStartOffset;
+        return offset;
+    }];
+    return page;
+}
+- (int)calculatePageNeedToTurnTo:(int)chapterIndex paragraphId:(long)paraId block:(float (^)(IYCParagraph *para))paragraphOffset
+{
+    int pageNumber = 0;
+    for (int i = 0; i < chapterIndex; i++) {
+        IYCChapter *chapter = [self.currentBookEdition.chapters objectAtIndex:i];
+        pageNumber = pageNumber + chapter.pageCount;
+    }
+    
+    IYCChapter *chapterThis = [self.currentBookEdition.chapters objectAtIndex:chapterIndex];
+    
+    IYCParagraph *paragraphThis = nil;
+    
+    for (int j = 0; j < [chapterThis.paragraphArray count]; j++) {
+        IYCParagraph *paragraph = [chapterThis.paragraphArray objectAtIndex:j];
+        
+        if (paragraph.paragraphId == paraId) {
+            paragraphThis = paragraph;
+            break;
+        }
+    }
+    
+    //    IYCPage *pageThisStart = nil;
+    //    IYCPage *pageThisEnd = nil;
+    //    for (int k = 0; k < chapterThis.pageCount; k++) {
+    //        IYCPage *page = [chapterThis.pageArray objectAtIndex:k];
+    //        if (page.pageId == paragraphThis.paragraphStartPage) {
+    //            pageThisStart = page;
+    //        }
+    //
+    //        if (page.pageId == paragraphThis.paragraphEndPage) {
+    //            pageThisEnd = page;
+    //        }
+    //    }
+    
+    double pageHeight = [UIScreen mainScreen].bounds.size.height - 100;
+    double offset = paragraphOffset(paragraphThis);
+    
+    //    if (offset < pageThisStart.pageOffsetH + pageHeight) {
+    //        pageNumber = pageNumber + paragraphThis.paragraphStartPage;
+    //    } else {
+    //        int i = (int)((pageThisEnd.pageOffsetH - pageThisStart.pageOffsetH) / pageHeight );
+    //
+    //        int pageN = 0;
+    //        for (int j = 1; j < i + 1; j++) {
+    //            if (offset < pageThisStart.pageOffsetH + pageHeight*(j+1) && offset >= pageThisStart.pageOffsetH + pageHeight*j ) {
+    //                pageN = j;
+    //                break;
+    //            }
+    //        }
+    //
+    //        pageNumber = pageNumber + paragraphThis.paragraphStartPage + pageN;
+    //    }
+    pageNumber += (int)(offset/pageHeight+0.02);//浮点型精度损失，所以加0.02的纠正。
+    
+    return pageNumber;
+}
+#pragma mark -
+#pragma mark Note View
+- (void)turnToNoteView:(NSNotification *)notification
+{
+    NSDictionary * info = notification.userInfo;
+    IYCNote *note=[info objectForKey:@"Note"];
+    NSLog(@"%@",note.selectString);
+    if ([note.selectString isEqualToString:@""]||note.selectString==nil) {
+
+    }
+    else if (([note.selectString rangeOfString:@"\r"].location!=NSNotFound)||([note.selectString rangeOfString:@"\n"].location!=NSNotFound)) {
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"不能跨段做笔记哦~" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+        [alert show];
+        [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+    }
+    else {
+        IYCNoteViewController * noteView = [[IYCNoteViewController alloc] init];
+     
+        [self presentViewController:noteView animated:YES completion:^{
+            IYCNote * note = [info objectForKey:@"Note"];
+            BOOL isCreate = [[info objectForKey:@"IsCreate"] boolValue];
+            NSString *str=@"";
+            if (_currentLang==1) {
+                str=self.readingBook.bookChineseTitle;
+            }
+            else
+                str=self.readingBook.bookEnglishTitle;
+            
+            [noteView editingNote:note isCreateNote:isCreate bookNameTitle:str];
+        }];
+    
+    }
+}
+- (void) upNewWordEvent {
+    [NSThread detachNewThreadSelector:@selector(upNewWordToWeb:) toTarget:self withObject:readyNewWordDict];
+}
+
+
+- (void) upNewWordToWeb:(NSDictionary *)infoDict {
+    NSDictionary *dict=infoDict;
+    IYCWordDBAction *db = [[IYCWordDBAction alloc] init];
+    IYCWord *newword = [[IYCWord alloc] init];
+    newword.userID = [[infoDict objectForKey:@"userId"] longLongValue];
+    newword.wordStatus = 1;
+    newword.wordString = [[infoDict objectForKey:@"word"] lowercaseString]; // word
+    newword.wordMeaning = [infoDict objectForKey:@"content"];
+    newword.locationString = self.readingBook.bookChineseTitle;
+    NSString *sentenceString =[infoDict objectForKey:@"sentenceString"];
+    sentenceString = [sentenceString stringByReplacingOccurrencesOfString:@"'" withString:@"''"];
+    newword.sentenceString = sentenceString; //articleContent
+    newword.wordDeleteStr = @"0";
+    newword.bookId = self.readingBook.bookServerId;  //bookID
+    newword.bookName = self.readingBook.bookChineseTitle ; //bookName
+    NSString *phoneticstr = [infoDict objectForKey:@"phonetic"];
+    phoneticstr=[phoneticstr stringByReplacingOccurrencesOfString:@"'"withString:@"''"];
+    newword.phonetic = phoneticstr;
+//    [[resDict objectForKey:@"basic"] objectForKey:@"phonetic"] //音标
+    if (![[infoDict objectForKey:@"level"] isEqualToString:@""]) {
+        
+        NSMutableArray *array3=[[NSMutableArray alloc]initWithArray:[[infoDict objectForKey:@"level"] componentsSeparatedByString:@","]];
+        for (int i=0; i<array3.count; i++) {
+            if ([[array3 objectAtIndex:i] intValue]==0) {
+                [array3 replaceObjectAtIndex:i withObject:@"tem8"];
+            }
+            else if ([[array3 objectAtIndex:i] intValue]==1) {
+                [array3 replaceObjectAtIndex:i withObject:@"tem4"];
+            }
+            else if ([[array3 objectAtIndex:i] intValue]==3) {
+                [array3 replaceObjectAtIndex:i withObject:@"sat"];
+            }
+            else if ([[array3 objectAtIndex:i] intValue]==7) {
+                [array3 replaceObjectAtIndex:i withObject:@"toelf"];
+            }
+            else if ([[array3 objectAtIndex:i] intValue]==4) {
+                [array3 replaceObjectAtIndex:i withObject:@"cet4"];
+            }
+            else if ([[array3 objectAtIndex:i] intValue]==6) {
+                [array3 replaceObjectAtIndex:i withObject:@"cet6"];
+            }
+            else if ([[array3 objectAtIndex:i] intValue]==5) {
+                [array3 replaceObjectAtIndex:i withObject:@"考研"];
+            }
+            else if ([[array3 objectAtIndex:i] intValue]==9) {
+                [array3 replaceObjectAtIndex:i withObject:@"gre"];
+            }
+            else if ([[array3 objectAtIndex:i] intValue]==8) {
+                [array3 replaceObjectAtIndex:i withObject:@"ielts"];
+            }
+        }
+        NSString *levelstr =[NSString stringWithFormat:@"%@",[array3 componentsJoinedByString:@","]];
+        newword.wordlevel = levelstr; // level
+        newword.favoriteword = 0;
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        [formatter setDateStyle:NSDateFormatterMediumStyle];
+        [formatter setTimeStyle:NSDateFormatterShortStyle];
+        [formatter setDateFormat:@"YYYY-MM-dd HH:mm:ss"];
+        
+        NSTimeZone* timeZone = [NSTimeZone timeZoneWithName:@"Asia/Beijing"];
+        [formatter setTimeZone:timeZone];
+        NSDate *datenow = [NSDate date];
+        newword.updatetimestr = [formatter stringFromDate:datenow];
+        NSMutableArray *array=[[NSMutableArray alloc]initWithArray:[db selectWordDictByWordString:[[infoDict objectForKey:@"word"] lowercaseString] andUserId:[[infoDict objectForKey:@"userId"] intValue]]];
+        if (array.count==0) {
+            [db insertWord:newword];
+        }
+    }
+    
+    
+//    
+//    [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"newwords/app/createNewWord" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+//        if (dic) {
+//            if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+////                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:[dic objectForKey:@"msg"] delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+////                [alert show];
+////                [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+//            }
+//
+//            [addWord setHidden:YES];
+//        }
+//
+//    } WithFailurBlock:^(NSError *error) {
+//    }];
+    
+    [addWord setHidden:YES];
+
+    [NSThread exit];
+}
+
+- (void)audioPlayByUrl:(NSNotification *)notification {
+    NSDictionary *dict=notification.object;
+    
+    NSURL * url  = [NSURL URLWithString:[dict objectForKey:@"audioUrl"]];
+    songItem = [[AVPlayerItem alloc]initWithURL:url];
+    player = [[AVPlayer alloc]initWithPlayerItem:songItem];
+
+    [songItem addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionNew context:nil];
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSString *,id> *)change context:(void *)context {
+    
+    if ([keyPath isEqualToString:@"status"]) {
+        switch (player.status) {
+            case AVPlayerStatusUnknown:
+                break;
+            case AVPlayerStatusReadyToPlay:
+                [player play];
+                [songItem removeObserver:self forKeyPath:@"status"];
+                break;
+            case AVPlayerStatusFailed:
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+- (void)videoPlayByUrl:(NSNotification *)notification {
+//    NSDictionary *dict=notification.object;
+//    
+//    WatchVideoViewController *vc=[[WatchVideoViewController alloc]init];
+//    vc.playurl=[dict objectForKey:@"videoUrl"];
+//    [self.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)missNewWordView:(NSNotification *)notification {
+//    NSDictionary *dictt=notification.object;
+//    
+//    if (([[dictt objectForKey:@"pointx"] floatValue]+100.0)>=tranView.frame.origin.x&&[[dictt objectForKey:@"pointx"] floatValue]<=(tranView.frame.origin.x+tranView.frame.size.width+100)&&[[dictt objectForKey:@"pointy"] floatValue]>=tranView.frame.origin.y&&[[dictt objectForKey:@"pointy"] floatValue]<=(tranView.frame.origin.y+tranView.frame.size.height)) {
+//        
+//    }
+//    else if([[dictt objectForKey:@"pointx"] intValue]==0&&[[dictt objectForKey:@"pointy"] intValue]==0) {
+//        
+//    }
+//    else
+//        [tranView removeFromSuperview];
+    
+    
+    [self.view removeGestureRecognizer:labelTapGestureRecognizer2];
+
+    
+}
+
+- (void)showNewWordView:(NSNotification *)notification {
+    noti=notification;
+    wordDict=notification.object;
+    newWordStr=[NSMutableString stringWithString:[wordDict objectForKey:@"newWordStr"]];
+//    NSMutableArray *menuItemsArray = [[NSMutableArray alloc] initWithObjects:@"复制",@"分享",@"搜索",@"笔记",@"查词",@"翻译", nil];
+    NSMutableArray *menuItemsArray = [[NSMutableArray alloc] initWithObjects:@"分享",@"搜索",@"笔记",@"查词",@"翻译", nil];
+
+    
+    float y=0.0;
+    if ([[wordDict objectForKey:@"frame"] floatValue]+50>HEIGHT/2) {
+        y=64.0;
+    }
+    else
+        y=HEIGHT-50-230;
+    [tranView removeFromSuperview];
+    tranView=[[UIView alloc]initWithFrame:CGRectMake(WIDTH/2-150,y,300,230)];
+    tranView.backgroundColor=[UIColor grayColor];
+    tranView.clipsToBounds=YES;
+    tranView.layer.borderColor=[UIColor whiteColor].CGColor;
+    tranView.layer.borderWidth=1.0;
+    tranView.layer.cornerRadius=0;
+    [self.view addSubview:tranView];
+
+    
+    UILabel *sepLab=[[UILabel alloc]initWithFrame:CGRectMake(0,34, 300, 0.5)];
+    sepLab.backgroundColor=[UIColor whiteColor];
+    [tranView addSubview:sepLab];
+    
+    for (int i=0; i<menuItemsArray.count; i++) {
+        UIButton *btn=[[UIButton alloc]initWithFrame:CGRectMake(i*(300.0/menuItemsArray.count)+1, 1, 300.0/menuItemsArray.count-2, 34)];
+        [btn setTitle:[menuItemsArray objectAtIndex:i] forState:UIControlStateNormal];
+        [btn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [btn setTitleColor:[UIColor colorWithHexString:mainColor] forState:UIControlStateHighlighted];
+        
+        btn.titleLabel.font=[UIFont systemFontOfSize:15.0];
+        btn.tag=300+i;
+        [btn addTarget:self action:@selector(tapBtn:) forControlEvents:UIControlEventTouchUpInside];
+        [tranView addSubview:btn];
+    }
+    UIButton *btn3=(UIButton *)[tranView viewWithTag:303];
+    [btn3 setTitleColor:[UIColor colorWithHexString:mainColor] forState:UIControlStateNormal];
+    
+    [self createWordView];
+    labelTapGestureRecognizer2 = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(tapTranView:)];
+    [self.view addGestureRecognizer:labelTapGestureRecognizer2];
+    //    [NSThread detachNewThreadSelector:@selector(queryWordLocal) toTarget:self withObject:nil];
+}
+
+- (void)tapTranView:(UITapGestureRecognizer *)tap {
+    CGPoint point=[tap locationInView:self.view];
+    if (!self.pushedToRight) {
+        NSLog(@"%f %f",point.x,point.y);
+        NSLog(@"%f %f %f %f",tranView.frame.origin.x,tranView.frame.origin.y,tranView.frame.size.width,tranView.frame.size.height);
+        if (point.x>tranView.frame.origin.x&&point.x<(tranView.frame.origin.x+tranView.frame.size.width)&&point.y>tranView.frame.origin.y&&point.y<(tranView.frame.origin.y+tranView.frame.size.height)) {
+            //        [self showNewWordView:noti];
+        }
+        else {
+            [self.view removeGestureRecognizer:labelTapGestureRecognizer2];
+            [tranView removeFromSuperview];
+        }
+    }
+
+}
+
+- (void)createWordView {
+    
+    [wordView removeFromSuperview];
+    wordView=[[UIView alloc]initWithFrame:CGRectMake(0,35,300,195)];
+    [tranView addSubview:wordView];
+    if ([self IsChinese:newWordStr]) {
+        UILabel *wordText=[[UILabel alloc] initWithFrame:CGRectMake(15, 0, 270,34.5)];
+        NSString *str2=[NSString stringWithFormat:@"%@",newWordStr];
+        wordText.text=str2;
+        wordText.font=[UIFont systemFontOfSize:15.0];
+        wordText.textColor=[UIColor whiteColor];
+        [wordView addSubview:wordText];
+        
+        UILabel *sepLab3=[[UILabel alloc]initWithFrame:CGRectMake(15,34.5, 270, 0.5)];
+        sepLab3.backgroundColor=[UIColor whiteColor];
+        [wordView addSubview:sepLab3];
+        
+        UILabel *wordText1=[[UILabel alloc] initWithFrame:CGRectMake(15, 35, 270,160)];
+        wordText1.text=@"暂不支持中文查词";
+        wordText1.textAlignment=NSTextAlignmentCenter;
+        wordText1.font=[UIFont systemFontOfSize:14.0];
+        wordText1.textColor=[UIColor whiteColor];
+        [wordView addSubview:wordText1];
+        
+    }
+    else {
+        QueryLocalWord *tt=[[QueryLocalWord alloc]init];
+        NSMutableDictionary *dict=[tt queryLocalWordDictionary:[newWordStr lowercaseString]];
+        NSMutableString *newStr2=[NSMutableString stringWithString:[newWordStr lowercaseString]];
+        if([dict count]==1) {
+            if ([[newWordStr lowercaseString] hasSuffix:@"ed"]) {
+                [newStr2 deleteCharactersInRange:NSMakeRange(newStr2.length-2, 2)];
+            }
+            else if ([[newWordStr lowercaseString] hasSuffix:@"es"]) {
+                [newStr2 deleteCharactersInRange:NSMakeRange(newStr2.length-2, 2)];
+            }
+            else if ([[newWordStr lowercaseString] hasSuffix:@"s"]) {
+                [newStr2 deleteCharactersInRange:NSMakeRange(newStr2.length-1, 1)];
+            }
+            else if ([[newWordStr lowercaseString] hasSuffix:@"ing"]) {
+                [newStr2 deleteCharactersInRange:NSMakeRange(newStr2.length-3, 3)];
+            }
+            else if ([[newWordStr lowercaseString] hasSuffix:@"ly"]) {
+                [newStr2 deleteCharactersInRange:NSMakeRange(newStr2.length-2, 2)];
+            }
+        }
+        
+        dict=[tt queryLocalWordDictionary:[newStr2 lowercaseString]];
+        
+        if ([IYCCheckNetwork isServiceAvailable]) {
+            NSString*urlStr =[NSString stringWithFormat:@"http://fanyi.youdao.com/openapi.do?keyfrom=%@&key=%@&type=data&doctype=json&version=1.1&q=%@&only=dict",YOUDAO_KEYFROM,YOUDAO_KEY,newWordStr];
+            NSString *newStr = [urlStr stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+            NSURL *url = [NSURL URLWithString:newStr];
+            NSMutableURLRequest*request = [NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:10];
+            
+            //将字符串转换为NSData对象
+            [request setHTTPMethod:@"GET"];
+            //异步链接(形式1,较少用)
+            [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *data, NSError *connectionError) {
+                
+                if(data==nil)
+                {
+                    data=[[NSData alloc] init];
+                }
+                
+                resDict=[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingAllowFragments error:nil];
+                if(resDict)
+                {
+                    if ([[resDict objectForKey:@"errorCode"] intValue]==0&&[resDict objectForKey:@"basic"]) {
+                        UILabel *wordText=[[UILabel alloc] initWithFrame:CGRectMake(15, 0, 270,34.5)];
+                        NSString *str2=[NSString stringWithFormat:@"%@ ",newWordStr];
+                        if ([[resDict objectForKey:@"basic"] objectForKey:@"phonetic"]) {
+                            str2=[str2 stringByAppendingString:[NSString stringWithFormat:@"[%@]",[[resDict objectForKey:@"basic"] objectForKey:@"phonetic"]]];
+                        }
+                        wordText.text=str2;
+                        wordText.font=[UIFont systemFontOfSize:15.0];
+                        wordText.textColor=[UIColor whiteColor];
+                        [wordView addSubview:wordText];
+                        
+                        UILabel *sepLab3=[[UILabel alloc]initWithFrame:CGRectMake(15,34.5, 270, 0.5)];
+                        sepLab3.backgroundColor=[UIColor whiteColor];
+                        [wordView addSubview:sepLab3];
+
+                        UIScrollView *scroll=[[UIScrollView alloc]initWithFrame:CGRectMake(0, 35, 300, 130)];
+                        float myHeight=0.0;
+                        NSMutableArray *tmpWordArray=[[NSMutableArray alloc]initWithArray:[[resDict objectForKey:@"basic"] objectForKey:@"explains"]];
+                        if (tmpWordArray.count>0) {
+                            for (int i=0; i<[tmpWordArray count]; i++) {
+                                
+                                float reviewHeight=[self getSpaceLabelHeight:[[[resDict objectForKey:@"basic"] objectForKey:@"explains"] objectAtIndex:i] withFont:[UIFont systemFontOfSize:14] withWidth:270]+2;
+                                
+                                UILabel *reviewLabel=[[UILabel alloc]initWithFrame:CGRectMake(15, 5+myHeight, 270, reviewHeight)];
+                                [self setLabelSpace:reviewLabel withValue:[tmpWordArray objectAtIndex:i] withFont:[UIFont systemFontOfSize:14]];
+                                reviewLabel.textColor=[UIColor whiteColor];
+                                reviewLabel.numberOfLines=0;
+                                [scroll addSubview:reviewLabel];
+                                
+                                myHeight+=reviewHeight;
+                            }
+                            scroll.contentSize=CGSizeMake(270, myHeight+10);
+                            [wordView addSubview:scroll];
+                            
+                            if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]&&([[[NSUserDefaults standardUserDefaults] objectForKey:@"autoWord"] intValue]==0)) {
+                                NSString *readingRecordLogId=@"0";
+                                AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+                                if ([delegate.studentUserId isEqualToString:@"0"]) {
+                                    readingRecordLogId=@"0";
+                                }
+                                else if ([delegate.studentUserId isEqualToString:@"1"]){
+                                    readingRecordLogId=delegate.readingrecordlogid;
+                                }
+                                NSString *pStr = [wordDict objectForKey:@"paragraphString"];
+                                pStr =[pStr stringByReplacingOccurrencesOfString:@"。" withString:@"."];
+                                pStr =[pStr stringByReplacingOccurrencesOfString:@"！" withString:@"."];
+                                pStr =[pStr stringByReplacingOccurrencesOfString:@"？" withString:@"."];
+                                pStr =[pStr stringByReplacingOccurrencesOfString:@"!" withString:@"."];
+                                pStr =[pStr stringByReplacingOccurrencesOfString:@"?" withString:@"."];
+
+                                NSArray *pArray  = [pStr componentsSeparatedByString:@"."];
+                                for (int i = 0; i <pArray.count; i++) {
+                                    if ([pArray[i] rangeOfString:newWordStr].location != NSNotFound) {
+                                        pStr = pArray[i];
+                                    }
+                                }
+//                                NSLog(@"%@",pStr);
+
+                                NSDictionary *newWordDict=@{@"bookId":[NSString stringWithFormat:@"%li", _readingBook.bookServerId],@"content":tmpWordArray.count?[tmpWordArray objectAtIndex:0]:@"",@"phonetic":[[resDict objectForKey:@"basic"] objectForKey:@"phonetic"]?:@"",@"segmentId":[wordDict objectForKey:@"segmentid"],@"terminal":@"2",@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"word":newWordStr,@"level":[dict objectForKey:@"WordLevel"]?:@"",@"readingRecordLogId":readingRecordLogId,@"sentenceString":pStr};
+                             
+                                [NSThread detachNewThreadSelector:@selector(upNewWordToWeb:) toTarget:self withObject:newWordDict];
+                            }
+                            else if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]&&([[[NSUserDefaults standardUserDefaults] objectForKey:@"autoWord"] intValue]!=0)) {
+                                NSString *readingRecordLogId=@"0";
+                                AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+                                if ([delegate.studentUserId isEqualToString:@"0"]) {
+                                    readingRecordLogId=@"0";
+                                }
+                                else if ([delegate.studentUserId isEqualToString:@"1"]){
+                                    readingRecordLogId=delegate.readingrecordlogid;
+                                }
+                                
+                                readyNewWordDict=@{@"bookId":[NSString stringWithFormat:@"%li", _readingBook.bookServerId],@"content":tmpWordArray.count?[tmpWordArray objectAtIndex:0]:@"",@"phonetic":[[resDict objectForKey:@"basic"] objectForKey:@"phonetic"]?:@"",@"segmentId":[wordDict objectForKey:@"segmentid"],@"terminal":@"2",@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"word":newWordStr,@"level":[dict objectForKey:@"WordLevel"]?:@"",@"readingRecordLogId":readingRecordLogId};
+                                
+                                addWord=[[UIButton alloc] initWithFrame:CGRectMake(227, 5, 60, 24)];
+                                [addWord setTitle:@"+生词" forState:UIControlStateNormal];
+                                [addWord setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+                                addWord.clipsToBounds=YES;
+                                addWord.layer.cornerRadius=12;
+                                [addWord setBackgroundImage:[self imageWithColor:[UIColor colorWithHexString:mainColor] size:addWord.frame.size] forState:UIControlStateNormal];
+                                [addWord.titleLabel setFont:[UIFont systemFontOfSize:15.0]];
+                                [addWord addTarget:self action:@selector(upNewWordEvent) forControlEvents:UIControlEventTouchUpInside];
+                                [wordView addSubview:addWord];
+                            }
+
+                        }
+                    }
+                    else {
+                        UILabel *wordText=[[UILabel alloc] initWithFrame:CGRectMake(15, 0, 270,34.5)];
+                        NSString *str2=[NSString stringWithFormat:@"%@ ",newWordStr];
+                        wordText.text=str2;
+                        wordText.font=[UIFont systemFontOfSize:15.0];
+                        wordText.textColor=[UIColor whiteColor];
+                        [wordView addSubview:wordText];
+                        
+                        UILabel *sepLab3=[[UILabel alloc]initWithFrame:CGRectMake(15,34.5, 270, 0.5)];
+                        sepLab3.backgroundColor=[UIColor whiteColor];
+                        [wordView addSubview:sepLab3];
+                        
+                        UILabel *wordText1=[[UILabel alloc] initWithFrame:CGRectMake(15, 35, 270,160)];
+                        wordText1.text=@"没有查询到结果";
+                        wordText1.textAlignment=NSTextAlignmentCenter;
+                        wordText1.font=[UIFont systemFontOfSize:14.0];
+                        wordText1.textColor=[UIColor whiteColor];
+                        [wordView addSubview:wordText1];
+                    }
+                }
+            }];
+
+        }
+        else {
+            UILabel *wordText=[[UILabel alloc] initWithFrame:CGRectMake(15, 0, 270,34.5)];
+            NSString *str2=[NSString stringWithFormat:@"%@ ",newWordStr];
+            if ([dict objectForKey:@"phonetic"]) {
+                str2=[str2 stringByAppendingString:[NSString stringWithFormat:@"[%@]",[dict objectForKey:@"phonetic"]]];
+            }
+            wordText.text=str2;
+            wordText.font=[UIFont systemFontOfSize:15.0];
+            wordText.textColor=[UIColor whiteColor];
+            [wordView addSubview:wordText];
+            
+            UILabel *sepLab3=[[UILabel alloc]initWithFrame:CGRectMake(15,34.5, 270, 0.5)];
+            sepLab3.backgroundColor=[UIColor whiteColor];
+            [wordView addSubview:sepLab3];
+            
+            NSMutableArray *tmpWordArray=[[NSMutableArray alloc]init];
+            
+            if ([dict objectForKey:@"category"]) {
+                if ([[dict objectForKey:@"category"] isKindOfClass:[NSDictionary class]]) {
+                    if ([[[dict objectForKey:@"category"] objectForKey:@"sense"] isKindOfClass:[NSDictionary class]]) {
+                        NSString *str=[NSString stringWithFormat:@"%@. %@",[[dict objectForKey:@"category"] objectForKey:@"cat"],[[[dict objectForKey:@"category"] objectForKey:@"sense"] objectForKey:@"description"]?:@""];
+                        [tmpWordArray addObject:str];
+                    }
+                    else if ([[[dict objectForKey:@"category"] objectForKey:@"sense"] isKindOfClass:[NSArray class]]) {
+                        NSString *str=[NSString stringWithFormat:@"%@. ",[[dict objectForKey:@"category"] objectForKey:@"cat"]];
+                        NSMutableArray *array2=[[NSMutableArray alloc]init];
+                        for (NSDictionary *dictt in [[dict objectForKey:@"category"] objectForKey:@"sense"]) {
+                            if ([dictt objectForKey:@"description"]&&[[dictt objectForKey:@"description"] isKindOfClass:[NSString class]]) {
+                                [array2 addObject:[dictt objectForKey:@"description"]?:@""];
+                            }
+                        }
+                        str=[str stringByAppendingString:[array2 componentsJoinedByString:@";"]];
+                        [tmpWordArray addObject:str];
+                    }
+                }
+                
+                else if ([[dict objectForKey:@"category"] isKindOfClass:[NSArray class]]) {
+                    for (NSDictionary *dictt in [dict objectForKey:@"category"]) {
+                        if ([[dictt objectForKey:@"sense"] isKindOfClass:[NSDictionary class]]) {
+                            NSString *str=[NSString stringWithFormat:@"%@. %@",[dictt objectForKey:@"cat"],[[dictt objectForKey:@"sense"] objectForKey:@"description"]?:@""];
+                            [tmpWordArray addObject:str];
+                        }
+                        else if ([[dictt objectForKey:@"sense"] isKindOfClass:[NSArray class]]) {
+                            NSString *str=[NSString stringWithFormat:@"%@. ",[dictt objectForKey:@"cat"]];
+                            NSMutableArray *array2=[[NSMutableArray alloc]init];
+                            for (NSDictionary *dicttt in [dictt objectForKey:@"sense"]) {
+                                if ([dicttt objectForKey:@"description"]&&[[dicttt objectForKey:@"description"] isKindOfClass:[NSString class]]) {
+                                    [array2 addObject:[dicttt objectForKey:@"description"]?:@""];
+                                }
+                            }
+                            str=[str stringByAppendingString:[array2 componentsJoinedByString:@";"]];
+                            [tmpWordArray addObject:str];
+                        }
+                        
+                    }
+                }
+            }
+            else {
+                UILabel *wordText1=[[UILabel alloc] initWithFrame:CGRectMake(15, 35, 270,160)];
+                wordText1.text=@"没有查询到结果";
+                wordText1.textAlignment=NSTextAlignmentCenter;
+                wordText1.font=[UIFont systemFontOfSize:14.0];
+                wordText1.textColor=[UIColor whiteColor];
+                [wordView addSubview:wordText1];
+            }
+            UIScrollView *scroll=[[UIScrollView alloc]initWithFrame:CGRectMake(0, 35, 300, 130)];
+            float myHeight=0.0;
+            for (int i=0; i<tmpWordArray.count; i++) {
+                
+                float reviewHeight=[self getSpaceLabelHeight:[tmpWordArray objectAtIndex:i] withFont:[UIFont systemFontOfSize:14] withWidth:270]+2;
+                
+                UILabel *reviewLabel=[[UILabel alloc]initWithFrame:CGRectMake(15, 5+myHeight, 270, reviewHeight)];
+                [self setLabelSpace:reviewLabel withValue:[tmpWordArray objectAtIndex:i] withFont:[UIFont systemFontOfSize:14]];
+                reviewLabel.textColor=[UIColor whiteColor];
+                reviewLabel.numberOfLines=0;
+                [scroll addSubview:reviewLabel];
+                
+                myHeight+=reviewHeight;
+            }
+            scroll.contentSize=CGSizeMake(270, myHeight+10);
+            [wordView addSubview:scroll];
+            
+            if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]&&([[[NSUserDefaults standardUserDefaults] objectForKey:@"autoWord"] intValue]==0)&&[dict objectForKey:@"phonetic"]) {
+                NSString *readingRecordLogId=@"0";
+                AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+                if ([delegate.studentUserId isEqualToString:@"0"]) {
+                    readingRecordLogId=@"0";
+                }
+                else if ([delegate.studentUserId isEqualToString:@"1"]){
+                    readingRecordLogId=delegate.readingrecordlogid;
+                }
+                NSString *pStr = [wordDict objectForKey:@"paragraphString"];
+                pStr =[pStr stringByReplacingOccurrencesOfString:@"。" withString:@"."];
+                pStr =[pStr stringByReplacingOccurrencesOfString:@"！" withString:@"."];
+                pStr =[pStr stringByReplacingOccurrencesOfString:@"？" withString:@"."];
+                pStr =[pStr stringByReplacingOccurrencesOfString:@"!" withString:@"."];
+                pStr =[pStr stringByReplacingOccurrencesOfString:@"?" withString:@"."];
+                
+                NSArray *pArray  = [pStr componentsSeparatedByString:@"."];
+                for (int i = 0; i <pArray.count; i++) {
+                    if ([pArray[i] rangeOfString:newWordStr].location != NSNotFound) {
+                        pStr = pArray[i];
+                    }
+                }
+
+                
+                NSDictionary *newWordDict=@{@"bookId":[NSString stringWithFormat:@"%li", _readingBook.bookServerId],@"content":tmpWordArray.count?[tmpWordArray objectAtIndex:0]:@"",@"phonetic":[dict objectForKey:@"phonetic"],@"segmentId":[wordDict objectForKey:@"segmentid"],@"terminal":@"2",@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"word":newWordStr,@"level":[dict objectForKey:@"WordLevel"],@"readingRecordLogId":readingRecordLogId,@"sentenceString":pStr};
+                
+                [NSThread detachNewThreadSelector:@selector(upNewWordToWeb:) toTarget:self withObject:newWordDict];
+            }
+            else if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]&&([[[NSUserDefaults standardUserDefaults] objectForKey:@"autoWord"] intValue]!=0)&&[dict objectForKey:@"phonetic"]) {
+                NSString *readingRecordLogId=@"0";
+                AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+                if ([delegate.studentUserId isEqualToString:@"0"]) {
+                    readingRecordLogId=@"0";
+                }
+                else if ([delegate.studentUserId isEqualToString:@"1"]){
+                    readingRecordLogId=delegate.readingrecordlogid;
+                }
+                readyNewWordDict=@{@"bookId":[NSString stringWithFormat:@"%li", _readingBook.bookServerId],@"content":tmpWordArray.count?[tmpWordArray objectAtIndex:0]:@"",@"phonetic":[dict objectForKey:@"phonetic"],@"segmentId":[wordDict objectForKey:@"segmentid"],@"terminal":@"2",@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"word":newWordStr,@"level":[dict objectForKey:@"WordLevel"],@"readingRecordLogId":readingRecordLogId};
+                
+                addWord=[[UIButton alloc] initWithFrame:CGRectMake(230, 3, 60, 28)];
+                [addWord setTitle:@"+生词" forState:UIControlStateNormal];
+                [addWord setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+                addWord.clipsToBounds=YES;
+                addWord.layer.cornerRadius=14;
+                [addWord setBackgroundImage:[self imageWithColor:[UIColor colorWithHexString:mainColor] size:addWord.frame.size] forState:UIControlStateHighlighted];
+                [addWord.titleLabel setFont:[UIFont systemFontOfSize:15.0]];
+                [addWord addTarget:self action:@selector(upNewWordEvent) forControlEvents:UIControlEventTouchUpInside];
+                [wordView addSubview:addWord];
+            }
+        }
+        if (![[dict objectForKey:@"WordLevel"] isEqualToString:@""]) {
+            
+            NSMutableArray *array3=[[NSMutableArray alloc]initWithArray:[[dict objectForKey:@"WordLevel"] componentsSeparatedByString:@","]];
+            for (int i=0; i<array3.count; i++) {
+                if ([[array3 objectAtIndex:i] intValue]==0) {
+                    [array3 replaceObjectAtIndex:i withObject:@"专八"];
+                }
+                else if ([[array3 objectAtIndex:i] intValue]==1) {
+                    [array3 replaceObjectAtIndex:i withObject:@"专四"];
+                }
+                else if ([[array3 objectAtIndex:i] intValue]==3) {
+                    [array3 replaceObjectAtIndex:i withObject:@"SAT"];
+                }
+                else if ([[array3 objectAtIndex:i] intValue]==7) {
+                    [array3 replaceObjectAtIndex:i withObject:@"托福"];
+                }
+                else if ([[array3 objectAtIndex:i] intValue]==4) {
+                    [array3 replaceObjectAtIndex:i withObject:@"四级"];
+                }
+                else if ([[array3 objectAtIndex:i] intValue]==6) {
+                    [array3 replaceObjectAtIndex:i withObject:@"六级"];
+                }
+                else if ([[array3 objectAtIndex:i] intValue]==5) {
+                    [array3 replaceObjectAtIndex:i withObject:@"考研"];
+                }
+                else if ([[array3 objectAtIndex:i] intValue]==9) {
+                    [array3 replaceObjectAtIndex:i withObject:@"GRE"];
+                }
+                else if ([[array3 objectAtIndex:i] intValue]==8) {
+                    [array3 replaceObjectAtIndex:i withObject:@"雅思"];
+                }
+            }
+            UILabel *LevelText=[[UILabel alloc] initWithFrame:CGRectMake(15, 165, 270,30)];
+            LevelText.text=[NSString stringWithFormat:@"%@",[array3 componentsJoinedByString:@" "]];
+            LevelText.font=[UIFont systemFontOfSize:14.0];
+            LevelText.textColor=[UIColor whiteColor];
+            [wordView addSubview:LevelText];
+            
+        }
+    }
+}
+
+- (UIImage *)imageWithColor:(UIColor *)color size:(CGSize)size {
+    CGRect rect = CGRectMake(0, 0, size.width, size.height);
+    UIGraphicsBeginImageContext(rect.size);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, [color CGColor]);
+    CGContextFillRect(context, rect);
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return image;
+}
+
+-(void)setLabelSpace:(UILabel*)label1 withValue:(NSString*)str withFont:(UIFont*)font {
+    NSMutableParagraphStyle *paraStyle = [[NSMutableParagraphStyle alloc] init];
+    paraStyle.lineBreakMode = NSLineBreakByTruncatingTail;
+    paraStyle.alignment = NSTextAlignmentLeft;
+    paraStyle.lineSpacing = 4; //设置行间距
+    paraStyle.hyphenationFactor = 0.0;
+    paraStyle.firstLineHeadIndent = 0.0;
+    paraStyle.paragraphSpacingBefore = 0.0;
+    paraStyle.headIndent = 0;
+    paraStyle.tailIndent = 0;
+    //设置字间距 NSKernAttributeName:@1.5f
+    NSDictionary *dic = @{NSFontAttributeName:font, NSParagraphStyleAttributeName:paraStyle, NSKernAttributeName:@0.0f
+                          };
+    
+    NSAttributedString *attributeStr = [[NSAttributedString alloc] initWithString:str attributes:dic];
+    label1.attributedText = attributeStr;
+}
+
+//计算UILabel的高度(带有行间距的情况)
+
+-(CGFloat)getSpaceLabelHeight:(NSString*)str withFont:(UIFont*)font withWidth:(CGFloat)width {
+    NSMutableParagraphStyle *paraStyle = [[NSMutableParagraphStyle alloc] init];
+    paraStyle.lineBreakMode = NSLineBreakByCharWrapping;
+    paraStyle.alignment = NSTextAlignmentLeft;
+    paraStyle.lineSpacing = 4;
+    paraStyle.hyphenationFactor = 0.0;
+    paraStyle.firstLineHeadIndent = 0.0;
+    paraStyle.paragraphSpacingBefore = 0.0;
+    paraStyle.headIndent = 0;
+    paraStyle.tailIndent = 0;
+    NSDictionary *dic = @{NSFontAttributeName:font, NSParagraphStyleAttributeName:paraStyle, NSKernAttributeName:@0.0f
+                          };
+    CGSize size = [str boundingRectWithSize:CGSizeMake(width, HEIGHT1) options:NSStringDrawingUsesLineFragmentOrigin attributes:dic context:nil].size;
+    return size.height;
+}
+
+
+- (void) tapBtn:(id)sender {
+    UIButton *btn=sender;
+//    if (btn.tag==300) {
+//        [tranView removeFromSuperview];
+//        [[NSNotificationCenter defaultCenter] postNotificationName:@"shareSelectedText" object:nil];
+//    }
+//    else
+        if (btn.tag==300) {
+        ShareSelectView *view = [ShareSelectView defaultPopupView];
+        view.parentVC = self;
+        
+        [self lew_presentPopupView:view animation:[LewPopupViewAnimationFade new] dismissed:^{
+            if (![view.selectShareType isEqualToString:@""]) {
+                [tranView removeFromSuperview];
+                
+                [self.view removeGestureRecognizer:labelTapGestureRecognizer2];
+
+                [self shareToOther:view.selectShareType];
+                if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]) {
+                    dispatch_queue_t queue =  dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+                    dispatch_async(queue, ^{
+                        NSDictionary *dict=@{@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"]};
+                        [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"personCenter/saveUserShareCoinValue" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+                        } WithFailurBlock:^(NSError *error) {
+                        }];
+                    });
+                }
+            }
+        }];
+    }
+    else if (btn.tag==301) {
+        [tranView removeFromSuperview];
+        [self.view removeGestureRecognizer:labelTapGestureRecognizer2];
+
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"searchSelectedText" object:nil];
+    }
+    else if (btn.tag==302) {
+        [tranView removeFromSuperview];
+        [self.view removeGestureRecognizer:labelTapGestureRecognizer2];
+
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"createNote" object:nil];
+    }
+    else if (btn.tag==303) {
+        UIButton *btn1=(UIButton *)[tranView viewWithTag:303];
+        [btn1 setTitleColor:[UIColor colorWithHexString:mainColor] forState:UIControlStateNormal];
+        UIButton *btn2=(UIButton *)[tranView viewWithTag:304];
+        [btn2 setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [sentenceView removeFromSuperview];
+        [wordView removeFromSuperview];
+        [self createWordView];
+    }
+    else if (btn.tag==304) {
+        UIButton *btn1=(UIButton *)[tranView viewWithTag:303];
+        [btn1 setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        UIButton *btn2=(UIButton *)[tranView viewWithTag:304];
+        [btn2 setTitleColor:[UIColor colorWithHexString:mainColor] forState:UIControlStateNormal];
+        [wordView removeFromSuperview];
+        [sentenceView removeFromSuperview];
+        [self getSentenceExplain];
+    }
+}
+
+- (void)getSentenceExplain {
+    if (self.currentLang==2&&[[newWordStr componentsSeparatedByString:@" "] count]>=3) {
+        NSDictionary *dict=@{@"bookid":[NSString stringWithFormat:@"%li",self.readingBook.bookServerId],@"chapterid":[wordDict objectForKey:@"chapterid"],@"keyword":newWordStr,@"rows":@"5",@"segmentid":[wordDict objectForKey:@"segmentid"],@"start":@"0"};
+        
+        [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"solr/search/sentence" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+            sentenceDictArray=dic;
+            [self createSentenceView];
+        } WithFailurBlock:^(NSError *error) {
+        }];
+    }
+    else
+        [self createSentenceView];
+    
+    
+}
+
+- (void)createSentenceView {
+    [sentenceView removeFromSuperview];
+    if (self.currentLang==2&&[[newWordStr componentsSeparatedByString:@" "] count]>=3) {
+        if ([sentenceDictArray count]>0&&![[[sentenceDictArray objectAtIndex:0] objectForKey:@"segment_zh"] isEqualToString:@""]) {
+            sentenceView=[[UIView alloc]initWithFrame:CGRectMake(0,35,300,195)];
+            [tranView addSubview:sentenceView];
+            
+            NSMutableArray *tmpWordArray=[[NSMutableArray alloc]init];
+            for (NSDictionary *dictt in sentenceDictArray) {
+                tmpWordArray =[[NSMutableArray alloc]initWithObjects:[NSString stringWithFormat:@"中文：%@",[dictt objectForKey:@"segment_zh"]],[NSString stringWithFormat:@"英文：%@",[dictt objectForKey:@"segment_en"]], nil];
+            }
+            
+            UIScrollView *scroll=[[UIScrollView alloc]initWithFrame:CGRectMake(0, 35, 300, 160)];
+            float myHeight=0.0;
+            UILabel *wordText=[[UILabel alloc] initWithFrame:CGRectMake(15, 0, 270,34.5)];
+            NSString *str2=[NSString stringWithFormat:@"%@",newWordStr];
+            wordText.text=str2;
+            wordText.font=[UIFont systemFontOfSize:15.0];
+            wordText.textColor=[UIColor whiteColor];
+            [sentenceView addSubview:wordText];
+            
+            UILabel *sepLab3=[[UILabel alloc]initWithFrame:CGRectMake(15,34.5, 270, 0.5)];
+            sepLab3.backgroundColor=[UIColor whiteColor];
+            [sentenceView addSubview:sepLab3];
+            
+            for (int i=0; i<tmpWordArray.count; i++) {
+                
+                float reviewHeight=[self getSpaceLabelHeight:[tmpWordArray objectAtIndex:i] withFont:[UIFont systemFontOfSize:14] withWidth:270]+2;
+                
+                UILabel *reviewLabel=[[UILabel alloc]initWithFrame:CGRectMake(15, 5+myHeight, 270, reviewHeight)];
+                [self setLabelSpace:reviewLabel withValue:[tmpWordArray objectAtIndex:i] withFont:[UIFont systemFontOfSize:14]];
+                reviewLabel.textColor=[UIColor whiteColor];
+                reviewLabel.numberOfLines=0;
+                [scroll addSubview:reviewLabel];
+                
+                myHeight+=reviewHeight;
+            }
+            scroll.contentSize=CGSizeMake(270, myHeight+10);
+            [sentenceView addSubview:scroll];
+
+        }
+        else {
+            sentenceView=[[UIView alloc]initWithFrame:CGRectMake(0,35,300,195)];
+            [tranView addSubview:sentenceView];
+            
+            UILabel *wordText1=[[UILabel alloc] initWithFrame:CGRectMake(15, 0, 270,195)];
+            wordText1.text=@"暂无句对翻译";
+            wordText1.textAlignment=NSTextAlignmentCenter;
+            wordText1.font=[UIFont systemFontOfSize:14.0];
+            wordText1.textColor=[UIColor whiteColor];
+            wordText1.numberOfLines=0;
+            [sentenceView addSubview:wordText1];
+        }
+    }
+    else {
+        sentenceView=[[UIView alloc]initWithFrame:CGRectMake(0,35,300,195)];
+        [tranView addSubview:sentenceView];
+        
+        UILabel *wordText1=[[UILabel alloc] initWithFrame:CGRectMake(15, 0, 270,195)];
+        wordText1.text=self.currentLang==1?@"中文版本暂不支持句对":@"句对功能要求至少选中3个单词";
+        wordText1.textAlignment=NSTextAlignmentCenter;
+        wordText1.font=[UIFont systemFontOfSize:14.0];
+        wordText1.textColor=[UIColor whiteColor];
+        wordText1.numberOfLines=0;
+        [sentenceView addSubview:wordText1];
+    }
+}
+
+- (void)shareToOther:(NSString *)shareType {
+    NSString *str=@"";
+    if (self.currentLang==1) {
+        str=self.readingBook.bookChineseTitle;
+    }
+    else
+        str=self.readingBook.bookEnglishTitle;
+    if ([shareType isEqualToString:@"1"]) {
+//        SendMessageToWXReq *req=[[SendMessageToWXReq alloc]init];
+//        req.bText=YES;
+//        req.text=[NSString stringWithFormat:@"我正在读#%@#，一起来读吧。",str];
+//        req.scene=WXSceneSession;
+//        [WXApi sendReq:req];
+        
+        SendMessageToWXReq *sendReq = [[SendMessageToWXReq alloc] init];
+        sendReq.bText = NO;//不使用文本信息
+        sendReq.scene = 0;//0 = 好友列表 1 = 朋友圈 2 = 收藏
+        
+        //创建分享内容对象
+        WXMediaMessage *urlMessage = [WXMediaMessage message];
+        urlMessage.title = @"#爱洋葱#图书分享";//分享标题
+        urlMessage.description = [NSString stringWithFormat:@"我正在读#%@#，一起来读吧。",str];//分享描述
+        [urlMessage setThumbImage:[UIImage imageWithData:[NSData dataWithContentsOfURL:[NSURL URLWithString:self.readingBook.bookThumbnailURL]]]];//分享图片,使用SDK的setThumbImage方法可压缩图片大小
+        
+        //创建多媒体对象
+        WXWebpageObject *webObj = [WXWebpageObject object];
+        webObj.webpageUrl = [NSString stringWithFormat:@"%@%@%ld",webAddress, @"iycong_web/html/book_store/book_detail.html?bookid=",self.readingBook.bookServerId];//分享链接
+        
+        //完成发送对象实例
+        urlMessage.mediaObject = webObj;
+        sendReq.message = urlMessage;
+        
+        //发送分享信息
+        [WXApi sendReq:sendReq];
+
+        
+    }
+    else if ([shareType isEqualToString:@"2"]) {
+//        SendMessageToWXReq *req=[[SendMessageToWXReq alloc]init];
+//        req.bText=YES;
+//        req.text=[NSString stringWithFormat:@"我正在读#%@#，一起来读吧。",str];
+//        req.scene=WXSceneTimeline;
+//        [WXApi sendReq:req];
+        
+        SendMessageToWXReq *sendReq = [[SendMessageToWXReq alloc] init];
+        sendReq.bText = NO;//不使用文本信息
+        sendReq.scene = 1;//0 = 好友列表 1 = 朋友圈 2 = 收藏
+        
+        //创建分享内容对象
+        WXMediaMessage *urlMessage = [WXMediaMessage message];
+        urlMessage.title = [NSString stringWithFormat:@"我正在读#%@#，一起来读吧。",str];//分享标题
+        urlMessage.description = [NSString stringWithFormat:@"我正在读#%@#，一起来读吧。",str];//分享描述
+        [urlMessage setThumbImage:[UIImage imageWithData:[NSData dataWithContentsOfURL:[NSURL URLWithString:self.readingBook.bookThumbnailURL]]]];//分享图片,使用SDK的setThumbImage方法可压缩图片大小
+        
+        //创建多媒体对象
+        WXWebpageObject *webObj = [WXWebpageObject object];
+        webObj.webpageUrl = [NSString stringWithFormat:@"%@%@%ld",webAddress, @"iycong_web/html/book_store/book_detail.html?bookid=",self.readingBook.bookServerId];//分享链接
+        
+        //完成发送对象实例
+        urlMessage.mediaObject = webObj;
+        sendReq.message = urlMessage;
+        
+        //发送分享信息
+        [WXApi sendReq:sendReq];
+    }
+    else if ([shareType isEqualToString:@"3"]) {
+        AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+        delegate.loginType=@"2";
+        
+        if (![TencentOAuth iphoneQQInstalled]) {
+            NSLog(@"请移步App Store去下载腾讯QQ客户端");
+        }else {
+            _tencentOAuth = [[TencentOAuth alloc] initWithAppId:QQAPP_ID
+                                                    andDelegate:self];
+            QQApiNewsObject *newsObj = [QQApiNewsObject
+                                        objectWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@%@%ld",webAddress,@"iycong_web/html/book_store/book_detail.html?bookid=",self.readingBook.bookServerId]]
+                                        title:@"#爱洋葱#图书分享"
+                                        description:[NSString stringWithFormat:@"我正在读#%@#，一起来读吧。",str]
+                                        previewImageURL:[NSURL URLWithString:self.readingBook.bookThumbnailURL]];
+            SendMessageToQQReq *req = [SendMessageToQQReq reqWithContent:newsObj];
+            [QQApiInterface sendReq:req];
+        }
+
+        
+//        
+//        
+//
+//        
+//        _tencentOAuth = [[TencentOAuth alloc] initWithAppId:QQAPP_ID
+//                                                andDelegate:self];
+//        QQApiNewsObject *newsObj = [QQApiNewsObject
+//                                    objectWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@%@%li",webAddress,@"iycong_web/html/book_store/book_detail.html?bookid=",self.readingBook.bookServerId]]
+//                                    title:self.readingBook.bookChineseTitle
+//                                    description:[NSString stringWithFormat:@"我正在读#%@#，一起来读吧。",str] previewImageURL:[NSURL URLWithString:@""]];
+//        SendMessageToQQReq *req = [SendMessageToQQReq reqWithContent:newsObj];
+//
+//        [QQApiInterface sendReq:req];
+    }
+    else if ([shareType isEqualToString:@"4"]) {
+        
+//        WBMessageObject *message = [WBMessageObject message];
+//        message.text = [NSString stringWithFormat:@"#爱洋葱阅读#我正在读#%@#，一起来读吧。%@",str,[NSString stringWithFormat:@"%@%@%ld",webAddress,@"iycong_web/html/book_store/book_detail.html?bookid=",self.readingBook.bookServerId]];
+//        
+//        WBImageObject *imageObject = [WBImageObject object];
+//        imageObject.imageData = UIImageJPEGRepresentation([UIImage imageWithData:[NSData dataWithContentsOfURL:[NSURL URLWithString:self.readingBook.bookThumbnailURL?:@""]]], 1.0);
+//        message.imageObject = imageObject;
+//        AppDelegate *myDelegate =(AppDelegate*)[[UIApplication sharedApplication] delegate];
+//        
+//        WBAuthorizeRequest *authRequest = [WBAuthorizeRequest request];
+//        authRequest.redirectURI = kRedirectURI;
+//        authRequest.scope = @"all";
+//        
+//        WBSendMessageToWeiboRequest *request = [WBSendMessageToWeiboRequest requestWithMessage:message authInfo:authRequest access_token:myDelegate.wbtoken];
+//        request.userInfo = @{@"ShareMessageFrom": @"SendMessageToWeiboViewController",
+//                             @"Other_Info_1": [NSNumber numberWithInt:123],
+//                             @"Other_Info_2": @[@"obj1", @"obj2"],
+//                             @"Other_Info_3": @{@"key1": @"obj1", @"key2": @"obj2"}};
+//        //    request.shouldOpenWeiboAppInstallPageIfNotInstalled = NO;
+//        [WeiboSDK sendRequest:request];
+
+        NSString *encodedString = (NSString *)
+        CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+                                                                  (CFStringRef)[NSString stringWithFormat:@"%@%@%ld",webAddress,@"iycong_web/html/book_store/book_detail.html?bookid=",self.readingBook.bookServerId],
+                                                                  NULL,
+                                                                  (CFStringRef)@"!*'();:@&=+$,/?%#[]",
+                                                                  kCFStringEncodingUTF8));
+        
+        NSString *url =[NSString stringWithFormat:@"http://50r.cn/urls/add.json?url=%@",encodedString];
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            NSURL *zoneUrl = [NSURL URLWithString:url];
+            NSString *zoneStr = [NSString stringWithContentsOfURL:zoneUrl encoding:NSUTF8StringEncoding error:nil];
+            NSData *data = [zoneStr dataUsingEncoding:NSUTF8StringEncoding];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (data) {
+                    NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:nil];
+                    WBMessageObject *message = [WBMessageObject message];
+                    message.text = [NSString stringWithFormat:@"#爱洋葱阅读#我正在读#%@#，一起来读吧。%@",str,[dic objectForKey:@"url"]];
+                    
+                    
+                    AppDelegate *myDelegate =(AppDelegate*)[[UIApplication sharedApplication] delegate];
+                    
+                    WBAuthorizeRequest *authRequest = [WBAuthorizeRequest request];
+                    authRequest.redirectURI = kRedirectURI;
+                    authRequest.scope = @"all";
+                    WBImageObject *imageObject = [WBImageObject object];
+                    imageObject.imageData = UIImageJPEGRepresentation([self.readingBook.bookThumbnailURL isEqual:[NSNull null]]?[UIImage imageNamed:@"dhg_0015_user"]:[UIImage imageWithData:[NSData dataWithContentsOfURL:[NSURL URLWithString:self.readingBook.bookThumbnailURL]]], 1.0);
+                    message.imageObject = imageObject;
+                    
+                    
+                    WBSendMessageToWeiboRequest *request = [WBSendMessageToWeiboRequest requestWithMessage:message authInfo:authRequest access_token:myDelegate.wbtoken];
+                    request.userInfo = @{@"ShareMessageFrom": @"SendMessageToWeiboViewController",
+                                         @"Other_Info_1": [NSNumber numberWithInt:123],
+                                         @"Other_Info_2": @[@"obj1", @"obj2"],
+                                         @"Other_Info_3": @{@"key1": @"obj1", @"key2": @"obj2"}};
+                    //    request.shouldOpenWeiboAppInstallPageIfNotInstalled = NO;
+                    [WeiboSDK sendRequest:request];
+                    
+                }
+            });
+        });
+
+        
+        
+        
+
+
+        
+        
+//        WBMessageObject *message = [WBMessageObject message];
+//        message.text = [NSString stringWithFormat:@"#爱洋葱阅读#我正在读#%@#，一起来读吧。",str];
+//
+//        AppDelegate *myDelegate =(AppDelegate*)[[UIApplication sharedApplication] delegate];
+//        
+//        WBAuthorizeRequest *authRequest = [WBAuthorizeRequest request];
+//        authRequest.redirectURI = kRedirectURI;
+//        authRequest.scope = @"all";
+//        
+//        WBSendMessageToWeiboRequest *request = [WBSendMessageToWeiboRequest requestWithMessage:message authInfo:authRequest access_token:myDelegate.wbtoken];
+//        request.userInfo = @{@"ShareMessageFrom": @"SendMessageToWeiboViewController",
+//                             @"Other_Info_1": [NSNumber numberWithInt:123],
+//                             @"Other_Info_2": @[@"obj1", @"obj2"],
+//                             @"Other_Info_3": @{@"key1": @"obj1", @"key2": @"obj2"}};
+//        //    request.shouldOpenWeiboAppInstallPageIfNotInstalled = NO;
+//        [WeiboSDK sendRequest:request];
+
+    }
+    else if ([shareType isEqualToString:@"5"]) {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"doubanaccess_token"]) {
+            
+            UIAlertView *alertview=[[UIAlertView alloc] initWithTitle:@"分享至豆瓣" message:@"" delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"确定", nil];
+            [alertview setAlertViewStyle:UIAlertViewStylePlainTextInput];
+            UITextField *nameField = [alertview textFieldAtIndex:0];
+            nameField.text=[NSString stringWithFormat:@"#爱洋葱阅读#我正在读#%@#，一起来读吧。",str];
+            nameField.placeholder = @"";
+            nameField.returnKeyType=UIReturnKeyDone;
+            alertview.tag=DOUBAN_SHARE_TAG;
+            [alertview performSelectorOnMainThread: @selector(show)
+                                        withObject: nil
+                                     waitUntilDone: YES];
+        }
+        else {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"您还未绑定豆瓣~" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+            [alert show];
+            [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+        }
+    }
+}
+
+#pragma mark -- TencentSessionDelegate
+//登陆完成调用
+- (void)tencentDidLogin
+{
+    
+}
+
+//非网络错误导致登录失败：
+-(void)tencentDidNotLogin:(BOOL)cancelled
+{
+    
+}
+// 网络错误导致登录失败：
+-(void)tencentDidNotNetWork
+{
+    
+}
+
+#pragma mark button action
+- (void)imagePlayByUrl:(NSNotification *)notification{
+    NSString *imageUrlStr=[notification.object objectForKey:@"imageUrl"];
+    
+//    NSString *imageUrlStr=@"http://b.hiphotos.baidu.com/zhidao/wh%3D450%2C600/sign=f0c5c08030d3d539c16807c70fb7c566/8ad4b31c8701a18bbef9f231982f07082838feba.jpg";
+
+    if (imageUrlStr) {
+        NSMutableArray *photoArray = [NSMutableArray array];
+
+        MWPhoto *photo = [MWPhoto photoWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@",imageUrlStr]]];
+        
+        [photoArray addObject:photo];
+
+        self.photos = photoArray;
+    }
+
+    MWPhotoBrowser *photoBrowser = [[MWPhotoBrowser alloc] initWithDelegate:self];
+    photoBrowser.displayActionButton = YES;
+    photoBrowser.displayNavArrows = NO;
+    photoBrowser.displaySelectionButtons = NO;
+    photoBrowser.alwaysShowControls = NO;
+    photoBrowser.zoomPhotosToFill = YES;
+    photoBrowser.enableGrid = NO;
+    photoBrowser.startOnGrid = NO;
+    photoBrowser.enableSwipeToDismiss = NO;
+    [photoBrowser setCurrentPhotoIndex:0];
+
+    [self.navigationController pushViewController:photoBrowser animated:YES];
+
+}
+
+- (NSUInteger)numberOfPhotosInPhotoBrowser:(MWPhotoBrowser *)photoBrowser {
+    return self.photos.count;
+}
+
+- (id )photoBrowser:(MWPhotoBrowser *)photoBrowser photoAtIndex:(NSUInteger)index {
+    return [self.photos objectAtIndex:index];
+}
+
+
+#pragma mark --------Weibo--------
+- (void)ShareView:(NSNotification *)notification
+{
+    //    NSString *string = notification.object;
+    //    weiboViewController = [[IYCWeiboViewController alloc] init];
+    //    weiboViewController.readingVC = self;
+    //    weiboViewController.view.frame = CGRectMake(0, 20, 320, self.view.bounds.size.height-20);
+    //    if (string.length>50) {
+    //        NSString *shareString = [string substringToIndex:49];
+    //        weiboViewController.selectedStr = [NSString stringWithFormat:@"%@…",shareString];
+    //    } else {
+    //        weiboViewController.selectedStr = string;
+    //    }
+    //
+    //    weiboViewController.totalWorldLabel.text = [NSString stringWithFormat:@"已输入0字"];
+    //
+    //    self.modalPresentationStyle = UIModalPresentationCurrentContext;
+    //    [self presentViewController:weiboViewController animated:NO completion:nil];
+    
+}
+
+#pragma mark -------IYCWebRefreshDelegate------------
+- (void)refreshFinished {
+    [self switchToPageInChapter];//跳转到书签或笔记。
+    [self setBookMarkStatus:self.readingBook.bookId];
+}
+-(void)tapSpan:(int)spanId offsetToLeft:(int)offsetLeft offsetToTop:(int)offsetTop
+{
+    NSArray * notes = [[IYCDBAction sharedDBAction] selectNoteById:spanId];
+    
+    if ([notes count]==0) {
+        return;
+    }
+    IYCNote *note = [notes objectAtIndex:0];
+    
+    //已经上传过的笔记 重新编辑需要获取noteServerID
+    if (note.noteStatus == NOTESTATUES_TYPE_UPLOADED) {
+        NSArray *array = [[IYCDBAction sharedDBAction] selectHaveNoteServerIdNoteById:spanId];
+        
+        int absoluteOffsetTop = offsetTop + contentViewController.theWebView.frame.origin.y;
+        IYCNoteInfo * seg = [[IYCNoteInfo alloc] initWithView:self.view offset:absoluteOffsetTop-1.5 gapWidth:100.0 position:offsetLeft];
+        seg.delegate = self;
+        [seg playWithNote:[array objectAtIndex:0]];
+        return;
+    }
+    
+    
+    int absoluteOffsetTop = offsetTop + contentViewController.theWebView.frame.origin.y;
+    IYCNoteInfo * seg = [[IYCNoteInfo alloc] initWithView:self.view offset:absoluteOffsetTop-1.5 gapWidth:100.0 position:offsetLeft];
+    seg.delegate = self;
+    [seg playWithNote:[notes objectAtIndex:0]];
+    
+}
+-(void)note:(IYCNote *)note finishEditWithStr:(NSString *)editedStr
+{
+    if ([note.noteContent isEqualToString:editedStr]) {
+        return;
+    }
+    
+    note.noteContent = editedStr;
+    note.modifyTime = [IYCCommon currentTimeStr] ;
+    if (note.noteServerID) {
+        note.noteStatus = NOTESTATUES_TYPE_CHANGED;
+    }
+    
+    [[IYCDBAction sharedDBAction] updateNote:note];
+    
+    if (note.noteServerID!=0&&[IYCCheckNetwork isServiceAvailable]) {
+        NSDictionary *dict=@{@"commentsId":[NSString stringWithFormat:@"%i",note.noteServerID],@"newContent":editedStr};
+        
+        [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/commentscontroller/updateComment" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+            if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+                note.noteStatus = NOTESTATUES_TYPE_UPLOADED;
+                [[IYCDBAction sharedDBAction] updateNote:note];
+            }
+        } WithFailurBlock:^(NSError *error) {
+        }];
+        
+    }
+}
+#pragma mark ------IYCNightModeView------
+- (void)nightModeSliderValueChanged{
+    DebugLog(@"%f",bottomViewController.nightModeSlider.value);
+    nightModeView.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:(1- bottomViewController.nightModeSlider.value)];
+    [self.view addSubview:nightModeView];
+    [[NSUserDefaults standardUserDefaults] setFloat:bottomViewController.nightModeSlider.value forKey:@"brightness"];
+}
+
+- (void)pageModelChanged:(NSNotification *)sender  {
+    int pageModelTag = (int)[[sender.userInfo objectForKey:@"pageModelTag"] intValue];
+    self.swipeGestureType=pageModelTag;
+}
+
+
+- (void)ModelChanged:(NSNotification *)sender {
+    int modelTag = (int)[[sender.userInfo objectForKey:@"modelTag"] intValue];
+    switch (modelTag) {
+        case 1:
+        {
+            self.navigationController.view.backgroundColor = DAY_COLOR_BACK1;
+            contentViewController.view.backgroundColor     = DAY_COLOR_BACK1;
+            contentViewController.theWebView.backgroundColor = DAY_COLOR_BACK1;
+            contentViewController.titlelabel.textColor = DAY_COLOR_TEXT;
+            contentViewController.pagelabel.textColor  = DAY_COLOR_TEXT;
+            contentViewController.line.image = [UIImage imageNamed:@"reading-step.png"];
+            bottomViewController.nightModelBG.backgroundColor = [UIColor whiteColor];
+            bottomViewController.bottomViewBg.backgroundColor= [UIColor whiteColor];
+            bottomViewController.pageModelBG.backgroundColor= [UIColor whiteColor];
+            bottomViewController.contentMenuViewBg.backgroundColor= [UIColor whiteColor];
+            bottomViewController.MoreVIew.backgroundColor=[UIColor whiteColor];
+            self.readingBannerImg.image=[UIImage imageNamed:@"阅读器banner"];
+            self.view.backgroundColor=DAY_COLOR_BACK1;
+            bottomViewController.contentBGView.backgroundColor=[UIColor whiteColor];
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#FAECD1'"];
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#000000'"];
+            [[NSUserDefaults standardUserDefaults] setObject:@"1" forKey:@"nightMode"];
+        }
+            break;
+        case 2:
+        {
+            self.navigationController.view.backgroundColor = DAY_COLOR_BACK2;
+            contentViewController.view.backgroundColor     = DAY_COLOR_BACK2;
+            contentViewController.theWebView.backgroundColor = DAY_COLOR_BACK2;
+            contentViewController.titlelabel.textColor = DAY_COLOR_TEXT;
+            contentViewController.pagelabel.textColor  = DAY_COLOR_TEXT;
+            contentViewController.line.image = [UIImage imageNamed:@"reading-step.png"];
+            bottomViewController.nightModelBG.backgroundColor = [UIColor whiteColor];
+            bottomViewController.bottomViewBg.backgroundColor= [UIColor whiteColor];
+            bottomViewController.pageModelBG.backgroundColor= [UIColor whiteColor];
+            bottomViewController.contentMenuViewBg.backgroundColor= [UIColor whiteColor];
+            bottomViewController.contentBGView.backgroundColor=[UIColor whiteColor];
+            self.readingBannerImg.image=[UIImage imageNamed:@"阅读器banner"];
+            self.view.backgroundColor=DAY_COLOR_BACK2;
+            bottomViewController.MoreVIew.backgroundColor=[UIColor whiteColor];
+
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#F9E2DC'"];
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#000000'"];
+            [[NSUserDefaults standardUserDefaults] setObject:@"2" forKey:@"nightMode"];
+        }
+            break;
+        case 3:
+        {
+            self.navigationController.view.backgroundColor = DAY_COLOR_BACK3;
+            contentViewController.view.backgroundColor     = DAY_COLOR_BACK3;
+            contentViewController.theWebView.backgroundColor = DAY_COLOR_BACK3;
+            contentViewController.titlelabel.textColor = DAY_COLOR_TEXT;
+            contentViewController.pagelabel.textColor  = DAY_COLOR_TEXT;
+            contentViewController.line.image = [UIImage imageNamed:@"reading-step.png"];
+            bottomViewController.nightModelBG.backgroundColor = [UIColor whiteColor];
+            bottomViewController.bottomViewBg.backgroundColor= [UIColor whiteColor];
+            bottomViewController.pageModelBG.backgroundColor= [UIColor whiteColor];
+            bottomViewController.contentMenuViewBg.backgroundColor= [UIColor whiteColor];
+            self.readingBannerImg.image=[UIImage imageNamed:@"阅读器banner"];
+            self.view.backgroundColor=DAY_COLOR_BACK3;
+            bottomViewController.MoreVIew.backgroundColor=[UIColor whiteColor];
+
+            bottomViewController.contentBGView.backgroundColor=[UIColor whiteColor];
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#E3F4F0'"];
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#000000'"];
+            [[NSUserDefaults standardUserDefaults] setObject:@"3" forKey:@"nightMode"];
+        }
+            break;
+        case 4:
+        {
+            self.navigationController.view.backgroundColor = DAY_COLOR_BACK4;
+            contentViewController.view.backgroundColor     = DAY_COLOR_BACK4;
+            contentViewController.theWebView.backgroundColor = DAY_COLOR_BACK4;
+            contentViewController.titlelabel.textColor = DAY_COLOR_TEXT;
+            contentViewController.pagelabel.textColor  = DAY_COLOR_TEXT;
+            contentViewController.line.image = [UIImage imageNamed:@"reading-step.png"];
+            bottomViewController.nightModelBG.backgroundColor = [UIColor whiteColor];
+            bottomViewController.bottomViewBg.backgroundColor= [UIColor whiteColor];
+            bottomViewController.pageModelBG.backgroundColor= [UIColor whiteColor];
+            bottomViewController.contentMenuViewBg.backgroundColor= [UIColor whiteColor];
+            bottomViewController.contentBGView.backgroundColor=[UIColor whiteColor];
+            self.readingBannerImg.image=[UIImage imageNamed:@"阅读器banner"];
+            self.view.backgroundColor=DAY_COLOR_BACK4;
+            bottomViewController.MoreVIew.backgroundColor=[UIColor whiteColor];
+
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#E3EEF5'"];
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#000000'"];
+            [[NSUserDefaults standardUserDefaults] setObject:@"4" forKey:@"nightMode"];
+        }
+            break;
+        case 5:
+        {
+            self.navigationController.view.backgroundColor = DAY_COLOR_BACK5;
+            contentViewController.view.backgroundColor     = DAY_COLOR_BACK5;
+            contentViewController.theWebView.backgroundColor = DAY_COLOR_BACK5;
+            contentViewController.titlelabel.textColor = DAY_COLOR_TEXT;
+            contentViewController.pagelabel.textColor  = DAY_COLOR_TEXT;
+            contentViewController.line.image = [UIImage imageNamed:@"reading-step.png"];
+            bottomViewController.nightModelBG.backgroundColor = [UIColor whiteColor];
+            bottomViewController.bottomViewBg.backgroundColor= [UIColor whiteColor];
+            bottomViewController.pageModelBG.backgroundColor= [UIColor whiteColor];
+            bottomViewController.contentMenuViewBg.backgroundColor= [UIColor whiteColor];
+            self.readingBannerImg.image=[UIImage imageNamed:@"阅读器banner"];
+            self.view.backgroundColor=DAY_COLOR_BACK5;
+            bottomViewController.MoreVIew.backgroundColor=[UIColor whiteColor];
+
+            bottomViewController.contentBGView.backgroundColor=[UIColor whiteColor];
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#DCDADB'"];
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#000000'"];
+            [[NSUserDefaults standardUserDefaults] setObject:@"5" forKey:@"nightMode"];
+        }
+            break;
+        case 6:
+        {
+            self.navigationController.view.backgroundColor = NIGHT_COLOR_BACK;
+            contentViewController.view.backgroundColor     = NIGHT_COLOR_BACK;
+            contentViewController.theWebView.backgroundColor = NIGHT_COLOR_BACK;
+            contentViewController.titlelabel.textColor = NIGHT_COLOR_TEXT;
+            contentViewController.pagelabel.textColor  = NIGHT_COLOR_TEXT;
+            contentViewController.line.image = [UIImage imageNamed:@"reading-steped.png"];
+            bottomViewController.nightModelBG.backgroundColor = NIGHT_COLOR_BACK;
+            bottomViewController.bottomViewBg.backgroundColor= NIGHT_COLOR_BACK;
+            bottomViewController.pageModelBG.backgroundColor= NIGHT_COLOR_BACK;
+            bottomViewController.contentMenuViewBg.backgroundColor= NIGHT_COLOR_BACK;
+            self.readingBannerImg.image=[UIImage imageNamed:@"阅读器banner2"];
+            self.view.backgroundColor=NIGHT_COLOR_BACK;
+            bottomViewController.MoreVIew.backgroundColor=NIGHT_COLOR_BACK;
+
+            bottomViewController.contentBGView.backgroundColor=NIGHT_COLOR_BACK;
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.backgroundColor='#262626'"];
+            [contentViewController.theWebView stringByEvaluatingJavaScriptFromString:@"document.getElementsByTagName('body')[0].style.color='#8d8d8d'"];
+            [[NSUserDefaults standardUserDefaults] setObject:@"6" forKey:@"nightMode"];
+        }
+            break;
+        default:
+            break;
+    }
+    
+    [bottomViewController.tableView reloadData];
+    [bottomViewController.bmView.bookmarkTable reloadData];
+}
+
+- (void)removeRead
+{
+    [[NSUserDefaults standardUserDefaults] setObject:@"Yes" forKey:@"firstRead"];
+    [btnRead removeFromSuperview];
+}
+
+@end

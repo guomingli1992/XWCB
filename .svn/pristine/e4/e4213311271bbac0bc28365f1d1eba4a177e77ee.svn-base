@@ -1,0 +1,20 @@
+//
+//  IYCBookDownload.h
+//  IYangCongReader
+//
+//  Created by she-mac on 4/1/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCConfig.h"
+
+@interface IYCBookDownload : NSObject
+
+@property (nonatomic) float downloadProgress;
+@property (nonatomic) double downloadSize;
+@property (nonatomic, strong) NSDate *downloadTime;  //time of beginning download
+@property (nonatomic, strong) NSDate *createTime;    //time of finishing download
+@property (nonatomic) IYCDownloadStateType downloadState;
+
+@end

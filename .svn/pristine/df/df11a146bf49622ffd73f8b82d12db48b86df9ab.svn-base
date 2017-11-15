@@ -1,0 +1,23 @@
+//
+//  OBMD5Util.h
+//  OpenBook
+//
+//  Created by  on 11-12-28.
+//  Copyright (c) 2011年 __MyCompanyName__. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCMD5Util : NSObject
+
++ (NSString*)md5:(NSString*)input;
+
++ (NSString *)md5File:(NSString*)path;
+
++ (NSString *)getKeyForMD5;
+
++ (NSString *)getNumberForMD5;
+
++ (NSString *)encode:(const uint8_t *)input length:(NSInteger)length;
+
+@end

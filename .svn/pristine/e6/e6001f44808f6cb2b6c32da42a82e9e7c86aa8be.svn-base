@@ -1,0 +1,114 @@
+//
+//  IYCBottomViewController.h
+//  IYangCongReader
+//
+//  Created by she-mac on 5/9/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "IYCBook.h"
+#import "IYCBookEdition.h"
+#import "IYCBookmarkView.h"
+#import "RESwitch.h"
+#import "UIColor+Hex.h"
+#import "IYCColor.h"
+@protocol IYCBottomViewDelegate <NSObject>
+
+- (void)updateBookMarkState:(BOOL)isShow;
+
+@end
+
+@class IYCReadingViewController;
+@interface IYCBottomViewController : UIViewController<UITableViewDataSource,UITableViewDelegate,UIGestureRecognizerDelegate>
+{
+    IBOutlet UIImageView *bookMarkImageView;
+    NSUserDefaults *userSetting;
+    id <IYCBottomViewDelegate> _delegate;
+
+    BOOL isShowBookMark;
+    NSString *accountId;
+    
+
+}
+@property (nonatomic, retain) NSString* accountId;
+@property (nonatomic, retain) IYCBookmarkView *bmView;
+@property (nonatomic) long bookId;
+@property (nonatomic) int edition;
+@property (nonatomic, assign)BOOL isShowBookMark;
+@property (nonatomic, assign)id <IYCBottomViewDelegate> delegate;
+@property (nonatomic, retain) IBOutlet UIImageView *bookMarkImageView;
+@property (nonatomic, retain) IBOutlet UIView *bottomView;
+@property (nonatomic, retain) IBOutlet UIView *contentView;
+@property (nonatomic, retain) IBOutlet UIView *percentView;
+@property (nonatomic, retain) IBOutlet UIView *contentMenuView;
+@property (nonatomic, retain) IBOutlet UITableView *tableView;
+@property (nonatomic, retain) IBOutlet UIImageView *menuBGView;
+@property (nonatomic, retain) IBOutlet UIImageView *bottomBGView;
+@property (retain, nonatomic) IBOutlet UIImageView *contentBGView;
+@property (strong, nonatomic) IBOutlet UIView *defaultView;
+
+@property (weak, nonatomic) IBOutlet UIButton *modelBtn1;
+@property (weak, nonatomic) IBOutlet UIButton *modelBtn2;
+@property (weak, nonatomic) IBOutlet UIButton *modelBtn3;
+@property (weak, nonatomic) IBOutlet UIButton *modelBtn4;
+@property (weak, nonatomic) IBOutlet UIButton *modelBtn5;
+@property (weak, nonatomic) IBOutlet UIButton *modelBtn6;
+
+
+@property (weak, nonatomic) IBOutlet UIButton *fontBtn1;
+@property (weak, nonatomic) IBOutlet UIButton *fontBtn2;
+@property (weak, nonatomic) IBOutlet UIButton *fontBtn3;
+@property (weak, nonatomic) IBOutlet UIButton *fontBtn4;
+@property (weak, nonatomic) IBOutlet UIButton *fontBtn5;
+
+@property (weak, nonatomic) IBOutlet UIButton *pageBtn1;
+@property (weak, nonatomic) IBOutlet UIButton *pageBtn2;
+@property (weak, nonatomic) IBOutlet UIButton *pageBtn3;
+@property (weak, nonatomic) IBOutlet UIButton *pageBtn4;
+@property (weak, nonatomic) IBOutlet UIButton *pageBtn5;
+@property (weak, nonatomic) IBOutlet UIView *nightModelBG;
+@property (weak, nonatomic) IBOutlet UIView *bottomViewBg;
+@property (weak, nonatomic) IBOutlet UIView *pageModelBG;
+
+@property (weak, nonatomic) IBOutlet UILabel *contentLabel;
+@property (weak, nonatomic) IBOutlet UILabel *bookMarkLabel;
+@property (weak, nonatomic) IBOutlet UILabel *noteLabel;
+@property (weak, nonatomic) IBOutlet UIView *contentMenuViewBg;
+@property (weak, nonatomic) IBOutlet UIView *MoreVIew;
+@property (weak, nonatomic) IBOutlet UIButton *theSearchBtn;
+@property (weak, nonatomic) IBOutlet UIButton *theVoiceBtn;
+
+@property (retain, nonatomic) IBOutlet UIView *nightModeView;
+@property (retain, nonatomic) IBOutlet UIImageView *nightModeBGView;
+@property (retain, nonatomic) IBOutlet UISlider *nightModeSlider;
+@property (weak, nonatomic) IBOutlet UIImageView *image1;
+@property (weak, nonatomic) IBOutlet UIImageView *image2;
+@property (weak, nonatomic) IBOutlet UIImageView *image3;
+@property (weak, nonatomic) IBOutlet UIImageView *image4;
+@property (weak, nonatomic) IBOutlet UIImageView *image5;
+@property (weak, nonatomic) IBOutlet UIImageView *fontImgS;
+@property (weak, nonatomic) IBOutlet UIImageView *fontImgM;
+@property (weak, nonatomic) IBOutlet UIImageView *FontImgL;
+
+@property (nonatomic, retain) IBOutlet UIView *ctView;
+@property (nonatomic, retain) IBOutlet UISlider *slider;
+@property (nonatomic, retain) IBOutlet UILabel *pageLabel;
+@property (nonatomic, retain) IBOutlet UIButton *backReadButton;
+@property (nonatomic, assign) IYCReadingViewController *readingVC;
+
+@property (nonatomic) IYCLanguageType currentLanguage;
+@property (nonatomic, retain) IYCBook *readingBook;
+@property (nonatomic) int currentChapterId;
+@property (nonatomic) BOOL canClicked;
+
+@property (nonatomic, retain) IBOutlet UIView *fontView;
+
+- (IBAction)menuSelected:(id)sender;
+- (void)sendHidden;
+- (IBAction)contentMenuSelected:(id)sender;
+- (void)setBookMarkState:(BOOL)hasBookMark;
+
+- (IBAction)modelSelected:(id)sender;
+
+@end

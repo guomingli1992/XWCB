@@ -1,0 +1,16 @@
+//
+//  IYCExperience.h
+//  IYangCongReader
+//
+//  Created by MaTeng on 14-6-11.
+//  Copyright (c) 2014年 IYangCong. All rights reserved.
+//
+
+#import "IYCService.h"
+#import "IYCExperienceReq.h"
+
+@interface IYCExperienceService : IYCService
+- (void)SendExperience:(IYCExperienceReq *)request;
+- (void)GetExperience:(IYCExperienceReq *)request;
+
+@end

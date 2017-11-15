@@ -1,0 +1,272 @@
+//
+//  IYCTranslationViewController.m
+//  IYangCongReader
+//
+//  Created by Lolo on 13-8-12.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCTranslationViewController.h"
+#import "TouchXML.h"
+#import "NSXmlKit/NSXmlKit.h"
+
+@interface IYCTranslationViewController (){
+    UIScrollView *scrollView;
+    NSMutableArray *infoArray;
+    float heightTag;
+    UISwitch *switchView;
+    NSString *levelStr;
+}
+@end
+
+@implementation IYCTranslationViewController
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+    }
+    return self;
+}
+- (id)init
+{
+    if (self = [super init])
+    {
+        heightTag=0.0;
+        
+        infoArray=[[NSMutableArray alloc]init];
+        
+        self.view.backgroundColor = [UIColor whiteColor];
+        UIImageView * toolBar = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"navigationBar"]];
+        toolBar.frame = CGRectMake(0, 0, WIDTH1, 64);
+        toolBar.userInteractionEnabled = YES;
+        
+        UIButton *backBtn=[self createBtnFrame:CGRectMake(0, 20, 50, 44) title:@"" bgImageName:@"" target:self action:@selector(backAction)];
+        [toolBar addSubview:backBtn];
+        
+        UIImageView *btnView=[self createImageViewFrame:CGRectMake(20, 11.25f, 11.5f, 21.5f) imageName:@"goback"];
+        [backBtn addSubview:btnView];
+        
+        UILabel * title = [[UILabel alloc] initWithFrame:CGRectMake(110, 33, WIDTH1-220 , 18)];
+        [title setText:@"查词"];
+        title.textColor = [UIColor whiteColor];
+        title.backgroundColor = [UIColor clearColor];
+        [title setFont:[UIFont boldSystemFontOfSize:18.0]];
+        title.textAlignment = NSTextAlignmentCenter;
+        [toolBar addSubview:title];
+
+        [self.view addSubview:toolBar];
+
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+}
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBar.hidden = YES;
+    [[UIApplication sharedApplication] setStatusBarHidden:NO];
+    if ([IYCCheckNetwork isServiceAvailable]) {
+        [self youdaoRequest];
+    }
+    else {
+        [self loadLocalDictionary];
+    }
+}
+
+- (void)loadLocalDictionary {
+    NSString *sourcePath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"dictionary-IYC.xml"];
+    NSString *xmlStr=[[NSString alloc]initWithContentsOfFile:sourcePath encoding:NSUTF8StringEncoding error:NULL];
+}
+
+- (void)youdaoRequest {
+    NSString *sourcePath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"dictionary-IYC.xml"];
+    NSString *xmlStr=[[NSString alloc]initWithContentsOfFile:sourcePath encoding:NSUTF8StringEncoding error:NULL];
+    NSXmlDoc *node = [[NSXmlDoc alloc] initWithXmlStr:xmlStr];
+    NSXmlNode *root = [node rootElement];
+    NSArray *nextNdArr = [root children];
+    NSXmlNode *nextNd = [nextNdArr firstObject];
+    
+    nextNdArr = [nextNd children];
+    nextNd = [nextNdArr firstObject];
+    
+    nextNdArr = [nextNd children];
+    nextNd = [nextNdArr firstObject];
+    
+    NSMutableDictionary *dt = [nextNd xmlToDictionary];
+
+    NSLog(@"dictionary: %@", dt);
+    NSString*urlStr =[NSString stringWithFormat:@"http://fanyi.youdao.com/openapi.do?keyfrom=%@&key=%@&type=data&doctype=json&version=1.1&q=%@",YOUDAO_KEYFROM,YOUDAO_KEY,_keyWordStr];
+    NSString *newStr = [urlStr stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    NSURL *url = [NSURL URLWithString:newStr];
+    NSMutableURLRequest*request = [NSMutableURLRequest requestWithURL:url cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:10];
+    
+    //将字符串转换为NSData对象
+    [request setHTTPMethod:@"GET"];
+    //异步链接(形式1,较少用)
+    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *data, NSError *connectionError) {
+        
+        if(data==nil)
+        {
+            data=[[NSData alloc] init];
+        }
+        
+        NSDictionary*resDict=[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingAllowFragments error:nil];
+        if(resDict)
+        {
+            if ([[resDict objectForKey:@"errorCode"] intValue]==0) {
+                _youdaoInfoDict=resDict;
+                [self createYoudaoView];
+            }
+            DebugLog(@"%@",resDict);
+        }
+    }];
+}
+
+- (void)createYoudaoView {
+    scrollView=[[UIScrollView alloc]initWithFrame:CGRectMake(20, 64, WIDTH1-40, HEIGHT1-64)];
+    scrollView.showsVerticalScrollIndicator=NO;
+    scrollView.bounces = NO;
+    [self.view addSubview:scrollView];
+    
+    [infoArray addObject:[NSString stringWithFormat:@"译：%@",[[_youdaoInfoDict objectForKey:@"translation"] objectAtIndex:0]]];
+    
+    if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] isEqualToString:@"0"]&&[_youdaoInfoDict objectForKey:@"basic"]) {
+        UILabel *lab=[self createLabelFrame:CGRectMake(WIDTH1-110, 15, -100, 30) text:@"加入生词本" textColor:[UIColor colorWithHexString:textMainColor] textFont:[UIFont systemFontOfSize:14] textAlignment:NSTextAlignmentRight numberOfLines:0];
+        [scrollView addSubview:lab];
+        
+        switchView = [[UISwitch alloc] initWithFrame:CGRectMake(WIDTH1-100, 15, 90, 30)];
+        [switchView setOn:NO];
+        [scrollView addSubview:switchView];
+        
+        NSString *tmp=[[_keyWordStr substringWithRange:NSMakeRange(0, 1)] lowercaseString];
+        
+        NSString *imagePath = [[NSBundle mainBundle] pathForResource:tmp ofType:@"json"];
+    
+        NSData *jsonData =[[NSData alloc]initWithContentsOfFile:imagePath];
+        
+        NSError *err;
+        
+        NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:jsonData
+                             
+                                                            options:NSJSONReadingMutableContainers
+                             
+                                                              error:&err];
+        
+        
+        levelStr=[dic objectForKey:[_keyWordStr lowercaseString]]?[dic objectForKey:[_keyWordStr lowercaseString]]:@"";
+    }
+    
+    if ([_youdaoInfoDict objectForKey:@"basic"]) {
+        if ([[_youdaoInfoDict objectForKey:@"basic"] objectForKey:@"us-phonetic"]) {
+            [infoArray addObject:[NSString stringWithFormat:@"美 [%@]",[[_youdaoInfoDict objectForKey:@"basic"] objectForKey:@"us-phonetic"]]];
+        }
+        if ([[_youdaoInfoDict objectForKey:@"basic"] objectForKey:@"uk-phonetic"]) {
+            [infoArray addObject:[NSString stringWithFormat:@"英 [%@]",[[_youdaoInfoDict objectForKey:@"basic"] objectForKey:@"uk-phonetic"]]];
+        }
+        if ([[_youdaoInfoDict objectForKey:@"basic"] objectForKey:@"explains"]) {
+            NSString *explainStr=@"释：";
+            for (NSString *str in [[_youdaoInfoDict objectForKey:@"basic"] objectForKey:@"explains"]) {
+                explainStr=[explainStr stringByAppendingString:[NSString stringWithFormat:@"%@  ",str]];
+            }
+            [infoArray addObject:explainStr];
+        }
+    }
+    
+//    if ([_youdaoInfoDict objectForKey:@"web"]) {
+//        [infoArray addObject:@"网络释义"];
+//        for (NSDictionary *dic in [_youdaoInfoDict objectForKey:@"web"]) {
+//            NSString *keyStr=[NSString stringWithFormat:@"%@：",[dic objectForKey:@"key"]];
+//            for (NSString *str in [dic objectForKey:@"value"]) {
+//                keyStr=[keyStr stringByAppendingString:[NSString stringWithFormat:@"%@  ",str]];
+//            }
+//            [infoArray addObject:keyStr];
+//        }
+//    }
+    
+    float reviewHeight2=[self getSpaceLabelHeight:_keyWordStr withFont:[UIFont systemFontOfSize:16] withWidth:WIDTH-40];
+    
+    UILabel *reviewLabel=[[UILabel alloc]initWithFrame:CGRectMake(0, heightTag+20, WIDTH-40, reviewHeight2)];
+    [self setLabelSpace:reviewLabel withValue:_keyWordStr withFont:[UIFont systemFontOfSize:16]];
+    reviewLabel.textColor=[UIColor colorWithHexString:textMainColor];
+    reviewLabel.numberOfLines=0;
+    [scrollView addSubview:reviewLabel];
+    heightTag+=reviewHeight2+30;
+    
+    for (int i=0; i<infoArray.count; i++) {
+        float reviewHeight=[self getSpaceLabelHeight:[infoArray objectAtIndex:i] withFont:[UIFont systemFontOfSize:14] withWidth:WIDTH-40];
+        
+        UILabel *reviewLabel=[[UILabel alloc]initWithFrame:CGRectMake(0, heightTag+10, WIDTH-40, reviewHeight)];
+        [self setLabelSpace:reviewLabel withValue:[infoArray objectAtIndex:i] withFont:[UIFont systemFontOfSize:14]];
+        reviewLabel.textColor=[UIColor colorWithHexString:textMainColor];
+        reviewLabel.numberOfLines=0;
+        [scrollView addSubview:reviewLabel];
+        heightTag+=reviewHeight+10;
+    }
+}
+
+- (void)setKeyWordStr:(NSString *)str {
+    _keyWordStr=str;
+}
+
+- (void)setKeyParaId:(NSString *)ParaId{
+    _ParaId=ParaId;
+}
+
+- (void)setBookId:(NSString *)bookId {
+    _bookId=bookId;
+}
+
+- (void)setreadingRecordLogId:(NSString *)readingRecordLogId {
+    _readingRecordLogId=readingRecordLogId;
+}
+
+- (UIImageView *)createImageViewFrame:(CGRect)frame imageName:(NSString *)imageName {
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
+    imageView.image = [UIImage imageNamed:imageName];
+    return imageView;
+}
+
+- (UIButton *)createBtnFrame:(CGRect)frame title:(NSString *)title bgImageName:(NSString *)bgImageName target:(id)target action:(SEL)action {
+    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn.frame = frame;
+    [btn setTitle:title forState:UIControlStateNormal];
+    [btn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [btn setBackgroundImage:[UIImage imageNamed:bgImageName] forState:UIControlStateNormal];
+    [btn addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
+    return btn;
+}
+
+- (void)backAction
+{
+    if (switchView.isOn) {
+        [self uploadWord];
+    }
+    
+    [self dismissViewControllerAnimated:YES completion:^{
+        
+    }];
+}
+
+- (void)uploadWord {
+    NSDictionary *dict=@{@"bookId":_bookId,@"content":[[_youdaoInfoDict objectForKey:@"translation"] objectAtIndex:0],@"phonetic":[[_youdaoInfoDict objectForKey:@"basic"] objectForKey:@"us-phonetic"],@"segmentId":_ParaId,@"terminal":@"2",@"userId":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"word":_keyWordStr,@"level":levelStr,@"readingRecordLogId":_readingRecordLogId};
+    [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"newwords/app/createNewWord" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+        if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+        }
+    } WithFailurBlock:^(NSError *error) {
+    }];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+@end

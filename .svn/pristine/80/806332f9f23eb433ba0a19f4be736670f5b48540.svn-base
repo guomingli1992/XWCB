@@ -1,0 +1,105 @@
+//
+//  ViewSelectView.m
+//  iyangcong
+//
+//  Created by lxm on 2016/12/13.
+//  Copyright © 2016年 FLTRP. All rights reserved.
+//
+
+#import "ViewSelectView.h"
+#import "UIViewController+LewPopupViewController.h"
+#import "LewPopupViewAnimationFade.h"
+#import "LewPopupViewAnimationSlide.h"
+#import "LewPopupViewAnimationSpring.h"
+#import "LewPopupViewAnimationDrop.h"
+
+@interface ViewSelectView () {
+    int bookType1;
+}
+
+@end
+
+@implementation ViewSelectView
+
+/*
+ // Only override drawRect: if you perform custom drawing.
+ // An empty implementation adversely affects performance during animation.
+ - (void)drawRect:(CGRect)rect {
+ // Drawing code
+ }
+ */
+
+-(id)initWithFrame:(CGRect)frame withType:(int)bookType
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        // Initialization code
+        [[NSBundle mainBundle] loadNibNamed:[[self class] description] owner:self options:nil];
+        _innerView.frame = frame;
+        bookType1=bookType;
+        _tap=@"-1";
+        [self addSubview:_innerView];
+        [self loadbtn];
+    }
+    return self;
+}
+
+- (void)loadbtn {
+    UILabel *lab=[self createLabelFrame:CGRectMake(15, 35, self.frame.size.width-30, 20) text:[NSString
+                                                                                                stringWithFormat:@"%@读已结束",bookType1==2?@"试":@"阅"] textColor:[UIColor colorWithHexString: textMainColor] textFont:[UIFont systemFontOfSize:16.0] textAlignment:NSTextAlignmentCenter numberOfLines:0];
+    [self addSubview:lab];
+    
+    if(bookType1==2) {
+        NSArray *array=@[@"购买全书",@"撰写书评",@"返回书架"];
+        for (int i=0; i<3; i++) {
+        
+            UIButton *goLoginBtn=[self createBtnFrame:CGRectMake(50, 80+55*i, 160, 30) title:[array objectAtIndex:i] bgImageName:nil target:self action:@selector(goLogin:)];
+            [goLoginBtn.layer setMasksToBounds:YES];
+            goLoginBtn.layer.cornerRadius = 15;//2.0是圆角的弧度，根据需求自己更改
+            goLoginBtn.layer.borderColor = [UIColor grayColor].CGColor;//设置边框颜色
+            goLoginBtn.layer.borderWidth = 0.5;//设置边框颜色
+            goLoginBtn.tag=1000+i;
+            [goLoginBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+            goLoginBtn.titleLabel.font=[UIFont systemFontOfSize:15];
+            [goLoginBtn setBackgroundImage:[self imageWithColor:[UIColor colorWithHexString:mainColor] size:CGSizeMake(160, 30)] forState:UIControlStateNormal];
+            [goLoginBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateHighlighted];
+
+            [self addSubview:goLoginBtn];
+        }
+    }
+    else {
+        NSArray *array=@[@"撰写书评",@"返回书架"];
+
+        for (int i=0; i<2; i++) {
+
+            UIButton *goLoginBtn=[self createBtnFrame:CGRectMake(50, 80+55*i, 160, 30) title:[array objectAtIndex:i] bgImageName:nil target:self action:@selector(goLogin:)];
+            [goLoginBtn.layer setMasksToBounds:YES];
+            goLoginBtn.layer.cornerRadius = 15;//2.0是圆角的弧度，根据需求自己更改
+            goLoginBtn.layer.borderColor = [UIColor grayColor].CGColor;//设置边框颜色
+            goLoginBtn.layer.borderWidth = 0.5;//设置边框颜色
+            goLoginBtn.tag=1000+i;
+            [goLoginBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+            goLoginBtn.titleLabel.font=[UIFont systemFontOfSize:15];
+            [goLoginBtn setBackgroundImage:[self imageWithColor:[UIColor colorWithHexString:mainColor] size:CGSizeMake(80, 30)] forState:UIControlStateNormal];
+            [goLoginBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateHighlighted];
+            
+            [self addSubview:goLoginBtn];
+        }
+    }
+}
+
+- (void)goLogin:(id)sender {
+    UIButton *btn=sender;
+    _tap=[NSString stringWithFormat:@"%li",btn.tag-1000];
+    [_parentVC lew_dismissPopupViewWithanimation:[LewPopupViewAnimationFade new]];
+}
+
+- (void) makesure:(id)sender {
+    [_parentVC lew_dismissPopupViewWithanimation:[LewPopupViewAnimationFade new]];
+}
+
++ (instancetype)defaultPopupView{
+    return [[ViewSelectView alloc]initWithFrame:CGRectMake(0, 0, 260, 280)];
+}
+
+@end

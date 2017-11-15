@@ -1,0 +1,33 @@
+//
+//  IYCNoteService.h
+//  IYangCongReader
+//
+//  Created by 马腾 on 15/7/15.
+//  Copyright (c) 2015年 IYangCong. All rights reserved.
+//
+
+#import "IYCService.h"
+#import "IYCSaveNoteReq.h"
+#import "IYCGetNoteReq.h"
+#import "IYCDeleteNoteReq.h"
+
+typedef enum IYCNOTESERVICE_TYPE
+{
+    IYCNOTESERVICE_TYPE_SAVENOTE,
+    IYCNOTESERVICE_TYPE_GETNOTE,
+    IYCNOTESERVICE_TYPE_DELETEONENOTE,
+    IYCNOTESERVICE_TYPE_DELETENOTEBYOFFSET
+    
+}IYCNOTESERVICE_TYPE;
+
+@interface IYCNoteService : IYCService
+{
+    IYCNOTESERVICE_TYPE m_type;
+}
+- (void)setType:(IYCNOTESERVICE_TYPE)type;
+- (void)sendNote:(IYCSaveNoteReq *)request;
+- (void)getNote:(IYCGetNoteReq *)request;
+- (void)deleteNote:(IYCDeleteNoteReq *)request;
+//- (void)deleteNote:()
+
+@end

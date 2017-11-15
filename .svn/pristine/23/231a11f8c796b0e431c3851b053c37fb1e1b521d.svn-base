@@ -1,0 +1,96 @@
+//
+//  JsonRT.m
+//  xingxuntong
+//  把Json字符串转换成实体bean的工具类
+//  原理：通过反射机制来实现
+//  Created by  on 12-1-12.
+//  Copyright (c) 2012 NEWCOM Technology Co.,Ltd. All rights reserved.
+//
+
+#import "JsonRT.h"
+#import <objc/runtime.h>
+
+@implementation JsonRT
+
+//把json树解析成实体bean
++(id)diction2Bean:(NSDictionary*)dic bean:(id)abean
+{
+    unsigned int outCount;
+    objc_property_t *properties = class_copyPropertyList([abean class], &outCount);
+    for(int i=0;i<outCount;i++)
+    {
+        objc_property_t property=properties[i];
+        
+        NSString *key=[NSString stringWithCString:property_getName(property) encoding:NSASCIIStringEncoding];
+        
+        id value=[dic objectForKey:key];
+        if(value==nil)
+        {
+            //cannot found properties
+            continue;
+        }
+        if([value isKindOfClass:[NSNull class]])
+        {
+            //null Object found for properties
+            continue;
+            
+        }
+        
+        
+        //根据不同的类型，生成对应的类
+        NSString *types=[NSString stringWithCString:property_getAttributes(property)
+                                           encoding:NSASCIIStringEncoding];
+        NSString *clazz=nil;
+        NSString *method=[NSString stringWithFormat:@"set%@%@:",
+                          [[key substringToIndex:1] uppercaseString],
+                          [key substringFromIndex:1]];
+        if([types characterAtIndex:1]=='@')
+        {
+            clazz=[[types componentsSeparatedByString:@"\"" ]objectAtIndex:1];
+        }
+        if(clazz==nil)
+        {
+            [abean performSelector:NSSelectorFromString(method) withObject:value];
+        }
+        else if([clazz compare:@"NSString"options: NSCaseInsensitiveSearch]==NSOrderedSame)
+        {
+            [abean performSelector:NSSelectorFromString(method) withObject:value];
+        }
+        else if([clazz compare:@"NSNumber"options: NSCaseInsensitiveSearch]==NSOrderedSame)
+        {
+            [abean performSelector:NSSelectorFromString(method) withObject:value];
+        }
+        else if([clazz compare:@"NSArray"options: NSCaseInsensitiveSearch]==NSOrderedSame)
+        {
+            [abean performSelector:NSSelectorFromString(method) withObject:value];
+        }
+        // add by bhs 04.21
+        else if ([clazz compare:@"NSMutableArray"options:NSCaseInsensitiveSearch]==NSOrderedSame)
+        {
+            [abean performSelector:NSSelectorFromString(method) withObject:value];
+        }
+        else
+        {
+            //set child prop
+            id sub=[[NSClassFromString(clazz) alloc] init];
+            
+            [JsonRT diction2Bean:value bean:sub];
+            
+            [abean performSelector:NSSelectorFromString(method) withObject:sub];
+            
+        }
+        
+        
+    }
+    //    while ((key = [enumerator nextObject])) {
+    //        // do something with object...
+    //
+    //    if([abean respondsToSelector: NSSelectorFromString(key)])
+    //       {
+    //        //   [abean properties]
+    //           id value=[dic objectForKey:key];
+    //       }
+    //    }
+    return abean;
+}
+@end

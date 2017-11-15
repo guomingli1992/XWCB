@@ -1,0 +1,31 @@
+//
+//  IYCUserInfo.h
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCRequest.h"
+
+@interface IYCUserInfo : IYCRequest
+{
+    NSString *_accountName;
+    NSString *_password;
+    NSString *_accountId;
+    NSString *_email;
+   
+    
+    NSString *_sessionId;
+}
+@property (nonatomic,retain)NSString *accountName;
+@property (nonatomic,retain)NSString *password;
+@property (nonatomic,retain)NSString *accountId;
+@property (nonatomic,retain)NSString *email;
+
+@property (nonatomic,retain)NSString *sessionId;
+
+- (NSString *)getJSONString;
+
+@end

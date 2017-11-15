@@ -1,0 +1,49 @@
+//
+//  IYCBookmarkCellView.m
+//  IYangCongReader
+//
+//  Created by haley on 5/19/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCBookmarkCellView.h"
+
+@implementation IYCBookmarkCellView
+@synthesize contentLabel = _contentLabel;
+@synthesize dateLabel = _dateLabel;
+@synthesize pageNumber = _pageNumber;
+@synthesize bookMarkLine = _bookMarkLine;
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.autoresizesSubviews = YES;
+        NSString *nibName = @"IYCBookmarkCellView";
+        
+        NSArray *viewArray = [[NSBundle mainBundle] loadNibNamed:nibName owner:self options:nil];
+        if ([viewArray count] > 0)
+        {
+            UIView *view = [viewArray objectAtIndex:0];
+            view.frame = CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height);
+            view.backgroundColor = [UIColor clearColor];
+            view.autoresizesSubviews = YES;
+            [self addSubview:view];
+            self.backgroundColor = [UIColor clearColor];
+        }
+
+        // Initialization code
+    }
+    return self;
+}
+
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect
+{
+    // Drawing code
+}
+*/
+
+
+@end

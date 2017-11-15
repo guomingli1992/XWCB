@@ -1,0 +1,48 @@
+//
+//  IYCBook.h
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCBookEdition.h"
+#import "IYCBookDownload.h"
+#import "IYCAccount.h"
+
+@interface IYCBook : NSObject<NSCopying>
+
+@property  long bookId;
+@property  long bookServerId;
+@property  IYCBookType  bookType;
+@property  double bookSize;
+@property  long bookCatalogId;
+@property  double bookPriceRMB;
+@property double bookPriceUSD;
+@property double discountPriceRMB;
+@property double discountPriceUSD;
+
+@property (nonatomic, retain) NSString *bookChineseTitle;
+@property (nonatomic, retain) NSString *bookEnglishTitle;
+@property (nonatomic, retain) NSString *bookChineseAuthor;
+@property (nonatomic, retain) NSString *bookEnglishAuthor;
+@property (nonatomic, retain) NSString *bookChineseAbstract;
+@property (nonatomic, retain) NSString *bookEnglishAbstract;
+@property (nonatomic, retain) NSString *bookPublisher;
+@property (nonatomic, retain) NSString *bookThumbnailURL;
+@property (nonatomic, retain) NSString *bookURL;
+@property (nonatomic, retain) UIImage  *bookCover;
+@property (nonatomic) IYCDiscountType  discountType;
+@property (nonatomic, retain) NSString *transtor;
+@property (nonatomic, retain) NSString *readableVersion;
+
+@property (nonatomic, retain) IYCBookDownload *bookDownload;
+@property (nonatomic, retain) IYCAccount *bookAccount;
+
+@property (nonatomic, retain) IYCBookEdition *chineseBookEdition;
+@property (nonatomic, retain) IYCBookEdition *englishBookEdition;
+
+- (id) initWithJSONDictionary:(NSDictionary *)jsonDict;
+
+@end

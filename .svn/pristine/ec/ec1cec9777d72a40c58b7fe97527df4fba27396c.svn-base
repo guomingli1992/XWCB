@@ -1,0 +1,63 @@
+//
+//  IYCBookReviewByIdService.m
+//  IYangCongReader
+//
+//  Created by Lolo on 13-6-20.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCBookReviewByIdService.h"
+#import "IYCURLUtil.h"
+#import "UIDevice+IdentifierAddition.h"
+#import "IYCBookReviewByIdRequest.h"
+@implementation IYCBookReviewByIdService
+-(void)uploadBookReview:(IYCBookReviewByIdRequest *)bookReview{
+    NSURL *url = [NSURL URLWithString:[IYCURLUtil getUploadadBookReviewUrl]];
+    DebugLog(@"url==%@",[IYCURLUtil getUploadadBookReviewUrl]);
+    bookReview.deviceType = [self getDeviceType:[self getPhoneModel]];
+    bookReview.deviceToken = [self getDeviceToken];
+    [self initRequest:url withBody:[bookReview getJSONString]];
+    DebugLog(@"[bookReview getJSONString]==%@",[bookReview getJSONString]);
+    
+    //ADD SESSION
+    NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+    NSString *sessionID = [NSString stringWithFormat:@"JSESSIONID=%@",[userdefaults objectForKey:KEY_SessionID]];
+    DebugLog(@"%@",sessionID);
+    [self.request addRequestHeader:@"Cookie" value:sessionID];
+
+    [self startAsynRequest];
+}
+
+#pragma mark -
+#pragma mark ASIHTTPRequestDelegate method
+- (void)requestFinished:(ASIHTTPRequest *)requestParam {
+    NSString *jsonString = [requestParam responseString];
+    DebugLog(@"jsonString===%@",jsonString);
+    IYCBookReviewByIdRequest * resp = [[IYCBookReviewByIdRequest alloc] initWithJSONDictionary:[jsonString objectFromJSONString]];
+    if (resp.errorCode == ResponseErrorCode_Success)
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidSuccess:)]) {
+            [self.delegate requestDidSuccess:resp];
+        }
+        
+    }
+    else
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+            [self.delegate requestDidFailed:resp];
+        }
+    }
+}
+
+- (void)requestFailed:(ASIHTTPRequest *)requestParam {
+    DebugLog(@"%@",requestParam.error);
+    IYCBookReviewByIdRequest * resp = [[IYCBookReviewByIdRequest alloc] init];
+    resp.errorCode = ResponseErrorCode_RequestAccessFailed;
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+        [self.delegate requestDidFailed:resp];
+    }
+}
+
+@end
+

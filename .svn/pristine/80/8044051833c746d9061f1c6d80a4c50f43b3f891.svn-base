@@ -1,0 +1,25 @@
+//
+//  IYCBottomView.m
+//  iyangcong
+//
+//  Created by lxm on 2017/2/23.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "IYCBottomView.h"
+@implementation IYCBottomView
+- (id)initWithFrame:(CGRect)frame infoDictionary:(NSDictionary *)infoDictionary
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+
+        [self creatView];
+    }
+    return self;
+}
+
+- (void) creatView {
+
+}
+
+@end

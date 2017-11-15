@@ -1,0 +1,31 @@
+//
+//  APPUtils.m
+//  iyangcong
+//
+//  Created by lxm on 2017/3/24.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "APPUtils.h"
+
+@implementation APPUtils
+//AppUtils类方法，验证成功，移除存储的receipt
++ (void)removeIapFailedPath:(NSString *)plistPath{
+    NSString *path = [NSString stringWithFormat:@"%@/%@", AppStoreInfoLocalFilePath, plistPath];
+    
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    if ([fileManager fileExistsAtPath:AppStoreInfoLocalFilePath])
+    {
+        [fileManager removeItemAtPath:AppStoreInfoLocalFilePath error:nil];
+    }
+    
+    if ([fileManager fileExistsAtPath:path])
+    {
+        [fileManager removeItemAtPath:path error:nil];
+    }
+}
+
++(NSString *)getUUIDString {
+    return [[UIDevice currentDevice].identifierForVendor UUIDString];
+}
+@end

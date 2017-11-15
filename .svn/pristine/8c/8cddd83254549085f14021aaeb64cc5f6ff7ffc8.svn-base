@@ -1,0 +1,27 @@
+//
+//  QPPlistUtil.h
+//  Reader
+//
+//  Created by Ian on 13-3-8.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCPlistUtil : NSObject
+
++ (NSMutableDictionary *)getInfoPlistData;
+
++ (NSString *)getWebServiceHost;
+
++ (NSString *)getBundleIdentifier;
+
++ (NSString*)getDeaultCatalogID;
+
++ (NSString *)getKeyForMD5;
+
++ (NSString *)getNumberForMD5;
+
++ (NSString *)getWebServiceHttpHost;
+
+@end

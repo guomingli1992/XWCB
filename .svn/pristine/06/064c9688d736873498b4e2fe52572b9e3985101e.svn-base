@@ -1,0 +1,30 @@
+//
+//  IYCSegmentAnimation.h
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-9-9.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+@class IYCNote;
+@protocol  IYCNoteInfoDelegate <NSObject>
+
+@optional
+- (void)animationDidFinish;
+
+- (void)note:(IYCNote *)note finishEditWithStr:(NSString *)editedStr;
+
+
+
+
+@end
+
+@interface IYCNoteInfo : UIView<UITextViewDelegate>
+
+@property (nonatomic, assign)id<IYCNoteInfoDelegate> delegate;
+
+//- (id)initWithView:(UIView *)animateView offset:(float)offset gapWidth:(float)width;
+- (id)initWithView:(UIView *)animateView offset:(float)offset gapWidth:(float)width position:(float)position;
+- (void)playWithNote:(IYCNote *)note;
+@end

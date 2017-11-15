@@ -1,0 +1,60 @@
+//
+//  IYCNote.m
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-7-23.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCNote.h"
+#import "NSDateHelper.h"
+
+@implementation IYCNote
+
+@synthesize noteID, bookID, accountID, chapterID, startParagraphId, endParagraphId;
+@synthesize startOffset, endOffset;
+@synthesize selectString, noteContent, modifyTime;
+@synthesize chapterIndex, language,noteStatus,status,noteServerID;
+
+- (id)init
+{
+    if (self = [super init])
+    {
+        noteID = -1;
+        bookID = -1;
+        accountID = -1;
+        chapterID = -1;
+        startParagraphId = -1;
+        endParagraphId = -1;
+        chapterIndex = -1;
+    }
+    return self;
+}
+
+- (id)initWithDic:(NSDictionary *)dic
+{
+    if ([super init]) {
+        self.bookID = [[dic objectForKey:@"bookId"] intValue];
+        self.noteID = [[dic objectForKey:@"id"] intValue];
+        self.chapterID = [[dic objectForKey:@"chapterId"] intValue];
+        self.startParagraphId = [[dic objectForKey:@"segmentId"] longValue];
+        self.noteContent = [dic objectForKey:@"note"];
+        self.selectString = [dic objectForKey:@"content"];
+        self.startOffset = [[dic objectForKey:@"startOffset"] intValue];
+        self.endOffset = [[dic objectForKey:@"endOffset"] intValue];
+        self.language = [[dic objectForKey:@"languageType"] intValue];
+        self.modifyTime = [dic objectForKey:@"lastModified"];
+        self.accountID = [[dic objectForKey:@"accountId"] intValue];
+        self.endParagraphId = [[dic objectForKey:@"segmentId"] intValue];
+        self.status = [[dic objectForKey:@"status"] intValue];
+        if (self.noteStatus == NOTESTATUES_TYPE_CHANGED) {
+            self.noteServerID = [[dic objectForKey:@"noteServerID"]intValue];
+        }
+
+        
+    }
+    return self;
+}
+
+
+@end

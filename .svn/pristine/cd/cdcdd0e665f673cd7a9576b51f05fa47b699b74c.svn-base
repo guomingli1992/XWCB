@@ -1,0 +1,21 @@
+//
+//  IYCTag.h
+//  IYangCongReader
+//
+//  Created by haley on 4/1/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCTag : NSObject
+{
+    NSString *_name;
+}
+
+@property (nonatomic, strong) NSNumber *tagID;
+@property (nonatomic,retain)  NSString *tagName;
+
+- (id) initWithJSONDictionary:(NSDictionary *)jsonDict;
+
+@end

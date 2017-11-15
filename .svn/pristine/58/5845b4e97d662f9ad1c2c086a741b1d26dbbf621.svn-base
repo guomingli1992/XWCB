@@ -1,0 +1,16 @@
+//
+//  IYCTagList.h
+//  IYangCongReader
+//
+//  Created by haley on 4/3/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCRequest.h"
+@interface IYCTagList : IYCRequest
+{
+    NSArray *_tagList;
+}
+@property(nonatomic,retain)NSArray *tagList;
+@end

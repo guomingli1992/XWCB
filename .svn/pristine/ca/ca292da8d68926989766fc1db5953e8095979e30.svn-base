@@ -1,0 +1,44 @@
+//
+//  IYCNote.h
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-7-23.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCBookEdition.h"
+
+typedef enum NOTESTATUES_TYPE
+{
+    NOTESTATUES_TYPE_UNUPLOADED, //查找未上传的笔记
+    NOTESTATUES_TYPE_UPLOADED,   //查找已经上传的笔记
+    NOTESTATUES_TYPE_CHANGED,    //查找状态改变的笔记
+    NOTESTATUES_TYPE_ALLEXCEPT,  //查找除上传过的笔记(包括未上传和状态改变的笔记)
+    NOTESTATUES_TYPE_ALL         //查找所有笔记
+    
+}NOTESTATUES_TYPE;
+
+@interface IYCNote : NSObject
+
+@property (nonatomic, assign)int noteID;
+@property (nonatomic, assign)int noteServerID;
+@property (nonatomic, assign)long bookID;
+@property (nonatomic, assign)long accountID;
+@property (nonatomic, assign)int chapterIndex;
+@property (nonatomic, assign)long chapterID;
+@property (nonatomic, assign)long startParagraphId;
+@property (nonatomic, assign)long endParagraphId;
+@property (nonatomic, assign)int startOffset;//选中的字符串在段内开始位置
+@property (nonatomic, assign)int endOffset;//选中的字符串在段内结束位置
+@property (nonatomic, retain)NSString * selectString;
+@property (nonatomic, retain)NSString * noteContent;
+@property (nonatomic, retain)NSString * modifyTime;
+@property (nonatomic, assign)int status;//笔记是否有用 1 有用 0 没用
+@property (nonatomic, assign)NOTESTATUES_TYPE noteStatus;
+
+@property (nonatomic, assign)IYCLanguageType language;
+
+- (id)initWithDic:(NSDictionary *)dic;
+
+@end

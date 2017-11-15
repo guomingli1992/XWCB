@@ -1,0 +1,217 @@
+//
+//  IYCDataMerge.m
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-7-16.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCDataMerge.h"
+#import "IYCDataBase.h"
+@implementation IYCDBAction (DataMerge)
+
+//新建图书价格表，用于存储图书价格及折扣信息
+- (int) createBookPriceTable
+{
+    NSString * sql = [NSString stringWithFormat:@"CREATE TABLE IF NOT EXISTS IYCBookPrice (BookId varchar NOT NULL UNIQUE, PriceRMB varchar, PriceUSD varchar, DiscountType integer, DiscountPriceRMB varchar, DiscountPriceUSD varchar)"];
+    return [[IYCDataBase share] updateDB:sql];
+}
+
+//为书签表添加一个字段存储段内相对进度
+- (int) addParagraphOffsetToBookMark
+{
+    NSString * sql = [NSString stringWithFormat:@"alter table IYCBookMark add column paragraphOffset double"];
+    return [[IYCDataBase share] updateDB:sql];
+}
+
+//为阅读进度表添加一个字段存储段内相对进度
+- (int) addChapterScheduleToBookState
+{
+    NSString * sql = [NSString stringWithFormat:@"alter table IYCBookState add column paragraphSchedule double"];
+    return [[IYCDataBase share] updateDB:sql];
+}
+
+- (int) createNoteTable
+{
+    NSString * sql = [NSString stringWithFormat:@"CREATE TABLE  IF NOT EXISTS IYCNote (NoteID integer NOT NULL PRIMARY KEY AUTOINCREMENT, BookID varchar NOT NULL, AccountID varchar NOT NULL, ChapterID varchar, ChapterIndex integer, StartParagraphID varchar, EndParagraphID varchar, SelectString varchar, NoteContent varchar, ModifyTime varchar, StartOffset integer, EndOffset integer, LanguageType integer,NoteStatus integer,NoteServerId integer)"];
+    return [[IYCDataBase share] updateDB:sql];
+}
+- (int) createDeleteNoteTable
+{
+    NSString * sql = [NSString stringWithFormat:@"CREATE TABLE  IF NOT EXISTS IYCDeleteNote (NoteID integer NOT NULL PRIMARY KEY AUTOINCREMENT, BookID varchar NOT NULL, AccountID varchar NOT NULL, ChapterID varchar, ChapterIndex integer, StartParagraphID varchar, EndParagraphID varchar, SelectString varchar, NoteContent varchar, ModifyTime varchar, StartOffset integer, EndOffset integer, LanguageType integer,NoteStatus integer,NoteServerId integer)"];
+    return [[IYCDataBase share] updateDB:sql];
+}
+
+- (int) createBookGroupInfo {
+    NSString * sql = [NSString stringWithFormat:@"CREATE TABLE IF NOT EXISTS Group_Info (group_Id INTEGER PRIMARY KEY AUTOINCREMENT, AccountID varchar NOT NULL,group_Name TEXT)"];
+    return [[IYCDataBase share] updateDB:sql];
+}
+
+-(int)creatWordNumberTable{
+    NSString * sql = [NSString stringWithFormat:@"CREATE TABLE IF NOT EXISTS IYCWORD (USERID integer NOT NULL , WORDSTATUES_TYPE integer NOT NULL, WordID integer NOT NULL PRIMARY KEY, WordString varchar , WordMeaning varchar，WordLevel TEXT , WordFavorite integer NOT NULL, WordUpdateTime varchar, WordLocation varchar,WORDSENTENCE ,WORDDELETE varchar , bookId integer NOT NULL ,bookName varchar , phonetic varchar)"];
+    return [[IYCDataBase share]updateDB:sql];
+}
+
+//- (int)createThirdFileTable
+//{
+//    NSString * sql = [NSString stringWithFormat:@"CREATE TABLE  IF NOT EXISTS IYCThirdFile (FileID integer NOT NULL PRIMARY KEY AUTOINCREMENT, FileName varchar NOT NULL, FilePath varchar NOT NULL, FileType integer, CreateTime varchar NOT NULL)"];
+//    return [[IYCDataBase share] updateDB:sql];
+//}
+
+//判断版本号并迁移旧数据
+- (void)startMergeData
+{
+    NSString * lastVersion = [IYCAppConfig getLastAppVersion];
+    NSString * currentVersion = [IYCAppConfig getCurrentAppVersion];
+    if (([currentVersion floatValue]-[lastVersion floatValue])>0.00001)
+    {
+        [self addChapterScheduleToBookState];
+        [self addParagraphOffsetToBookMark];
+        [self createNoteTable];
+        [self createPurchaseDataTable];
+        [self createBookPriceTable];
+        [self createDeleteNoteTable];
+        [self createBookGroupInfo];
+        [self creatWordNumberTable];
+
+    }
+    
+}
+
+#pragma mark - 
+#pragma mark IAP
+- (NSArray *)makeResultToPurchaseData:(id)rs
+{
+    NSMutableArray * temArray = [[NSMutableArray alloc] init];
+    NSMutableArray *array = (NSMutableArray *)rs;
+    
+    for (NSDictionary * rs in array) {
+        IYCPurchaseData * purchaseData = [[IYCPurchaseData alloc] init];
+        
+        NSNumber *purchaseId = [rs objectForKey:@"PurchaseDataId"];
+        if ((NSNull*)purchaseId != [NSNull null]){
+            purchaseData.purchaseDataId = [purchaseId intValue];
+        }
+        
+        if ((NSNull *)[rs objectForKey:@"OrderId"] != [NSNull null]) {
+            purchaseData.orderId = [rs objectForKey:@"OrderId"];
+        }
+        
+        if ((NSNull *)[rs objectForKey:@"Receipt"] != [NSNull null]) {
+            purchaseData.receiptData = [rs objectForKey:@"Receipt"];
+        }
+        
+        if ((NSNull *)[rs objectForKey:@"Status"] != [NSNull null]) {
+            purchaseData.status = [[rs objectForKey:@"Status"] intValue];
+        }
+        
+        if ((NSNull *)[rs objectForKey:@"ProductId"] != [NSNull null]) {
+            purchaseData.productId = [rs objectForKey:@"ProductId"];
+        }
+        
+        [temArray addObject:purchaseData];
+
+        
+    }
+
+    /*
+    while ([rs next]){
+        IYCPurchaseData * purchaseData = [[IYCPurchaseData alloc] init];
+        
+        NSNumber *purchaseId = [rs objectForColumn:@"PurchaseDataId"];
+        if ((NSNull*)purchaseId != [NSNull null]){
+            purchaseData.purchaseDataId = [purchaseId intValue];
+        }
+        
+        if ((NSNull *)[rs objectForColumn:@"OrderId"] != [NSNull null]) {
+            purchaseData.orderId = [rs objectForColumn:@"OrderId"];
+        }
+        
+        if ((NSNull *)[rs objectForColumn:@"Receipt"] != [NSNull null]) {
+            purchaseData.receiptData = [rs objectForColumn:@"Receipt"];
+        }
+        
+        if ((NSNull *)[rs objectForColumn:@"Status"] != [NSNull null]) {
+            purchaseData.status = [[rs objectForColumn:@"Status"] intValue];
+        }
+        
+        if ((NSNull *)[rs objectForColumn:@"ProductId"] != [NSNull null]) {
+            purchaseData.productId = [rs objectForColumn:@"ProductId"];
+        }
+        
+        [array addObject:purchaseData];
+        [purchaseData release];
+    }
+     */
+    return temArray;
+}
+- (int) createPurchaseDataTable
+{
+    NSString * sql = [NSString stringWithFormat:@"CREATE TABLE IF NOT EXISTS IYCPURCHASEDATA (PurchaseDataId integer NOT NULL PRIMARY KEY AUTOINCREMENT, OrderId varchar NOT NULL, Receipt varchar, Status integer, AccountId varchar NOT NULL, ProductId varchar)"];
+    return [[IYCDataBase share] updateDB:sql];
+}
+- (NSArray *)selectPurchaseDataWithProduct:(NSString *)productId andAccount:(NSString *)account
+{
+    NSString * sql = [NSString stringWithFormat:@"SELECT * FROM IYCPURCHASEDATA WHERE ProductId = '%@' AND AccountId = '%@'",productId,account];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * arr = [self makeResultToPurchaseData:rs];
+//    [rs close];
+    return arr;
+}
+- (NSArray *)selectPurchaseDataWithOrder:(NSString *)order andAccount:(NSString *)account
+{
+    NSString * sql = [NSString stringWithFormat:@"SELECT * FROM IYCPURCHASEDATA WHERE OrderId = '%@' AND AccountId = '%@'",order,account];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * arr = [self makeResultToPurchaseData:rs];
+//    [rs close];
+    return arr;
+}
+- (NSArray *)selectAllPurchaseData:(NSString *)account
+{
+    NSString * sql = [NSString stringWithFormat:@"select * from IYCPURCHASEDATA WHERE AccountId = '%@'",account];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * arr = [self makeResultToPurchaseData:rs];
+//    [rs close];
+    
+    return arr;
+}
+- (NSArray *)selectPurchaseDataWithStatus:(NSInteger)status andAccount:(NSString *)account
+{
+    NSString * sql = [NSString stringWithFormat:@"SELECT * FROM IYCPURCHASEDATA WHERE Status = %l AND AccountId = '%@'",status,account];
+    id rs;
+    rs = [[IYCDataBase share] queryDB:sql];
+    NSArray * arr = [self makeResultToPurchaseData:rs];
+    [rs close];
+    return arr;
+    
+}
+- (int)updatePurchaseData:(IYCPurchaseData *)purchase
+{
+    NSString * updateSql = [NSString stringWithFormat:@"UPDATE IYCPURCHASEDATA SET Status = '%d',Receipt = '%@',ProductId = '%@'  WHERE OrderId = '%@'",purchase.status, purchase.receiptData, purchase.productId, purchase.orderId];
+    int result = [[IYCDataBase share] updateDB:updateSql];
+    return result;
+}
+
+- (int)deletePurchaseData:(IYCPurchaseData *)purchase
+{
+    NSString * deleteSql = [NSString stringWithFormat:@"delete from IYCPURCHASEDATA where OrderId = '%@'",purchase.orderId];
+    
+    return [[IYCDataBase share] updateDB:deleteSql];
+}
+
+- (int)insertPurchaseData:(IYCPurchaseData *)purchase
+{
+    NSArray * ar = [self selectPurchaseDataWithOrder:purchase.orderId andAccount:purchase.accountId];
+    if ([ar count]>0) {
+        return [self updatePurchaseData:purchase];
+    }
+    NSString * sql = [NSString stringWithFormat:@"INSERT INTO IYCPURCHASEDATA(PurchaseDataId, OrderId, Receipt, Status, AccountId, ProductId) VALUES ('%d','%@','%@','%d','%@','%@')",purchase.purchaseDataId, purchase.orderId, purchase.receiptData, purchase.status,purchase.accountId,purchase.productId];
+    
+    int result = [[IYCDataBase share] updateDB:sql];
+    
+    return result;
+}
+@end

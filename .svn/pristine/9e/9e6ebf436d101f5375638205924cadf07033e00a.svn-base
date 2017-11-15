@@ -1,0 +1,90 @@
+//
+//  IYCExperience.m
+//  IYangCongReader
+//
+//  Created by MaTeng on 14-6-11.
+//  Copyright (c) 2014年 IYangCong. All rights reserved.
+//
+
+#import "IYCExperienceService.h"
+#import "IYCURLUtil.h"
+#import "IYCExperienceResp.h"
+
+
+@implementation IYCExperienceService
+- (void)SendExperience:(IYCExperienceReq *)request{
+    NSURL *url = [NSURL URLWithString:[IYCURLUtil SendExperienceDataUrl]];
+    request.deviceType = [self getDeviceType:[self getPhoneModel]];
+    request.deviceToken = [self getDeviceToken];
+    DebugLog(@"request json: %@",[request getJSONString]);
+    [self initRequest:url withBody:[request getJSONString]];
+    
+    //ADD SESSION
+    NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+    NSString *sessionID = [NSString stringWithFormat:@"JSESSIONID=%@",[userdefaults objectForKey:KEY_SessionID]];
+    [self.request addRequestHeader:@"Cookie" value:sessionID];
+    
+    [self startAsynRequest];
+    
+}
+
+- (void)GetExperience:(IYCExperienceResp *)request{
+    NSURL *url = [NSURL URLWithString:[IYCURLUtil getExperienceInfoUrl]];
+    request.deviceType = [self getDeviceType:[self getPhoneModel]];
+    request.deviceToken = [self getDeviceToken];
+    DebugLog(@"request json: %@",[request getJSONString]);
+    [self initRequest:url withBody:[request getJSONString]];
+    
+    //ADD SESSION
+    NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+    NSString *sessionID = [NSString stringWithFormat:@"JSESSIONID=%@",[userdefaults objectForKey:KEY_SessionID]];
+    [self.request addRequestHeader:@"Cookie" value:sessionID];
+    
+    [self startAsynRequest];
+    
+}
+
+
+#pragma mark -
+#pragma mark ASIHTTPRequestDelegate method
+- (void)requestFinished:(ASIHTTPRequest *)requestParam {
+    NSString *jsonString = [requestParam responseString];
+    
+    DebugLog(@"response json:%@",jsonString);
+    
+    IYCExperienceResp *resp = [[[IYCExperienceResp alloc] init] initWithJSONDictionary:[jsonString objectFromJSONString]];
+    
+    if (resp.errorCode == ResponseErrorCode_Success)
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidSuccess:)]) {
+            [self.delegate requestDidSuccess:resp];
+        }
+        else
+        {
+            if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+                [self.delegate requestDidFailed:resp];
+            }
+        }
+    }
+    if (resp.errorCode == ResponseErrorCode_SessionExpired)
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+            [self.delegate requestDidFailed:resp];
+        }
+    }
+
+    
+    
+}
+
+- (void)requestFailed:(ASIHTTPRequest *)requestParam {
+    IYCExperienceReq *resp = [[IYCExperienceReq alloc] init];
+    resp.errorCode = ResponseErrorCode_RequestAccessFailed;
+    
+    DebugLog(@"error Message: %@", resp.errorMessage);
+    if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+        [self.delegate requestDidFailed:resp];
+    }
+}
+
+@end

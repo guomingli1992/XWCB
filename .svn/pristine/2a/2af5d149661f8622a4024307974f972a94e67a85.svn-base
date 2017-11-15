@@ -1,0 +1,65 @@
+//
+//  IYCSynchroService.m
+//  IYangCongReader
+//
+//  Created by haley on 4/25/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//  说明：请求服务器类（同步用户阅读信息到服务器）
+
+#import "IYCSynchroService.h"
+#import "IYCURLUtil.h"
+#import "UIDevice+IdentifierAddition.h"
+#import "IYCUpdateUserInfo.h"
+@implementation IYCSynchroService
+-(void)uploadToServer:(NSString*)accountId andBookList:(NSArray *)bookList
+{
+     NSURL *url = [NSURL URLWithString:[IYCURLUtil getUploadadUserInfoUrl]];
+     DebugLog(@"url==%@",[IYCURLUtil getUploadadUserInfoUrl]);
+     IYCUpdateUserInfo *userInfo = [[IYCUpdateUserInfo alloc] init];
+     userInfo.bookListArray = bookList;
+     userInfo.accountId = accountId;
+     userInfo.deviceType = [self getDeviceType:[self getPhoneModel]];
+     userInfo.deviceToken = [self getDeviceToken];
+     [self initRequest:url withBody:[userInfo getJSONString]];
+     NSString *sessionID = [NSString stringWithFormat:@"JSESSIONID=%@",[[NSUserDefaults standardUserDefaults] objectForKey:KEY_SessionID]];
+     [self.request addRequestHeader:@"Cookie" value:sessionID];
+
+//     DebugLog(@"[userInfo getJSONString]==%@",[userInfo getJSONString]);
+     [self startAsynRequest];
+     
+
+
+}
+
+#pragma mark -
+#pragma mark ASIHTTPRequestDelegate method
+- (void)requestFinished:(ASIHTTPRequest *)requestParam {
+    NSString *jsonString = [requestParam responseString];
+    DebugLog(@"jsonString===%@",jsonString);
+    
+    IYCUpdateUserInfo *userInfo = [[IYCUpdateUserInfo alloc] initWithJSONDictionary:[jsonString objectFromJSONString]];
+    if (userInfo.errorCode == ResponseErrorCode_Success)
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidSuccess:)]) {
+            [self.delegate requestDidSuccess:userInfo];
+        }
+    }
+    else
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+            [self.delegate requestDidFailed:userInfo ];
+        }
+    }
+}
+
+- (void)requestFailed:(ASIHTTPRequest *)requestParam {
+    DebugLog(@"%@",requestParam.error);
+    IYCRequest * request = [[IYCRequest alloc] init];
+    request.errorCode = ResponseErrorCode_RequestAccessFailed;
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+        [self.delegate requestDidFailed:request];
+    }
+}
+
+@end

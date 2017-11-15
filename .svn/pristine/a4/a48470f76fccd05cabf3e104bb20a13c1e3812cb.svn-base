@@ -1,0 +1,48 @@
+//
+//  IYCExperienceResp.m
+//  IYangCongReader
+//
+//  Created by MaTeng on 14-6-10.
+//  Copyright (c) 2014年 IYangCong. All rights reserved.
+//
+
+#import "IYCExperienceResp.h"
+#import "IYCExperience.h"
+
+@implementation IYCExperienceResp
+@synthesize ranking,readingHabit,readingQuantity;
+@synthesize zhReadingTime,enReadingTime,totalReadingTime;
+@synthesize useDays,accountId;
+
+- (NSString *)getJSONString {
+    NSMutableDictionary * dic = [super getJSONString];
+    
+    if (self.accountId) {
+        [dic setObject:[NSNumber numberWithInt:self.accountId] forKey:@"accountId"];
+    }
+    if (self.deviceType) {
+        [dic setObject:self.deviceType forKey:@"deviceType"];
+    }
+    if (self.deviceToken) {
+        [dic setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+    return dic.JSONString;
+}
+
+- (id)initWithJSONDictionary:(NSDictionary *)jsonDic
+{
+    if (self = [super initWithJSONDictionary:jsonDic]) {
+        
+        self.accountId = [jsonDic objectForKey:@"accountId"];
+        self.ranking = [jsonDic objectForKey:@"ranking"];
+        self.readingQuantity = [jsonDic objectForKey:@"readingQuantity"];
+        self.readingHabit = [jsonDic objectForKey:@"readingHabit"];
+        self.zhReadingTime = [jsonDic objectForKey:@"zhReadingTime"];
+        self.enReadingTime = [jsonDic objectForKey:@"enReadingTime"];
+        self.totalReadingTime = [jsonDic objectForKey:@"totalReadingTime"];
+        self.useDays = [jsonDic objectForKey:@"useDays"];
+    }
+    return self;
+}
+
+@end

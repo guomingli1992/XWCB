@@ -1,0 +1,31 @@
+//
+//  IYCBookState.h
+//  IYangCongReader
+//
+//  Created by haley on 4/30/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCBook.h"
+@interface IYCBookState : NSObject
+{
+    IYCBook *book;
+    float readSchedule;
+    BOOL isBuy;
+   
+    int chapterNo;
+    int paragraphNo;
+    NSString *timestamp;
+    NSString *appSupport;
+}
+@property (nonatomic,retain)IYCBook *book;
+@property (nonatomic,retain)NSString *timestamp;
+@property (nonatomic,retain)NSString *appSupport;
+@property (nonatomic)int chapterNo;
+@property (nonatomic)int paragraphNo;
+@property (nonatomic)float readSchedule;
+@property (nonatomic)BOOL isBuy;
+@property (nonatomic) int languageType;
+- (id) initWithJSONDictionary:(NSDictionary *)jsonDict;
+@end

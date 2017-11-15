@@ -1,0 +1,284 @@
+//
+//  IYCCommon.m
+//  IYangCongReader
+//
+//  Created by Bella on 4/11/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCCommon.h"
+#import "IYCRequest.h"
+#import "IYCDBAction.h"
+#import "IYCFileManager.h"
+#import "IYCLoginService.h"
+#import "IYCUserInfo.h"
+#import "UIImageView+WebCache.h"
+#import "GTMBase64.h"
+#import "IYCGetQqAppIDSrv.h"
+#import "IYCGetAppIDResp.h"
+
+static IYCCommon *instance = nil;
+@implementation IYCCommon
+- (id)init {
+    if (self = [super init]) {
+        userManager = [NSUserDefaults standardUserDefaults];
+    }
+    
+    return self;
+}
+
++ (IYCCommon *)sharedCommon
+{
+    if (instance == nil){
+        instance = [[IYCCommon alloc] init];
+    }
+    return instance;
+}
+
++ (BOOL)isAccountLogin
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *accountId = [defaults objectForKey:@"userId"];
+    NSString *sessionId = [defaults objectForKey:KEY_SessionID];
+    if (accountId && sessionId)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
++ (void)alterErrorMessage:(IYCRequest*)request
+{
+    if (request.errorCode != ResponseErrorCode_Success)
+    {
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"提示" message:request.errorMessage delegate:nil cancelButtonTitle:nil otherButtonTitles:@"确认", nil];
+        [alertView show];
+        return;
+    }
+}
+
++ (void)alterNoNetwork
+{
+    UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"提示" message:@"无法连接网络" delegate:nil cancelButtonTitle:nil otherButtonTitles:@"确认", nil];
+    [alertView show];
+    return;
+    
+}
+
+//更新当前阅读进度－－一本书
+-(void)updateUserInfoFromServerByOne:(IYCUpdateBook*)book{
+    if (![IYCCommon isAccountLogin]) {
+        return;
+        
+    }
+    userManager = [NSUserDefaults standardUserDefaults];
+    NSString *accountId = [userManager objectForKey:@"userId"];
+    NSMutableArray *updateArray = [[NSMutableArray alloc] init];
+    [updateArray addObject:book];
+    syncService = [[IYCSynchroService alloc]init];
+    syncService.delegate = self;
+    //    DebugLog(@"%@\n%@",userInfo.accountId,array);
+    [syncService uploadToServer:accountId andBookList:updateArray];
+}
+
+
+- (void)updateUserInfoFromServer
+{
+    
+    if (![IYCCommon isAccountLogin]) {
+        return;
+        
+    }
+    loginService = [[IYCLoginService alloc] init];
+    loginService.delegate = self;
+    userManager = [NSUserDefaults standardUserDefaults];
+    
+//    NSString *email = [userManager objectForKey:KEY_Email];
+//    NSString *password = [userManager objectForKey:KEY_Password];
+//    [loginService getLoginByEmail:email password:password];
+    NSString *accountId = [userManager objectForKey:@"userId"];
+    NSArray *array = [[IYCDBAction sharedDBAction]queryBookByAccountId:accountId];
+    syncService = [[IYCSynchroService alloc]init];
+    syncService.delegate = self;
+//    DebugLog(@"%@\n%@",userInfo.accountId,array);
+    [syncService uploadToServer:accountId andBookList:array];
+    
+    loginService.delegate = nil;
+    loginService = nil;
+    
+    
+
+}
+
+-(void)getappId
+{
+//    IYCGetAppIDReq *req = [[IYCGetAppIDReq alloc] init];
+//    
+//    IYCGetQqAppIDSrv *GetQqService = [[IYCGetQqAppIDSrv alloc] init];
+//    GetQqService.delegate = self;
+//    [GetQqService GetQqappID:req];
+//    [req release];
+}
+
++ (void)updateBookCoverForDownloadBook
+{
+    NSArray *bookList = [[IYCDBAction sharedDBAction] queryBooksSetCover];
+    if (bookList && [bookList count] > 0)
+    {
+        //update book cover
+        for (int i = 0; i < [bookList count]; i++)
+        {
+             IYCBook *book = [bookList objectAtIndex:i];
+             UIImageView *imageView = [[UIImageView alloc] init];
+            [imageView sd_setImageWithURL:[NSURL URLWithString:book.bookThumbnailURL]];
+            NSData *data = nil;
+        
+            if (imageView.image)
+            {
+#if TARGET_OS_IPHONE
+                data = UIImageJPEGRepresentation(imageView.image, (CGFloat)1.0);
+#else
+                // data = [NSBitmapImageRep representationOfImageRepsInArray:image.representations usingType: NSJPEGFileType properties:nil];
+#endif
+            }
+            if (data)
+            {
+                NSString* filePath = [IYCFileManager getCachesDir];
+                filePath = [filePath stringByAppendingPathComponent:[NSString stringWithFormat:@"books/%ld", book.bookId]];
+                    
+                // Can't use defaultManager another thread
+                NSFileManager *fileManager = NSFileManager.new;
+                if (![fileManager fileExistsAtPath:filePath])
+                {
+                    [fileManager createDirectoryAtPath:filePath withIntermediateDirectories:YES attributes:nil error:NULL];
+                }
+                filePath = [filePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%ldImage",book.bookId]];
+                NSError *error = nil;
+                [fileManager removeItemAtPath:filePath error:&error];
+                if (!error) {
+                    [fileManager createFileAtPath:filePath contents:data attributes:nil];
+                    [[IYCDBAction sharedDBAction] updateBookThumbnailURL:book.bookId];
+                }
+            }
+        }
+    }
+}
+
+
++ (BOOL)deleteBookData:(long)bookId
+{
+    //1.dbTable 3个：书签表、用户进度表、书籍表
+    IYCDBAction *dbaction = [IYCDBAction sharedDBAction];
+    
+    [dbaction deleteBookmarkByBookId:bookId];
+    [dbaction deleteBookStateByBookId:bookId];
+    [dbaction deleteBookByID:bookId];
+    [dbaction deleteServerBookStateByBookId:bookId];
+    //2.delete book data
+    [IYCFileManager removeBookFiles:bookId];
+    return true;
+}
+
+
++ (int)getDownloadErrorCode:(long)bookId
+{
+    //read from download zip file
+    NSString *filePath = [[IYCFileManager getBookSavePath:bookId] stringByAppendingPathComponent:[NSString stringWithFormat:@"%ld.zip",bookId]];
+    NSData *data = [[NSData alloc] initWithContentsOfFile:filePath];
+    NSString *jsonString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] ;
+    NSDictionary *jsonDic = [jsonString objectFromJSONString];
+    int errorCode = [[jsonDic objectForKey:@"errorCode"] intValue];
+    return errorCode;
+}
+
+#pragma mark -
+#pragma mark QPTopChartServiceDelegate methods
+- (void)requestDidSuccess:(id)data
+{
+    
+    if ([data isKindOfClass:[IYCUserInfo class]]) {
+        IYCUserInfo *userInfo = (IYCUserInfo *)data;
+        NSUserDefaults *userDefault = [NSUserDefaults standardUserDefaults];
+        [userDefault setObject:userInfo.accountId forKey:@"userId"];
+       
+        [userDefault setObject:userInfo.accountName forKey:KEY_AccountName];
+        [userDefault setObject:userInfo.email forKey:KEY_Email];
+        [userDefault setObject:userInfo.sessionId forKey:KEY_SessionID];
+        [userDefault synchronize];
+        NSArray *array = [[IYCDBAction sharedDBAction]queryBookByAccountId:userInfo.accountId];
+        syncService = [[IYCSynchroService alloc]init];
+        syncService.delegate = self;
+        DebugLog(@"%@\n%@",userInfo.accountId,array);
+        [syncService uploadToServer:userInfo.accountId andBookList:array];
+        
+        loginService.delegate = nil;
+        loginService = nil;
+    }
+    else
+    {
+        syncService.delegate = nil;
+        syncService = nil;
+    }
+    
+    if ([data isKindOfClass:[IYCGetAppIDReq class]]) {
+        IYCGetAppIDReq *resp = (IYCGetAppIDReq*)data;
+        [[NSUserDefaults standardUserDefaults] setObject:resp.QqAppID forKey:@"QqAppID"];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+    }
+   
+}
+
+
+- (void)requestDidFailed:(id)data
+{
+   if ([data isKindOfClass:[IYCUserInfo class]])
+   {
+       loginService.delegate = nil;
+       loginService = nil;
+   }
+   else
+   {
+       syncService.delegate = nil;
+       syncService = nil;
+   }
+}
+
++ (void)encodeBase64forFile:(NSString*)filePath {
+    NSData * data = [NSData dataWithContentsOfFile:filePath];
+    NSData * encodeData = [GTMBase64 encodeData:data];
+    [encodeData writeToFile:filePath atomically:NO];
+}
+
++ (NSString *)decodeBase64forFile:(NSString*)filePath {
+    NSData * data = [NSData dataWithContentsOfFile:filePath];
+    NSData * decodeData = [GTMBase64 decodeData:data];
+//   [decodeData writeToFile:filePath atomically:NO];
+    NSString * html = [[NSString alloc] initWithData:decodeData encoding:NSUTF8StringEncoding];
+    html = [html stringByReplacingOccurrencesOfString:@"stylesheet.css" withString:[NSString stringWithFormat:@"stylesheet.css?version=%@",[IYCCommon currentTimeStr]]];
+    return html;
+}
+
++ (NSString *)currentTimeStr
+{
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    NSString *currentDateStr = [dateFormatter stringFromDate:[NSDate date]];
+    return currentDateStr;
+}
+
++ (IYCFONTSIZE)fontSizeOfCurrentAccount
+{
+    NSString *accountID = [[NSUserDefaults standardUserDefaults] objectForKey:@"userId"];
+    IYCAccount * account = [[IYCDBAction sharedDBAction] queryAccountByAccountID:accountID];
+    int fontSize = IYCFONTSIZE3;
+    if (account.fontSize<=IYCFONTSIZE5 && account.fontSize>=IYCFONTSIZE1) {
+        fontSize = account.fontSize;
+    }else{
+        account.fontSize = fontSize;
+        [[IYCDBAction sharedDBAction] saveAccount:account];
+    }
+    return fontSize;
+}
+
+
+@end

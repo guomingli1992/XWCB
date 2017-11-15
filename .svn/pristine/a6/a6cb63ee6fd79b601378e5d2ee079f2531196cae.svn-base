@@ -1,0 +1,21 @@
+//
+//  IYCBookReview.h
+//  IYangCongReader
+//
+//  Created by Bella on 5/6/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCBookReview : NSObject
+
+@property (nonatomic,retain)NSNumber  *bookReviewId;
+@property (nonatomic,retain)NSString  *reviewer;
+@property (nonatomic,retain)NSString  *comment;
+@property (nonatomic,retain)NSString  *commentTime;
+@property (nonatomic,retain)NSString  *title;
+
+- (id) initWithJSONDictionary:(NSDictionary *)jsonDict;
+- (NSMutableDictionary *)getJSONDictinary;
+@end

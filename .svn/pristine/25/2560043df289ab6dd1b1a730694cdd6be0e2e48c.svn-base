@@ -1,0 +1,26 @@
+//
+//  ManuscriptViewController.h
+//  iyangcong
+//
+//  Created by mingli 郭 on 2017/7/11.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "YZDisplayViewController.h"
+#import <UIKit/UIKit.h>
+#import <QuartzCore/QuartzCore.h>
+#import "AppDelegate.h"
+#import "UIImageView+WebCache.h"
+#import "AFNetWorking.h"
+#import "UIColor+Hex.h"
+#import "SURefreshHeader.h"
+#import "LewPopupViewController.h"
+#import "RegexKitLite.h"
+#import "JsonRT.h"
+#import "IYCData.h"
+#import "IYCNetSetting.h"
+#import "MBProgressHUD.h"
+#import "IYCDataModel.h"
+@interface ManuscriptViewController : YZDisplayViewController
+
+@end

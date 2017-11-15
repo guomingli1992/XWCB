@@ -1,0 +1,16 @@
+//
+//  IYCBookReviewService.h
+//  IYangCongReader
+//
+//  Created by Bella on 5/6/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//  说明：请求服务器类（获取书籍读后感）
+
+#import "IYCService.h"
+#import "IYCBookReviewRequest.h"
+
+@interface IYCBookReviewService : IYCService
+
+- (void)getBookReview:(IYCBookReviewRequest *)request;
+
+@end

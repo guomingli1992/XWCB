@@ -1,0 +1,94 @@
+//
+//  IYCLoginService.m
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//  说明：请求服务器类（用户登录）
+
+#import "IYCLoginService.h"
+
+#import "IYCURLUtil.h"
+#import "IYCUserInfo.h"
+#import "UIDevice+IdentifierAddition.h"
+#import "NSString+MD5Addition.h"
+
+
+
+@implementation IYCLoginService
+
+
+- (void)getLoginByEmail:(NSString *)email password:(NSString *)passwordNumber
+{
+    NSURL *url = [NSURL URLWithString:[IYCURLUtil getLoginUrl]];
+    IYCUserInfo *requestData = [[IYCUserInfo alloc] init];
+    requestData.email = email;
+    requestData.password = [passwordNumber stringFromMD5];
+    requestData.deviceType = [self getDeviceType:[self getPhoneModel]];
+    requestData.deviceToken = [self getDeviceToken];
+    DebugLog(@"%@",[requestData getJSONString]);
+    
+    [self initRequest:url withBody:[requestData getJSONString]];
+    
+    //set sessionId
+    NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+    NSString *emailStr = [userdefaults objectForKey:KEY_Email];
+    if ([emailStr isEqualToString:email])
+    {
+        NSString *sessionID = [NSString stringWithFormat:@"JSESSIONID=%@",[userdefaults objectForKey:KEY_SessionID]];
+        if (sessionID)
+        {
+            [self.request addRequestHeader:@"Cookie" value:sessionID];
+        }
+       
+    }
+    
+    [self startAsynRequest];
+}
+
+
+#pragma mark -
+#pragma mark ASIHTTPRequestDelegate method
+- (void)requestFinished:(ASIHTTPRequest *)requestParam {
+    NSString *jsonString = [requestParam responseString];
+    DebugLog(@"%@",jsonString);
+    
+    
+    
+//    NSLog(@"%@",[requestParam responseCookies]);
+//    
+//    NSArray *cookies = [requestParam responseCookies];
+//    // 打印 sessionid
+//    NSHTTPCookie *cookie = nil ;
+//    for (cookie in cookies) {
+//        if ([[cookie name ] isEqualToString : @"JSESSIONID" ]) {
+//            NSLog ( @"session name:%@,value:%@" ,[cookie name ],[cookie value ]);
+//        }
+//    }
+    
+    IYCUserInfo *userInfo = [[IYCUserInfo alloc] initWithJSONDictionary:[jsonString objectFromJSONString]];
+    if (userInfo.errorCode == ResponseErrorCode_Success)
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidSuccess:)]) {
+            [self.delegate requestDidSuccess:userInfo];
+        }
+    }
+    else
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+            [self.delegate requestDidFailed:userInfo];
+        }
+    }
+}
+
+- (void)requestFailed:(ASIHTTPRequest *)requestParam {
+    DebugLog(@"%@",requestParam.error);
+    IYCUserInfo * request = [[IYCUserInfo alloc] init];
+    request.errorCode = ResponseErrorCode_RequestAccessFailed;
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+        [self.delegate requestDidFailed:request];
+    }
+}
+
+@end

@@ -1,0 +1,15 @@
+//
+//  CXMLElement_CreationExtensions.h
+//  TouchCode
+//
+//
+
+#import "CXMLElement.h"
+
+@interface CXMLElement (CXMLElement_CreationExtensions)
+
+- (void)addChild:(CXMLNode *)inNode;
+
+- (void)addNamespace:(CXMLNode *)inNamespace;
+
+@end

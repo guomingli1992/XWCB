@@ -1,0 +1,18 @@
+//
+//  IYCNotesView.h
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-8-7.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface IYCNotesView : UIView<UITableViewDataSource,UITableViewDelegate>
+{
+    UITableView * notesTableView;
+    NSArray * notesArray;
+}
+- (id)initWithFrame:(CGRect)frame book:(long)bookId language:(int)language;
+- (void)refreshViewWithBook:(long)bookId language:(int)language;
+@end

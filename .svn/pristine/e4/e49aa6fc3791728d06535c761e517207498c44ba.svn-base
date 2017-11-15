@@ -1,0 +1,124 @@
+#import "IYCFileUtils.h"
+
+#import "IYCFileManager.h"
+@implementation IYCFileUtils
+
+/**
+ * 当前应用程序的documents目录
+ *
+ * 目录结构: <Application_Home>/Documents/
+ * 
+ */
++ (NSString *)appDocumentsDir {
+	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+	return [paths objectAtIndex:0];
+}
+
+/**
+ * 如果指定目录在当前应用的目录结构中存在则返回存在的目录路径
+ * 如果不存在指根据指定的目录路径创建目录
+ */
++ (NSString *)createOrGetDirWithName:(NSString *)dirPathName {
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	NSError *error = nil;
+	
+	if (![fileManager fileExistsAtPath:dirPathName]) {
+		if(![fileManager createDirectoryAtPath:dirPathName withIntermediateDirectories:YES attributes:nil error:&error]) {
+			DebugLog(@"ERROR: Failed to create dir path %@ with comming message %@ .", dirPathName,[error localizedDescription]);
+		}
+	}
+	return dirPathName;
+}
+
+
+#pragma mark -
+#pragma mark Get Info.plist Vaule Methods
+
+
+
++ (NSString *)getBundleResourcePath: (NSString *)picName
+{
+    
+  NSString *fileSaveDir = [[[IYCFileManager getCachesDir] stringByAppendingPathComponent:@"ImageCache"] stringByAppendingPathComponent:picName];
+	return fileSaveDir;
+}
+
+
++ (NSString *)getBundleIdentifier
+{
+    NSString* bundleIdentifier = [[NSBundle mainBundle] bundleIdentifier];
+    return bundleIdentifier;
+}
+
+
++ (NSString *)getVersion
+{
+	NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"Info" ofType:@"plist"]];
+    NSString *softVersion = [NSString stringWithFormat:@"%@", [dict objectForKey:@"Software version"]];
+
+    return softVersion;
+}
+
+
++ (NSString *)getSinaOAuthConsumerKey
+{
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"Info" ofType:@"plist"]];
+    NSString* sinaOAuthConsumerKey =[NSString stringWithFormat:@"%@",[dict objectForKey:@"SinaOAuthConsumerKey"]];
+    
+    return sinaOAuthConsumerKey;
+}
+
++ (NSString *)getSinaOAuthConsumerSecret
+{
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"Info" ofType:@"plist"]];
+    NSString* sinaOAuthConsumerSecret =[NSString stringWithFormat:@"%@",[dict objectForKey:@"SinaOAuthConsumerSecret"]];
+    
+    return sinaOAuthConsumerSecret;
+}
+
++ (NSString *)getTecentOAuthConsumerKey
+{
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"Info" ofType:@"plist"]];
+    NSString* qqOAuthConsumerKey =[NSString stringWithFormat:@"%@",[dict objectForKey:@"QqOAuthConsumerKey"]];
+    
+    return qqOAuthConsumerKey;
+}
+
++ (NSString *)getTecentOAuthConsumerSecret	//plist 里面的key必须是第一个字母大写，否则就不会导到.app的info.plist里面去
+{
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"Info" ofType:@"plist"]];
+    NSString* qqOAuthConsumerSecret =[NSString stringWithFormat:@"%@",[dict objectForKey:@"QqOAuthConsumerSecret"]];
+
+    return qqOAuthConsumerSecret;
+}
+
+
++ (BOOL)isValideUrl: (NSURL *)url
+{
+	if ([[url scheme] isEqualToString:@"http"] || [[url scheme] isEqualToString:@"https"]) {
+		return YES;
+	} else {
+		return NO;
+	}
+}
+
++ (NSString *)getWebServiceHost
+{
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"Info" ofType:@"plist"]];
+    NSString* urlString =[NSString stringWithFormat:@"https://%@/openbook",[dict objectForKey:@"IP Address"]];
+    
+    return urlString;
+}
++ (NSString *)getAppUrl
+{
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"Info" ofType:@"plist"]];
+    NSString * appUrl = [NSString stringWithFormat:@"%@",[dict objectForKey:@"App URL"] ] ;
+    DebugLog(@"%@",appUrl);
+    
+    return appUrl;
+    
+}
+
+
+
+@end

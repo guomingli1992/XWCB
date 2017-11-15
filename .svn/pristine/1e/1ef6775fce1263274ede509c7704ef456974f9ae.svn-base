@@ -1,0 +1,98 @@
+//
+//  IYCRequest.m
+//  IYangCongReader
+//
+//  Created by haley on 4/3/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCRequest.h"
+
+@implementation IYCRequest
+@synthesize errorCode = _errorCode;
+@synthesize errorMessage = _errorMessage;
+@synthesize deviceType = _deviceType;
+@synthesize deviceToken = _deviceToken;
+
+- (id)initWithJSONDictionary: (NSDictionary*)jsonDic
+{
+    if (self = [super init])
+    {
+        self.errorCode = [[jsonDic objectForKey:@"errorCode"] intValue];
+
+    }
+	return self;
+}
+
+- (void)setErrorCode:(ResponseErrorCode)code
+{
+    _errorCode = code;
+    
+    switch (_errorCode)
+    {
+        case ResponseErrorCode_Success:
+            self.errorMessage = @"成功";
+            break;
+        case ResponseErrorCode_DeviceVerifyFailed:
+            self.errorMessage = @"设备验证失败";
+            break;
+        case ResponseErrorCode_UserVerifyFailed:
+            self.errorMessage = @"身份验证失败";
+            break;
+        case ResponseErrorCode_SessionExpired:
+            self.errorMessage = @"登录已过期，请重新登录";
+            break;
+        case ResponseErrorCode_RequestVerifyFailed:
+            self.errorMessage = @"请求验证失败";
+            break;
+        case ResponseErrorCode_ServerFailed:
+            self.errorMessage = @"未知服务器错误";
+            break;
+        case ResponseErrorCode_ParameterFailed:
+            self.errorMessage = @"请求参数错误";
+            break;
+        case ResponseErrorCode_Register_NicknameUsed:
+            self.errorMessage = @"注册失败，昵称已用。";
+            break;
+        case ResponseErrorCode_Register_EmainlUsed:
+            self.errorMessage = @"注册失败，邮箱已用。";
+            break;
+        case ResponseErrorCode_RequestAccessFailed:
+            self.errorMessage = @"请求服务器失败";
+            break;
+        case ResponseErrorCode_Purchase_BookAlreadyPaid:
+            self.errorMessage = @"选定图书为已购图书，请同步即可下载阅读。";
+            break;
+        case ResponseErrorCode_SoldOut_Political:
+            self.errorMessage = @"根据相关法律法规和政策，该图书已经下架";
+            break;
+        case ResponseErrorCode_SoldOut_ContentError:
+            self.errorMessage = @"该图书已经下架，给您造成不便十分抱歉，请您继续浏览其它图书";
+            break;
+        case ResponseErrorCode_SoldOut_Copyright:
+            self.errorMessage = @"该图书已经下架，给您造成不便十分抱歉，请您继续浏览其它图书";
+            break;
+        case ResponseErrorCode_SoldOut:
+            self.errorMessage = @"该图书已经下架，给您造成不便十分抱歉，请您继续浏览其它图书";
+            break;
+        default:
+            break;
+    }
+}
+
+- (NSMutableDictionary *)getJSONString {
+    
+    NSMutableDictionary *JSONDict = [NSMutableDictionary dictionary];
+    
+    
+    //	if (self.bundleIdentifier) {
+    //		[JSONDict setObject:self.bundleIdentifier forKey:@"appID"];
+    //	}
+    //	if (self.masterCatalogID) {
+    //		[JSONDict setObject:self.masterCatalogID forKey:@"masterCatalogID"];
+    //	}
+    
+    return JSONDict;
+}
+
+@end

@@ -1,0 +1,43 @@
+//
+//  IYCDataModel.m
+//  iyangcong
+//
+//  Created by lxm on 2017/2/15.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "IYCDataModel.h"
+
+@implementation IYCDataModel
+
+@end
+
+
+@implementation UserInfo
+
+@synthesize birth;
+@synthesize detail;
+@synthesize gkNumber;
+
+@end
+
+
+@implementation BookInfo
+
+@synthesize book_Id;
+@synthesize book_Name;
+@synthesize book_Url;
+@synthesize book_State;
+@synthesize book_Progress;
+@synthesize book_Time;
+@synthesize book_Groupid;
+@synthesize book_Buy;
+@end
+
+
+@implementation GroupInfo
+
+@synthesize group_Id;
+@synthesize group_Name;
+
+@end

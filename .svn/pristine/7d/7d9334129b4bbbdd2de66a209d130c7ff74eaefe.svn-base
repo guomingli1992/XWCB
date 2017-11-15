@@ -1,0 +1,21 @@
+//
+//  CXMLElement_ElementTreeExtensions.m
+//  TouchCode
+//
+//
+
+#import "CXMLElement_ElementTreeExtensions.h"
+
+#import "CXMLElement_CreationExtensions.h"
+#import "CXMLNode_CreationExtensions.h"
+
+@implementation CXMLElement (CXMLElement_ElementTreeExtensions)
+
+- (CXMLElement *)subelement:(NSString *)inName;
+{
+CXMLElement *theSubelement = [CXMLNode elementWithName:inName];
+[self addChild:theSubelement];
+return(theSubelement);
+}
+
+@end

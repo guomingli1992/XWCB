@@ -1,0 +1,18 @@
+//
+//  IYCColor.h
+//  iyangcong
+//
+//  Created by lxm on 2016/12/19.
+//  Copyright © 2016年 FLTRP. All rights reserved.
+//
+
+#ifndef IYCColor_h
+#define IYCColor_h
+
+#define  mainColor  @"ff692e"     //主色调橘色
+#define  bgDarkColor  @"F9F9F9"     //背景灰色
+#define  bgDarkGrayColor   @"E6E6E6" //背景灰色辅色
+#define  textMainColor  @"585757"   //文字主色
+#define  textSecColor  @"969595"   //文字辅色
+
+#endif /* IYCColor_h */

@@ -1,0 +1,79 @@
+//
+//  IYCUpdateBookList.m
+//  IYangCongReader
+//
+//  Created by haley on 4/26/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCUpdateBook.h"
+
+@implementation IYCUpdateBook
+@synthesize bookId;
+@synthesize paragraphNo;
+@synthesize readShedule;
+@synthesize timestamp;
+@synthesize chapterNo;
+@synthesize accountId;
+@synthesize languageType;
+
+
+- (NSString *)getJSONString {
+    
+    NSMutableDictionary *JSONDict = [super getJSONString];
+    
+    if (self.bookId) {
+        [JSONDict setObject:[NSNumber numberWithLong:self.bookId ] forKey:@"bookId"];
+    }
+    if (self.chapterNo) {
+         [JSONDict setObject:[NSNumber numberWithInt:self.chapterNo] forKey:@"chapterNo"];
+    }
+    
+    if (self.paragraphNo) {
+        [JSONDict setObject:[NSNumber numberWithInt:self.paragraphNo] forKey:@"paragraphNo"];
+    }
+    
+    if (self.readShedule) {
+    
+        [JSONDict setObject:[NSString stringWithFormat:@"%.4f",self.readShedule] forKey:@"readShedule"];
+    }
+    
+    if (self.timestamp) {
+        [JSONDict setObject:self.timestamp forKey:@"timestamp"];
+    }
+   
+    DebugLog(@"booklist%@",JSONDict.JSONString);
+    return JSONDict.JSONString;
+}
+
+- (NSDictionary *)getJSONDictinary
+{
+    NSMutableDictionary *JSONDict = [super getJSONString];
+    
+//    if (self.bookId) {
+        [JSONDict setObject:[NSNumber numberWithLong:self.bookId ] forKey:@"bookId"];
+//    }
+//    if (self.chapterNo) {
+        [JSONDict setObject:[NSNumber numberWithInt:self.chapterNo] forKey:@"chapterNo"];
+//    }
+    
+//    if (self.paragraphNo) {
+        [JSONDict setObject:[NSNumber numberWithInt:self.paragraphNo] forKey:@"paragraphNo"];
+//    }
+    
+//    if (self.readShedule) {
+    
+        [JSONDict setObject:[NSString stringWithFormat:@"%.4f",self.readShedule] forKey:@"readSchedule"];
+//    }
+    
+    if (self.timestamp) {
+        [JSONDict setObject:self.timestamp forKey:@"timestamp"];
+    }
+    [JSONDict setObject:[NSNumber numberWithInt:self.languageType] forKey:@"languagetype"];
+    return JSONDict;
+
+}
+
+
+
+@end

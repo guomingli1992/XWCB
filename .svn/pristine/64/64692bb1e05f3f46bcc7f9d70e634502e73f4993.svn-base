@@ -1,0 +1,28 @@
+/**
+ * jQuery plugin: for supporting touch events
+ *
+ * @see http://developer.apple.com/library/safari/#documentation/UserExperience/Reference/TouchEventClassReference/TouchEvent/TouchEvent.html
+ * @see http://developer.apple.com/library/safari/#documentation/UserExperience/Reference/GestureEventClassReference/GestureEvent/GestureEvent.html
+ *
+ * @author Wills - MingLQ
+ */
+(function($, undefined) {
+    // events
+    $.touches = ["touchstart", "touchmove", "touchend", "touchcancel"];
+
+    // set binder and trigger
+    // see "Handle event binding"@jquery-1.6.4.js:3747
+    $.each($.touches, function(i, eventType) {
+        $.fn[eventType] = $.fn[eventType] || function(data, handler) {
+            if (handler === null || handler === undefined) {
+                handler = data;
+                data = null;
+            }
+            return handler ? this.bind(eventType, data, handler) : this.trigger(eventType);
+        };
+        if ($.attrFn) {
+            $.attrFn[eventType] = true;
+        }
+    });
+})(jQuery);
+

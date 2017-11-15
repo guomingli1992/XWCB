@@ -1,0 +1,40 @@
+//
+//  IYCService.h
+//  Reader
+//
+//  Created by Ian on 13-3-8.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//  说明：请求服务器基类
+
+#import <Foundation/Foundation.h>
+#import "ASIHttpRequest.h"
+
+@protocol IYCServiceDelegate <NSObject>
+@optional
+
+- (void)requestDidSuccess:(id)data;
+
+- (void)requestDidFailed:(id)data;
+
+@end
+
+
+@interface IYCService : NSObject <ASIHTTPRequestDelegate>
+
+@property(nonatomic, assign)id <IYCServiceDelegate> delegate;
+
+@property(nonatomic, retain)ASIHTTPRequest *request;
+
+- (void)startAsynchronousRequest: (NSURL *)url postData:(NSString *)data;
+
+- (void)startDownloadRequest:(NSURL *)url postData:(NSString *)data bookid:(long)bookID progress:(id)progress;
+
+- (void)initRequest:(NSURL *)url withBody:(NSString *)data;
+- (void)startAsynRequest;
+
+//get iphone's type
+- (NSString *)getPhoneModel;
+- (NSNumber *)getDeviceType:(NSString *)platform;
+- (NSString *)getDeviceToken;
+
+@end

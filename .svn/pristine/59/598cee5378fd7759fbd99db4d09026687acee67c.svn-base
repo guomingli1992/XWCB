@@ -1,0 +1,16 @@
+//
+//  IYCWelcomeViewController.h
+//  IYangCongReader
+//
+//  Created by Lolo on 13-7-23.
+//  Copyright (c) 2013年 Lolo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface IYCWelcomeViewController : UIViewController<UIScrollViewDelegate>{
+    UIScrollView  *welcomeView;
+    int currentIndex;
+}
+
+@end

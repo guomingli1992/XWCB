@@ -1,0 +1,26 @@
+//
+//  EPubParser.h
+
+//
+
+#import <Foundation/Foundation.h>
+#import "TouchXML.h"
+#import "IYCBookEdition.h"
+#import "IYCConfig.h"
+
+@interface IYCEPub : NSObject {
+	NSMutableArray* spineArray;
+	NSString* epubFilePath;
+    BOOL epubValid;
+  
+    IYCLanguageType language;
+    int     bookId;
+}
+
+@property (nonatomic, retain) NSMutableArray* spineArray;
+@property (nonatomic) BOOL epubValid;
+
+- (id) initWithEPubPath:(NSString*)path withLanguageType:(IYCLanguageType)laType withBookId: (int)bookid;
+
+
+@end

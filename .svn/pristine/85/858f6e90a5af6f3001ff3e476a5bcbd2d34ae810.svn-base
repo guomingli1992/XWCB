@@ -1,0 +1,399 @@
+//
+//  IYCSegmentAnimation.m
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-9-9.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCNoteInfo.h"
+#import "IYCCommon.h"
+#import "IYCNote.h"
+#import "IYCNoteContentView.h"
+#import <QuartzCore/QuartzCore.h>
+#import "IYCDBAction.h"
+
+@interface IYCNoteInfo()
+{
+    UIView * _animationView;
+    UIImageView * _topLayer;
+    UIImageView * _bottomLayer;
+    UIImageView * _gapBg;
+//    UITextView * _textView;
+    UIButton * _finishBtn;
+    float _gapWidth;
+    float _offset;//上下切割线位置
+    float _position;//三角左右位置
+    
+    float _upOffset;
+    float _downOffset;
+    
+    BOOL _played;
+    
+    IYCNote * _note;
+
+    
+
+}
+
+@end
+
+@implementation IYCNoteInfo
+@synthesize delegate;
+// Generates an image from the view with transparent margins.
+// (CGRect)frame is a rectangle in the view's coordinate space- pass in bounds to render the entire view, or another rect to render a subset of the view
+// (UIEdgeInsets)insets defines the size of the transparent margins to create
+- (UIImage *)renderImageFromView:(UIView *)view withRect:(CGRect)frame transparentInsets:(UIEdgeInsets)insets
+{
+	CGSize imageSizeWithBorder = CGSizeMake(frame.size.width + insets.left + insets.right, frame.size.height + insets.top + insets.bottom);
+    // Create a new context of the desired size to render the image
+	UIGraphicsBeginImageContextWithOptions(imageSizeWithBorder, UIEdgeInsetsEqualToEdgeInsets(insets, UIEdgeInsetsZero), 0);
+	CGContextRef context = UIGraphicsGetCurrentContext();
+	
+	// Clip the context to the portion of the view we will draw
+	CGContextClipToRect(context, (CGRect){{insets.left, insets.top}, frame.size});
+	// Translate it, to the desired position
+    CGContextTranslateCTM(context, -frame.origin.x + insets.left, -frame.origin.y + insets.top);
+    
+    // Render the view as image
+    [view.layer renderInContext:UIGraphicsGetCurrentContext()];
+    
+    // Fetch the image
+    UIImage *renderedImage = UIGraphicsGetImageFromCurrentImageContext();
+    
+    // Cleanup
+    UIGraphicsEndImageContext();
+    
+    return renderedImage;
+}
+//制作有三角形缺口的图片
+- (UIImage *)makePolygonImage:(UIImageView *)imgView
+{
+    CGRect rect = CGRectZero;
+    rect.size = imgView.frame.size;
+    
+    UIGraphicsBeginImageContextWithOptions(rect.size, YES, 0.0);
+    UIBezierPath * path = [UIBezierPath bezierPath];
+    
+    [[UIColor blackColor] setFill];
+    UIRectFill(rect);
+    [[UIColor whiteColor] setFill];
+    
+    CGPoint lt = CGPointMake(0, 0);
+    CGPoint rt = CGPointMake(rect.size.width, 0);
+    CGPoint lb = CGPointMake(0, rect.size.height);
+    CGPoint rb = CGPointMake(rect.size.width, rect.size.height);
+    CGPoint triangle1 = CGPointMake(_position, rect.size.height);
+    CGPoint triangle2 = CGPointMake(_position+8, rect.size.height-6);
+    CGPoint triangle3 = CGPointMake(_position+16, rect.size.height);
+    
+    [path moveToPoint:lt];
+
+    [path addLineToPoint:rt];
+    [path addLineToPoint:rb];
+    [path addLineToPoint:triangle3];
+    [path addLineToPoint:triangle2];
+    [path addLineToPoint:triangle1];
+    [path addLineToPoint:lb];
+    
+    [path closePath];
+    [path fill];
+    
+    UIImage *mask = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    UIGraphicsBeginImageContextWithOptions(rect.size, NO, 0.0);
+
+    CGContextClipToMask(UIGraphicsGetCurrentContext(), rect, mask.CGImage);
+    [imgView.image drawAtPoint:CGPointZero];
+    
+    UIImage *maskedImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+//    NSString * p = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+//    [UIImagePNGRepresentation(maskedImage) writeToFile:[NSString stringWithFormat:@"%@/%@",p,@"1.png"] atomically:YES];
+    
+    return maskedImage;
+}
+
+- (id)initWithView:(UIView *)animateView offset:(float)offset gapWidth:(float)width position:(float)position
+{
+    self = [super initWithFrame:animateView.frame];
+    if (self) {
+        //_animationView = [animateView retain];
+        _animationView = animateView;
+        _gapWidth = width;
+        _offset = offset;
+        _position = position;
+        
+        self.backgroundColor = [UIColor clearColor];
+//        _gapBg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"noteInfoBg.png"]];
+        _gapBg = [[UIImageView alloc] init];
+        _gapBg.backgroundColor = [UIColor colorWithRed:24.0/255.0 green:24.0/255.0 blue:24.0/255.0 alpha:0.8];
+        _gapBg.frame = CGRectMake(0, -10, [UIScreen mainScreen].bounds.size.width, width+75);
+        [self addSubview:_gapBg];
+
+        self.userInteractionEnabled = YES;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+        
+    }
+    return self;
+}
+
+- (void)playWithNote:(IYCNote *)note
+{
+    _note =note;
+
+    //处理画面
+    UIImage * topPart = [self renderImageFromView:_animationView
+                                         withRect:CGRectMake(0, 0, _animationView.frame.size.width, _offset)
+                                transparentInsets:UIEdgeInsetsMake(0,0,1,0)];
+    UIImage * bottomPart = [self renderImageFromView:_animationView
+                                            withRect:CGRectMake(0, _offset, _animationView.frame.size.width, _animationView.frame.size.height-_offset)
+                                   transparentInsets:UIEdgeInsetsMake(1,0,0,0)];
+    
+    UIImageView * topLayer = [[UIImageView alloc] initWithImage:topPart];
+    topLayer.frame = CGRectMake(0, 0, _animationView.frame.size.width, _offset);
+    topLayer.layer.shadowOffset = CGSizeMake(4, 3);
+    topLayer.layer.shadowColor = [UIColor blackColor].CGColor;
+    topLayer.layer.shadowRadius = 2.0;
+    topLayer.layer.shadowOpacity = 0.5;
+    topLayer.userInteractionEnabled = YES;
+    [self addSubview:topLayer];
+    _topLayer = topLayer;
+    
+    UIImageView * bottomLayer = [[UIImageView alloc] initWithImage:bottomPart];
+    bottomLayer.frame = CGRectMake(0, _offset, _animationView.frame.size.width, _animationView.frame.size.height-_offset);
+    bottomLayer.layer.shadowOffset = CGSizeMake(0, -1.5);
+    bottomLayer.layer.shadowColor = [UIColor blackColor].CGColor;
+    bottomLayer.layer.shadowRadius = 2.0;
+    bottomLayer.layer.shadowOpacity = 0.5;
+    bottomLayer.userInteractionEnabled = YES;
+    bottomLayer.backgroundColor = [UIColor clearColor];
+    [self addSubview:bottomLayer];
+    _bottomLayer = bottomLayer;
+    
+    _bottomLayer.image = [self makePolygonImage:_bottomLayer];
+    
+    //计算动画移动距离
+    float upOffset=60,downOffset=60;//动画两个部分分别向上向下移动的偏移量。
+    float bottomHeigh = _animationView.frame.size.height-_offset;
+    if(bottomHeigh<_gapWidth){
+        downOffset = bottomHeigh-_gapWidth/2;
+        upOffset = _gapWidth-downOffset;
+    }
+    if (_offset<_gapWidth) {
+        upOffset = _offset - _gapWidth/2;
+        downOffset = _gapWidth-upOffset;
+    }
+    if (downOffset<0) {
+        downOffset = 0;
+        upOffset = _gapWidth;
+    }
+    if (upOffset<0) {
+        upOffset = 0;
+        downOffset = _gapWidth;
+    }
+    _upOffset = upOffset;
+    _downOffset = downOffset;
+    
+    _gapBg.frame = CGRectOffset(_gapBg.frame, 0, _offset-_upOffset);
+    
+    
+    UIScrollView *scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(30, 3+_offset-_upOffset, _animationView.frame.size.width-60, _gapWidth+22)];
+    
+    CGRect rect;
+    rect.origin.x = 0;
+    rect.origin.y = 0;
+    rect.size.width = _animationView.frame.size.width;
+    rect.size.height = 140;
+    
+    
+    //添加下划线并获取点击事件
+    NSArray * notes = [[IYCDBAction sharedDBAction] selectNotesByBookID:note.bookID
+                                                               AccountId:[[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"] longLongValue]
+                                                            ChapterIndex:-1
+                                                                language:note.language];
+    
+    int startOffset = note.startOffset;
+    int endOffset = note.endOffset;
+    NSMutableArray *notesArray = [[NSMutableArray alloc] init];
+    
+    int i = 0;
+
+    for (IYCNote * localNote in notes)
+    {
+        if (localNote.startParagraphId == note.startParagraphId && startOffset<=localNote.endOffset && endOffset>=localNote.startOffset)
+        {
+//            NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc]init];
+//            paragraphStyle.lineBreakMode = NSLineBreakByWordWrapping;
+//            
+//            NSDictionary *attributes = @{NSFontAttributeName:[UIFont boldSystemFontOfSize:13], NSParagraphStyleAttributeName:paragraphStyle.copy};
+//            
+//            CGSize textSize = [localNote.noteContent boundingRectWithSize:CGSizeMake(_animationView.frame.size.width-60, 1500) options:NSStringDrawingUsesLineFragmentOrigin attributes:attributes context:nil].size;
+//
+//            NSLog(@"%f",textSize.height);
+            
+            [notesArray addObject:localNote];
+            rect.origin.x = 0;
+            rect.origin.y = i*85;
+            rect.size.width = _animationView.frame.size.width-60;
+            rect.size.height = 80;
+
+            IYCNoteContentView *noteContentView = [[IYCNoteContentView alloc] initWithFrame:rect withNote:localNote withDelegate:self];
+            [scrollView addSubview:noteContentView];
+            i++;
+
+
+        }
+        [scrollView setContentSize:CGSizeMake(0, i*90)];
+
+
+    }
+    [self insertSubview:scrollView aboveSubview:_gapBg];
+
+  
+    
+    UITapGestureRecognizer * tapTop = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(restore:)];
+    [_topLayer addGestureRecognizer:tapTop];
+    
+    UITapGestureRecognizer * tapBottom = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(restore:)];
+    [_bottomLayer addGestureRecognizer:tapBottom];
+    
+    //开始动画
+    [_animationView.superview insertSubview:self atIndex:0];
+    _animationView.hidden = YES;
+    
+    [UIView animateWithDuration:0.3f animations:^{
+        _topLayer.frame = CGRectOffset(_topLayer.frame, 0, -_upOffset);
+        _bottomLayer.frame = CGRectOffset(_bottomLayer.frame, 0, _downOffset);
+
+    } completion:^(BOOL finished) {
+        if (finished) {
+            _played = YES;
+        }
+    }];
+
+    
+}
+
+
+- (void)restore:(UITapGestureRecognizer *)tap
+{
+    if (!_played) {
+        return;
+    }
+    if (_finishBtn) {
+        [_finishBtn removeFromSuperview];
+        _finishBtn=Nil;
+    }
+//    [_textView resignFirstResponder];
+    [UIView animateWithDuration:0.3f animations:^{
+
+        _topLayer.frame = CGRectOffset(_topLayer.frame, 0, _upOffset);
+        _bottomLayer.frame = CGRectOffset(_bottomLayer.frame, 0, -_downOffset);
+        self.frame = _animationView.frame;
+        
+    } completion:^(BOOL finished) {
+        if (finished) {
+            if (self.delegate && [self.delegate respondsToSelector:@selector(animationDidFinish:)]) {
+                [self.delegate animationDidFinish];
+            }
+            [_animationView setHidden:NO];
+            [self removeFromSuperview];
+        }
+    }];
+}
+- (void) finishedEditContent:(UITextView *)textView
+{
+    if (!textView.text || [textView.text length]==0) {
+        UIAlertView * alert = [[UIAlertView alloc] initWithTitle:@"提示" message:@"笔记内容不能为空。" delegate:nil cancelButtonTitle:@"好的" otherButtonTitles:nil, nil];
+        [alert show];
+        return;
+    }
+
+    if (self.delegate && [self.delegate respondsToSelector:@selector(note:finishEditWithStr:)]) {
+        [self.delegate note:_note finishEditWithStr:textView.text];
+    }
+        [textView resignFirstResponder];
+        [UIView animateWithDuration:0.2f animations:^{
+            self.frame = _animationView.frame;
+        }];
+}
+//- (void)editFinish:(id)sender
+//{
+//    if (!_textView.text || [_textView.text length]==0) {
+//        UIAlertView * alert = [[UIAlertView alloc] initWithTitle:@"提示" message:@"笔记内容不能为空。" delegate:nil cancelButtonTitle:@"好的" otherButtonTitles:nil, nil];
+//        [alert show];
+//        [alert release];
+//        return;
+//    }
+//    [_finishBtn removeFromSuperview];
+//    _finishBtn = nil;
+//    
+//    if (self.delegate && [self.delegate respondsToSelector:@selector(note:finishEditWithStr:)]) {
+//        [self.delegate note:_note finishEditWithStr:_textView.text];
+//    }
+//    [_textView resignFirstResponder];
+//    [UIView animateWithDuration:0.2f animations:^{
+//        self.frame = _animationView.frame;
+//    }];
+//}
+
+- (void)keyboardWillShow:(NSNotification *)notification
+{
+    NSDictionary * userInfo = notification.userInfo;
+    
+    if (!userInfo) {
+        return;
+    }
+    NSValue * value = [userInfo objectForKey:UIKeyboardFrameEndUserInfoKey];
+    CGRect rect = [value CGRectValue];
+    if (_offset+_downOffset>rect.origin.y) {
+        [UIView animateWithDuration:0.3f animations:^{
+            self.frame = CGRectOffset(_animationView.frame, 0, -(_offset+_downOffset-rect.origin.y));
+        }];
+    }
+    
+//    if (!_finishBtn) {
+//        UIButton * finishBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+//        [finishBtn addTarget:self action:@selector(editFinish:) forControlEvents:UIControlEventTouchUpInside];
+//        finishBtn.frame = CGRectMake(_animationView.frame.size.width-45, _offset-_upOffset, 45, 45);
+//        [self addSubview:finishBtn];
+//        _finishBtn = finishBtn;
+//        _finishBtn.userInteractionEnabled = YES;
+//        
+//        CALayer * layer = [CALayer layer];
+//        [layer setContents:(id)[UIImage imageNamed:@"logout.png"].CGImage];
+//        layer.frame = CGRectMake(15, 10, 25, 20);
+//        [finishBtn.layer addSublayer:layer];
+//        
+//        UILabel * title = [[[UILabel alloc] initWithFrame:CGRectMake(0, 0, layer.frame.size.width, layer.frame.size.height)] autorelease];
+//        title.text = @"完成";
+//        title.font = [UIFont systemFontOfSize:10];
+//        title.backgroundColor = [UIColor clearColor];
+//        title.textAlignment = NSTextAlignmentCenter;
+//        
+//        [layer addSublayer:title.layer];
+//    }
+   // _finishBtn.frame = CGRectMake(_animationView.frame.size.width-45, _offset-_upOffset, 45, 45);
+
+}
+
+
+#pragma mark -
+#pragma mark UITextViewDelegate
+
+
+
+
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect
+{
+    // Drawing code
+}
+*/
+
+@end

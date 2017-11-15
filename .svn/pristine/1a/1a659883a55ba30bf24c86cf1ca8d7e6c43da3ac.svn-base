@@ -1,0 +1,36 @@
+//
+//  IYCContentViewController.h
+//
+///
+
+#import <UIKit/UIKit.h>
+#import "IYCPage.h"
+#import "IYCBookEdition.h"
+#import "IYCBook.h"
+#import "IYCWebView.h"
+
+@interface IYCContentViewController : UIViewController <UIWebViewDelegate> {
+
+    UIMenuController *menuController;
+    UIImageView *bookMarkView ;
+}
+
+@property (nonatomic) int  pageNum;
+@property (nonatomic) IYCLanguageType langType;
+@property (nonatomic) int changeChapterIndex;
+@property (nonatomic) float changeChapterOffset;
+@property (nonatomic, retain) IYCWebView *theWebView;
+@property (nonatomic, retain) IYCPage *page;
+@property (nonatomic, assign) IYCBook *readingBook;
+@property (nonatomic, retain) UILabel *pagelabel;
+@property (nonatomic, retain) UILabel *titlelabel;
+@property (nonatomic, retain) UIImageView *line;
+@property (nonatomic) BOOL canChange;
+@property (nonatomic) BOOL allParsed;
+
+- (id)init;
+- (void)jumpToPageInChapter;
+- (void)webViewRefresh:(IYCPage *)newPage;
+- (void)setBookMarkState:(BOOL)hasBookMark;
+
+@end

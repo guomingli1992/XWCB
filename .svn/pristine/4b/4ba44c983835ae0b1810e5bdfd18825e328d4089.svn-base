@@ -1,0 +1,17 @@
+//
+//  IYCExperience.m
+//  IYangCongReader
+//
+//  Created by MaTeng on 14-6-12.
+//  Copyright (c) 2014年 IYangCong. All rights reserved.
+//
+
+#import "IYCExperience.h"
+
+@implementation IYCExperience
+@synthesize ranking,readingHabit,readingQuantity;
+@synthesize zhReadingTime,enReadingTime,totalReadingTime;
+@synthesize useDays,accountId;
+
+
+@end

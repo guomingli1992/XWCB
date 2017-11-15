@@ -1,0 +1,366 @@
+//
+//  IYCDbHelper.m
+//  iyangcong
+//
+//  Created by lxm on 2017/1/13.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "IYCDbHelper.h"
+
+@implementation IYCDbHelper
+
++(IYCDbHelper*)sharedInstance;
+{
+    static dispatch_once_t IYCDbHelperonce;
+    static IYCDbHelper * IYCDbHelperstatic;
+    dispatch_once(&IYCDbHelperonce, ^{
+        IYCDbHelperstatic = [[IYCDbHelper alloc] init];
+    });
+    return IYCDbHelperstatic;
+}
+
+//打开数据库，返回此数据库
+-(FMDatabase*)openDataBasePath:(NSString*)userID
+{
+    //1.获得数据库文件的路径
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    if ([db open]) {
+        if(![db tableExists:@"Book_Info"]){
+            //4.创表
+            BOOL result=[db executeUpdate:@"CREATE TABLE IF NOT EXISTS Book_Info (ID INTEGER PRIMARY KEY AUTOINCREMENT, book_Id TEXT,book_Name TEXT,book_State TEXT,book_Buy TEXT,book_Url TEXT,book_Progress TEXT,book_Groupid TEXT DEFAULT 0,book_Time TEXT)"];
+            if (result) {
+                NSLog(@"创表Book_Info成功");
+            }
+            else {
+                NSLog(@"创表Book_Info失败");
+            }
+        }
+        if(![db tableExists:@"Group_Info"]){
+            //4.创表
+            BOOL result=[db executeUpdate:@"CREATE TABLE IF NOT EXISTS Group_Info (group_Id INTEGER PRIMARY KEY AUTOINCREMENT, group_Name TEXT)"];
+            if (result) {
+                NSLog(@"创表Group_Info成功");
+            }
+            else {
+                NSLog(@"创表Group_Info失败");
+            }
+        }
+
+        [db close];
+    }
+    return db;
+}
+
+//根据用户ID获取本地数据库所有图书
+- (NSMutableArray *)getAllBookListId:(NSString*)userID
+{
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    NSMutableArray*bookArray=[[NSMutableArray alloc] init];
+    if ([db open]) {
+        NSString * sql = [NSString stringWithFormat:
+                          @"SELECT * FROM Book_Info"];
+        
+        FMResultSet * rs = [db executeQuery:sql];
+        while ([rs next]) {
+            BookInfo *bookInfo=[BookInfo alloc];
+            bookInfo.book_Id=[rs stringForColumn:@"book_Id"];
+            bookInfo.book_Name=[rs stringForColumn:@"book_Name"];
+            bookInfo.book_State=[rs stringForColumn:@"book_State"];
+            bookInfo.book_Buy=[rs stringForColumn:@"book_Buy"];
+            bookInfo.book_Url=[rs stringForColumn:@"book_Url"];
+            bookInfo.book_Progress=[rs stringForColumn:@"book_Progress"];
+            bookInfo.book_Groupid=[rs stringForColumn:@"book_Groupid"];
+            bookInfo.book_Time=[rs stringForColumn:@"book_Time"];
+            [bookArray addObject:bookInfo];
+            
+        }
+        [db close];
+    }
+    return bookArray;
+}
+
+- (void)deleteGroupByGroupId:(NSString *)groupId andUserId:(NSString *)userID {
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    if ([db open]) {
+        NSString * deletesql = [NSString stringWithFormat:
+                                @"delete from Group_Info where Group_Id =%@",groupId];
+        BOOL res = [db executeUpdate:deletesql];
+        if (!res) {
+            NSLog(@"error when delete db table");
+        } else {
+            NSLog(@"success to delete db table");
+        }
+        [db close];
+    }
+}
+
+//根据用户ID获取本地数据库所有图书分组情况
+- (NSMutableArray *)getAllGroupListId:(NSString*)userID
+{
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    NSMutableArray*bookArray=[[NSMutableArray alloc] init];
+    if ([db open]) {
+        NSString * sql = [NSString stringWithFormat:
+                          @"SELECT * FROM Group_Info"];
+        
+        FMResultSet * rs = [db executeQuery:sql];
+        while ([rs next]) {
+            GroupInfo *groupInfo=[GroupInfo alloc];
+            groupInfo.group_Id=[NSString stringWithFormat:@"%i",[rs intForColumn:@"group_Id"]];
+            groupInfo.group_Name=[rs stringForColumn:@"group_Name"];
+
+            [bookArray addObject:groupInfo];
+        }
+        [db close];
+    }
+    return bookArray;
+}
+
+//获取Group_List中最后一条数据
+-(GroupInfo *)getGroupListLastRowUserId:(NSString *)userID {
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    GroupInfo *groupInfo=[GroupInfo alloc];
+    if ([db open]) {
+        NSString * sql = [NSString stringWithFormat:
+                          @"SELECT * FROM Group_Info ORDER BY group_Id DESC LIMIT 1"];
+        
+        FMResultSet * rs = [db executeQuery:sql];
+        while ([rs next]) {
+            groupInfo.group_Id=[NSString stringWithFormat:@"%i",[rs intForColumn:@"group_Id"]];
+            groupInfo.group_Name=[rs stringForColumn:@"group_Name"];
+        }
+    }
+    [db close];
+    return groupInfo;
+}
+
+//根据用户ID获取本地数据库图书顺序
+- (NSMutableArray *)getBookOrderId:(NSString*)userID {
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    NSMutableArray*bookArray=[[NSMutableArray alloc] init];
+    if ([db open]) {
+        FMResultSet*rs=[db executeQuery:@"select * from Book_Info ORDER BY book_Time DESC"];
+        while ([rs next]) {
+            BookInfo *bookInfo=[BookInfo alloc];
+            bookInfo.book_Id=[rs stringForColumn:@"book_Id"];
+            bookInfo.book_Name=[rs stringForColumn:@"book_Name"];
+            bookInfo.book_State=[rs stringForColumn:@"book_State"];
+            bookInfo.book_Buy=[rs stringForColumn:@"book_Buy"];
+            bookInfo.book_Url=[rs stringForColumn:@"book_Url"];
+            bookInfo.book_Progress=[rs stringForColumn:@"book_Progress"];
+            bookInfo.book_Groupid=[rs stringForColumn:@"book_Groupid"];
+            bookInfo.book_Time=[rs stringForColumn:@"book_Time"];
+            
+            [bookArray addObject:bookInfo];
+        }
+        [db close];
+    }
+    return bookArray;
+
+}
+
+//根据某个图书ID获取该图书全部信息
+-(NSMutableArray*)getBookInfoByBookID:(NSArray*)bookIDArray andUserId:(NSString*)userID
+{
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    NSMutableArray*bookArray=[[NSMutableArray alloc] init];
+    if ([db open]) {
+        for (NSString*patientIDstr in bookIDArray) {
+            FMResultSet*rs=[db executeQuery:@"select* from Book_Info where book_Id = ?",patientIDstr];
+            while ([rs next]) {
+                BookInfo *bookInfo=[BookInfo alloc];
+                bookInfo.book_Id=[rs stringForColumn:@"book_Id"];
+                bookInfo.book_Name=[rs stringForColumn:@"book_Name"];
+                bookInfo.book_State=[rs stringForColumn:@"book_State"];
+                bookInfo.book_Buy=[rs stringForColumn:@"book_Buy"];
+                bookInfo.book_Url=[rs stringForColumn:@"book_Url"];
+                bookInfo.book_Progress=[rs stringForColumn:@"book_Progress"];
+                bookInfo.book_Groupid=[rs stringForColumn:@"book_Groupid"];
+                bookInfo.book_Time=[rs stringForColumn:@"book_Time"];
+
+                [bookArray addObject:bookInfo];
+            }
+        }
+        [db close];
+    }
+    return bookArray;
+}
+
+//根据某个图书ID获取该图书所在分组情况
+-(GroupInfo *)getGroupInfoByBookID:(NSInteger)bookID andUserId:(NSString*)userID
+{
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    GroupInfo *groupInfo=[GroupInfo alloc];
+    if ([db open]) {
+        
+        FMResultSet*rs=[db executeQuery:@"select* from Group_Info where book_Id = ?",bookID];
+        while ([rs next]) {
+            
+            groupInfo.group_Id=[NSString stringWithFormat:@"%i",[rs intForColumn:@"group_Id"]];
+            groupInfo.group_Name=[rs stringForColumn:@"group_Name"];
+
+        }
+        [db close];
+    }
+    return groupInfo;
+}
+
+//创建图书分组
+-(void)addGroupList:(GroupInfo *)groupInfo andUserId:(NSString*)userID
+{
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    if ([db open]) {
+        
+        NSString *insertSql1= [NSString stringWithFormat:  @"INSERT INTO 'Group_Info' (group_Name) VALUES ('%@')",groupInfo.group_Name];
+        BOOL res = [db executeUpdate:insertSql1];
+        if (!res) {
+            NSLog(@"error when insert db table");
+        } else {
+            NSLog(@"success to insert db table");
+        }
+    }
+    [db close];
+}
+
+//更新分组信息
+-(void)upGroupList:(GroupInfo *)groupInfo andUserId:(NSString*)userID
+{
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    if ([db open]) {
+        
+        FMResultSet*rs=[db executeQuery:@"select* from Group_Info where group_Id = ?",groupInfo.group_Id];
+        
+        if([rs next])//更新信息
+        {
+            BOOL res = [db executeUpdate:@"update Group_Info set group_Id = ? ,group_Name = ?   where group_Id = ?",groupInfo.group_Id, groupInfo.group_Name,groupInfo.group_Id];
+            
+            if (!res) {
+                NSLog(@"error when insert db table");
+            }
+            else {
+                NSLog(@"success to insert db table");
+            }
+        }
+    }
+    [db close];
+}
+
+
+//删除某图书ID本地所有信息，可用于批量删除
+-(void)deleteBookID:(NSArray*)bookIDArray andUserId:(NSString*)userID{
+    
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    
+    for (NSString*bookIDstr in bookIDArray) {
+        if ([db open]) {
+            NSString * deletesql = [NSString stringWithFormat:
+                                    @"delete from Book_Info where book_Id =%@",bookIDstr];
+            BOOL res = [db executeUpdate:deletesql];
+            if (!res) {
+                NSLog(@"error when delete db table");
+            } else {
+                NSLog(@"success to delete db table");
+            }
+            [db close];
+        }
+    }
+}
+
+
+//更新新书全部信息
+-(void)upBookList:(NSMutableArray*)bookListArray andUserId:(NSString*)userID
+{
+    NSString *doc=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    NSString*dbName=[NSString stringWithFormat:@"localBookData%@.sqlite",userID];
+    NSString *fileName=[doc stringByAppendingPathComponent:dbName];
+    //2.获得数据库
+    FMDatabase *db=[FMDatabase databaseWithPath:fileName];
+    
+    if ([db open]) {
+        
+        for(BookInfo *bookInfo in bookListArray){
+            NSLog(@"%@",bookInfo.book_Id);
+            FMResultSet*rs=[db executeQuery:@"select* from Book_Info where book_Id = ?",bookInfo.book_Id];
+            
+            if([rs next])//更新信息
+            {
+                BOOL res = [db executeUpdate:@"update Book_Info set book_Id = ? ,book_Name = ? ,book_State = ?,book_Buy = ? ,book_Url = ? ,book_Progress = ?,book_Groupid = ? ,book_Time = ?  where Book_Id = ?",bookInfo.book_Id,bookInfo.book_Name,bookInfo.book_State,bookInfo.book_Buy, bookInfo.book_Url,bookInfo.book_Progress,bookInfo.book_Groupid,bookInfo.book_Time, bookInfo.book_Id];
+                
+                if (!res) {
+                    NSLog(@"error when insert db table");
+                } else {
+                    NSLog(@"success to insert db table");
+                }
+            }
+            else//新增信息
+            {
+                NSString *insertSql1= [NSString stringWithFormat:  @"INSERT INTO 'Book_Info' (book_Id, book_Name, book_State, book_Buy, book_Url, book_Progress, book_Groupid, book_Time) VALUES ('%@', '%@', '%@','%@','%@','%@','%@','%@')",bookInfo.book_Id,bookInfo.book_Name,bookInfo.book_State,bookInfo.book_Buy, bookInfo.book_Url,bookInfo.book_Progress,bookInfo.book_Groupid,bookInfo.book_Time];
+                BOOL res = [db executeUpdate:insertSql1];
+                if (!res) {
+                    NSLog(@"error when insert db table");
+                } else {
+                    NSLog(@"success to insert db table");
+                }
+            }
+        }
+    }
+    [db close];
+}
+@end

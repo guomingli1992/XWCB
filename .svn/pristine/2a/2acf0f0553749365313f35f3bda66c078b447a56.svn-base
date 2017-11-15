@@ -1,0 +1,66 @@
+//
+//  IYCFileManager.h
+//  Reader
+//
+//  Created by Ian on 13-3-8.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCFileManager : NSObject
+
++ (NSString *)getBundlePath;
+
++ (NSString *)getDocumentPath;
+
++ (NSString *)getCachesDir;
+
++ (NSString *)getBundlePlistPathByName: (NSString *)name;
+
++ (NSString *)getBundleResourcePath: (NSString *)picName;
+
++ (NSString *)getDataBasePathByName:(NSString *)name;
+
++ (NSString *)getBookSavePath:(long)bookID;
+
++ (NSString *)getBookTempSavePath;
+
++ (NSString *)getResourcePath:(int)bookID resource:(NSString *)resource;
+
++ (NSString *)getBookTocThumbnailPath:(int)bookID thumbnail:(NSString *)thumbnail;
+
++ (NSString *)getBookPageFilePath:(int)bookID pageFile:(NSString *)pageFile;
+
+//+ (NSString *)getBookCoverFilePath:(int)bookID imageFile:(NSString *)imageFile;
+
++ (NSString *)getOnlineSourceFilePath:(NSInteger)bookId pageNum:(int)num overlayID:(NSString *)ID sourceType:(NSString *)type;
+
++ (BOOL)removeOnlineSourceTempFiles:(NSInteger)num overlay_ID:(NSString *)ID sourcePostfix:(NSString *)postfix;
+
++ (BOOL)removeOnlineSourceFiles:(NSInteger)bookId pageNum:(int)num overlayID:(NSString *)ID sourceType:(NSString *)type;
+
++ (NSString *)getPreviewResourcePath:(NSString *)resource;
+
++ (NSString *)getPreviewBookTocThumbnailPath:(int)bookID thumbnail:(NSString *)thumbnail;
+
+
+
+
++ (BOOL)unzipBook:(long)bookId progress:(id)view;
+
++ (void)unzipWidgetByBook:(long)bookId;
+
++ (void)removeZipFile:(long)bookId;
+
++ (void)removeZipWidget:(long)bookId;
+
++ (BOOL)removeBookFiles:(long)bookId;
+
++ (BOOL)removeBookTempPartFile:(NSInteger)bookId;
+
++ (NSString *)getBookStyleXmlFilePath:(int)bookId;
+
++ (float)getTempBookFileSize:(int)bookId;
++ (NSString *)getBookCoverFilePath:(long)bookID imageFile:(NSString *)imageFile;
+@end

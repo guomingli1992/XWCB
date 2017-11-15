@@ -1,0 +1,15 @@
+//
+//  IYCParagraph.m
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCParagraph.h"
+
+@implementation IYCParagraph
+
+
+
+@end

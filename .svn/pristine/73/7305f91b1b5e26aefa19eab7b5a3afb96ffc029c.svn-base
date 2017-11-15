@@ -1,0 +1,21 @@
+//
+//  IYCExperience.h
+//  IYangCongReader
+//
+//  Created by MaTeng on 14-6-12.
+//  Copyright (c) 2014年 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCExperience : NSObject
+@property (nonatomic, assign) NSNumber *accountId;
+@property (nonatomic, assign) NSNumber *ranking;
+@property (nonatomic, assign) NSNumber *readingQuantity;
+@property (nonatomic, assign) NSNumber *zhReadingTime;
+@property (nonatomic, assign) NSNumber *enReadingTime;
+@property (nonatomic, assign) NSNumber *totalReadingTime;
+@property (nonatomic, retain) NSArray *readingHabit;
+@property (nonatomic, assign) NSNumber *useDays;
+
+@end

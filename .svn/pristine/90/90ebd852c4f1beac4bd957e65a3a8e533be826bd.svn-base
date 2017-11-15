@@ -1,0 +1,27 @@
+//
+//  IYCBookMark.h
+//  IYangCongReader
+//
+//  Created by she-mac on 4/1/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCBookMark : NSObject 
+
+@property (nonatomic) int markId;
+@property (nonatomic)int paragraphId;
+@property (nonatomic,retain) NSString *accountId;
+@property (nonatomic) float markPosition;  // int markPage;
+@property (nonatomic, strong) NSString *markTime;
+@property (nonatomic, strong) NSString *markContent;
+@property (nonatomic)long bookServerId;
+@property (nonatomic)int lineNumber;
+@property (nonatomic) int edition;
+@property (nonatomic)int bookMarkServerId;
+@property (nonatomic)int bookMarkStatus;   //0未上传 1已上传
+@property (nonatomic) int chapterId;
+@property (nonatomic,retain)NSString *log;
+@property (nonatomic) float paragraphOffset;//段内相对偏移量
+@end

@@ -1,0 +1,55 @@
+//
+//  QPPlistUtil.m
+//  Reader
+//
+//  Created by Ian on 13-3-8.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCPlistUtil.h"
+#import "IYCFileManager.h"
+
+@interface IYCPlistUtil ()
+
+@end
+
+
+
+@implementation IYCPlistUtil
+
+
++ (NSString *)getWebServiceHttpHost {
+    return [NSString stringWithFormat:@"http://%@/qikpg", [[IYCPlistUtil getInfoPlistData] objectForKey:@"ServerHost"]];
+}
+
++ (NSMutableDictionary *)getPlistDataByName: (NSString *)name {
+	return [NSMutableDictionary dictionaryWithContentsOfFile:[IYCFileManager getBundlePlistPathByName:name]];
+}
+
++ (NSMutableDictionary *)getInfoPlistData {
+	return [IYCPlistUtil getPlistDataByName:@"Info"];
+}
+
++ (NSString *)getWebServiceHost {
+//    return @"http://192.168.54.244:8181/mobileback";
+//    return @"http://192.168.54.107:8080/mobileback_0921";
+    return [[IYCPlistUtil getInfoPlistData] objectForKey:@"ServerHost"];
+}
+
++ (NSString *)getBundleIdentifier {
+    return [[NSBundle mainBundle] bundleIdentifier];
+}
+
++ (NSString*)getDeaultCatalogID {
+    return [[IYCPlistUtil getInfoPlistData] objectForKey:@"Catalog ID"];
+}
+
++ (NSString *)getKeyForMD5 {
+	return [[IYCPlistUtil getInfoPlistData] objectForKey:@"Key"];
+}
+
++ (NSString *)getNumberForMD5 {
+	return [[IYCPlistUtil getInfoPlistData] objectForKey:@"Number"];
+}
+
+@end

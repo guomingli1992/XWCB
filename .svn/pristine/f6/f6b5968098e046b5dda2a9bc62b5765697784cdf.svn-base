@@ -1,0 +1,68 @@
+//
+//  iyangcong-Prefix.pch
+//  iyangcong
+//
+//  Created by lxm on 2016/11/29.
+//  Copyright © 2016年 FLTRP. All rights reserved.
+//
+
+#ifdef __OBJC__
+#ifndef iyangcong_Prefix_pch
+#define iyangcong_Prefix_pch
+#import <UIKit/UIKit.h>
+#import "IYCConfig.h"
+#endif
+// Include any system framework and library headers here that should be included in all compilation units.
+// You will also need to set the Prefix Header build setting of one or more of your targets to reference this file.
+#define DebugLog( s, ... ) NSLog( @"<%@:(%d)> %@", [[NSString stringWithUTF8String:__FILE__] lastPathComponent], __LINE__, [NSString stringWithFormat:(s), ##__VA_ARGS__] )
+
+#endif /* iyangcong_Prefix_pch */
+#define WIDTH1 self.view.frame.size.width      //通用屏幕宽度
+#define HEIGHT1 self.view.frame.size.height    //通用屏幕高度
+
+#define WIDTH [[UIScreen mainScreen] bounds].size.width
+#define HEIGHT [[UIScreen mainScreen] bounds].size.height
+
+#define AppStoreInfoLocalFilePath [NSString stringWithFormat:@"%@/%@/", [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject],@"EACEF35FE363A75A"]
+
+#ifdef DEBUG
+#define NSLog(format, ...) printf("\n[%s] %s [第%d行] %s\n", __TIME__, __FUNCTION__, __LINE__, [[NSString stringWithFormat:format, ## __VA_ARGS__] UTF8String]);
+#else
+#define NSLog(format, ...)
+#endif
+
+//weixin
+#define APP_ID          @"wxc659f70ff4f8a0ba"
+#define APP_SECRET      @"667cb1006271371a2e2cca37bce3d87f"
+
+
+//QQ
+#define QQAPP_ID        @"1101100001"
+
+//com.sina.weibo
+#define kAppKey         @"76333889"
+#define kAppSecret      @"06c1615977ceed71c7423c6abfc96d6b"
+#define kRedirectURI    @"http://www.iyangcong.com/app/index"
+
+
+//douban
+#define DOUBAN_APPKEY   @"0d0a47df1d32bcca271ed79d5798365e"
+#define DOUBAN_SECRET   @"3d3d01c1144ea5fe"
+#define REDIRECT_URL    @"http://www.iyangcong.com/app/index"
+
+
+//有道翻译
+#define YOUDAO_KEYFROM  @"iyangcong"
+#define YOUDAO_KEY      @"1236571953"
+
+//iOS内购验证服务器地址
+#define SandboxAddress  @"https://sandbox.itunes.apple.com/verifyReceipt/"
+#define BuyAddress      @"https://buy.itunes.apple.com/verifyRec                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    eipt/"
+
+
+//#define webAddress     @"http://42.159.121.164:80/"
+
+//#define webAddress    @"http://10.103.41.244:8080/iyangcong/"
+
+#define webAddress     @"http://demo.edu.iyangcong.com/"
+

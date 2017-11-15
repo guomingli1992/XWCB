@@ -1,0 +1,148 @@
+//
+//  IYCData.m
+//  iyangcong
+//
+//  Created by lxm on 2016/12/7.
+//  Copyright © 2016年 FLTRP. All rights reserved.
+//
+
+#import "IYCData.h"
+#import "IYCChapter.h"
+
+@interface IYCData ()
+{
+    float  currentTextSize;
+    BOOL   showPage;
+    int    realChapterID;
+    int    sID;
+    BOOL   stopPaging;
+    IYCChapter * chapterTmp;
+    BOOL   isHoldPage;
+}
+@end
+
+@implementation IYCData
+@synthesize delegate;
+@synthesize loadedEpub;
+@synthesize pageArray;
+@synthesize lType;
+@synthesize fChapterId;
+@synthesize bookId;
+
+- (BOOL) loadEpub:(NSURL*) epubURL withLanguageType:(IYCLanguageType)laType withFontSize:(int)fontSize withChapterIndex:(int)index {
+    
+    IYCEPub *epub = [[IYCEPub alloc] initWithEPubPath:[epubURL path] withLanguageType:laType withBookId:self.bookId];
+    self.loadedEpub = epub;
+    
+    if (self.loadedEpub.epubValid == YES) {
+        [self initProperties:fontSize withLanguageType:laType];
+    }
+    
+    return self.loadedEpub.epubValid;
+}
+
+- (void)initProperties: (int)fontSize withLanguageType:(IYCLanguageType)laType {
+    self.lType = laType;
+    currentTextSize = fontSize;
+    showPage = NO;
+    stopPaging = NO;
+    chapterTmp = Nil;
+    isHoldPage = NO;
+    
+    self.pageArray = [NSMutableArray array];
+    self.totalPageArray = [NSMutableArray array];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(continueToPage) name:@"ContinueToPage" object:Nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(holdPage) name:@"HoldPage" object:Nil];
+    [self updatePagination];
+    
+}
+- (void)stopPaging
+{
+    stopPaging = YES;
+}
+- (void) updatePagination{
+    
+    int f = 0;
+    
+    if (self.fChapterId != 0)
+        for (int i = 0; i < [self.loadedEpub.spineArray count]; i++) {
+            IYCChapter *chapter = [self.loadedEpub.spineArray objectAtIndex:i];
+            if (chapter.serverChapterId == self.fChapterId) {
+                f = i;
+                break;
+            }
+        }
+    
+    DebugLog(@"Pagination Started! curentlang ==== %i",self.lType);
+    realChapterID = f;
+    sID = f;
+    IYCChapter *chapter = [self.loadedEpub.spineArray objectAtIndex:f];
+    if (f == 0) {
+        self.fChapterId = chapter.serverChapterId;
+    }
+    
+    chapter.isParseParagraph = YES;
+    [chapter setDelegate:self];
+    [chapter loadChapterWithWindowSize:CGRectMake(0, 0, WIDTH, [UIScreen mainScreen].bounds.size.height - 100 ) fontPercentSize:currentTextSize withLanguageType:self.lType withChangeChapterIndex:-1 withString:nil];
+}
+- (void)continueToPage
+{
+    if (!isHoldPage || Nil == chapterTmp) {
+        return;
+    }
+    isHoldPage = NO;
+    [self chapterDidFinishLoad:chapterTmp];
+    chapterTmp = Nil;
+}
+- (void)holdPage
+{
+    isHoldPage = YES;
+}
+- (void) chapterDidFinishLoad:(IYCChapter *)chapter {
+    if (stopPaging) {
+        return;
+    }
+    NSString *location = @"after";
+    
+    if(chapter.serverChapterId == self.fChapterId && chapterTmp==Nil) {
+        [self.delegate openBook:chapter.pageArray withLanguageType:self.lType];
+    }
+    else {
+        if (chapter.serverChapterId < self.fChapterId) {
+            location = @"before";
+        }
+        
+        if (!chapter.isParsed) {
+            [self.delegate chapterPaginationFinished:chapter andLocation:location];
+        }
+    }
+    if (isHoldPage) {
+        if (chapterTmp == Nil) {
+            chapterTmp = chapter;
+        }
+        return;
+    }
+    if(chapter.chapterIndex + 1 < [self.loadedEpub.spineArray count] && sID==realChapterID){
+        IYCChapter *tchapter = [self.loadedEpub.spineArray objectAtIndex:chapter.chapterIndex + 1];
+        tchapter.isParseParagraph = NO;
+        [tchapter setDelegate:self];
+        [tchapter loadChapterWithWindowSize:CGRectMake(0, 0, WIDTH, [UIScreen mainScreen].bounds.size.height - 100) fontPercentSize:currentTextSize withLanguageType:self.lType withChangeChapterIndex:-1 withString:nil];
+    }
+    else {
+        if (realChapterID - 1 >= 0) {
+            IYCChapter *tchapter1 = [self.loadedEpub.spineArray objectAtIndex:realChapterID - 1];
+            tchapter1.isParseParagraph = NO;
+            [tchapter1 setDelegate:self];
+            [tchapter1 loadChapterWithWindowSize:CGRectMake(0, 0, WIDTH, [UIScreen mainScreen].bounds.size.height - 100) fontPercentSize:currentTextSize withLanguageType:self.lType withChangeChapterIndex:-1 withString:nil];
+            realChapterID --;
+        } else {
+            DebugLog(@"Pagination Ended!");
+        }
+    }
+}
+
+
+
+@end
+

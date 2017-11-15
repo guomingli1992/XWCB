@@ -1,0 +1,30 @@
+//
+//  IYCWord.m
+//  iyangcong
+//
+//  Created by mingli 郭 on 2017/4/8.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "IYCWord.h"
+
+@implementation IYCWord
+
+@synthesize wordID;
+-(id)init
+{
+    if (self = [super init]) {
+        wordID = -1;
+    }
+    return self;
+}
+
+//-(id)initWithDict:(NSDictionary *)dic{
+//    if ([super init]) {
+//        self.wordID = [[dic objectForKey:@"wordID"] intValue];
+//        self.wordString = [dic objectForKey:@"wordString"];
+//        self.wordMeaning = [dic objectForKey:@"wordMeaning"];
+//    }
+//    return self;
+//}
+@end

@@ -1,0 +1,53 @@
+//
+//  IYCDbHelper.h
+//  iyangcong
+//
+//  Created by lxm on 2017/1/13.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+#import "IYCData.h"
+#import "IYCDataModel.h"
+
+#import <Foundation/Foundation.h>
+#import "FMDB.h"
+@interface IYCDbHelper : NSObject
+
+//获取句柄
++(IYCDbHelper*)sharedInstance;
+
+//打开数据库，返回此数据库
+-(FMDatabase*)openDataBasePath:(NSString*)userID;
+
+//根据用户ID获取本地数据库所有图书
+- (NSMutableArray *)getAllBookListId:(NSString*)userID;
+
+//根据用户ID获取本地数据库所有图书分组情况
+- (NSMutableArray *)getAllGroupListId:(NSString*)userID;
+
+//根据用户ID获取本地数据库图书顺序
+- (NSMutableArray *)getBookOrderId:(NSString*)userID;
+
+//根据某个图书ID获取该图书所在分组情况
+-(GroupInfo *)getGroupInfoByBookID:(NSInteger)bookID andUserId:(NSString*)userID;
+
+//创建图书分组
+-(void)addGroupList:(GroupInfo *)groupInfo andUserId:(NSString*)userID;
+
+
+- (void)deleteGroupByGroupId:(NSString *)groupId andUserId:(NSString*)userID;
+
+//更新分组信息
+-(void)upGroupList:(GroupInfo *)groupInfo andUserId:(NSString*)userID;
+
+//获取Group_List中最后一条数据
+-(GroupInfo *)getGroupListLastRowUserId:(NSString *)userID;
+
+//删除某图书ID本地所有信息，可用于批量删除
+-(void)deleteBookID:(NSArray*)bookIDArray andUserId:(NSString*)userID;
+
+//根据某个图书ID获取该图书全部信息
+-(NSMutableArray*)getBookInfoByBookID:(NSArray*)bookIDArray andUserId:(NSString*)userID;
+
+//更新新书全部信息
+-(void)upBookList:(NSMutableArray*)bookListArray andUserId:(NSString*)userID;
+@end

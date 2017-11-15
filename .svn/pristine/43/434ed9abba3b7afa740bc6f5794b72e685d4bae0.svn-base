@@ -1,0 +1,29 @@
+//
+//  IYCEventManager.h
+//  Reader
+//
+//  Created by Ian on 13-3-18.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCEventManager : NSObject
+
++ (void) Register:(id)target callback:(SEL)method event:(NSString *)name;
+
++ (void) Unregister:(id)target;
+
++ (void) Unregister:(id)target event:(NSString *)name;
+
+
+
++ (void) FireEvent:(NSString *)name;
+
++ (void) FireEvent:(id)target event:(NSString *)name;
+
++ (void) FireEvent:(id)target event:(NSString *)name  moreData:(NSDictionary *)moreData;
+
++ (void) FireErrorEvent:(id)target event:(NSString *)name error:(NSError *)error;
+
+@end

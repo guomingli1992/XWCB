@@ -1,0 +1,23 @@
+//
+//  IYCCongradientUserInfo.h
+//  IYangCongReader
+//
+//  Created by haley on 4/30/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCRequest.h"
+@interface IYCCongradientUserInfo : IYCRequest
+{
+    NSString  *accountId;
+    NSNumber  *start;
+    NSNumber  *maximumSize;
+    
+
+}
+@property (nonatomic,retain)NSString  *accountId;
+@property (nonatomic,retain)NSNumber  *start;
+@property (nonatomic,retain)NSNumber  *maximumSize;
+- (NSString *)getJSONString;
+@end

@@ -1,0 +1,65 @@
+//
+//  IYCUserInfo.m
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCUserInfo.h"
+
+@implementation IYCUserInfo
+
+@synthesize accountId = _accountId;
+
+@synthesize accountName = _accountName;
+
+@synthesize email = _email;
+
+@synthesize password = _password;
+
+@synthesize sessionId = _sessionId;
+
+- (id)initWithJSONDictionary: (NSDictionary*)jsonDic
+{
+    if (self = [super initWithJSONDictionary:jsonDic])
+    {
+        if (self.errorCode == ResponseErrorCode_Success)
+        {
+            self.sessionId = [jsonDic objectForKey:@"sessionId"];
+            
+            NSDictionary *accountDic = [jsonDic objectForKey:@"account"];
+            self.accountId = [accountDic objectForKey:@"accountId"];
+            self.accountName = [accountDic objectForKey:@"accountName"];
+            self.email = [accountDic objectForKey:@"email"];
+        }
+    }
+	return self;
+}
+
+
+- (NSString *)getJSONString {
+    
+    NSMutableDictionary *JSONDict = [super getJSONString];
+    
+    if (self.email) {
+        [JSONDict setObject:self.email forKey:@"email"];
+    }
+    
+    if (self.password) {
+        [JSONDict setObject:self.password forKey:@"password"];
+    }
+    
+    if (self.deviceType) {
+        [JSONDict setObject:self.deviceType forKey:@"deviceType"];
+    }
+    
+    if (self.deviceToken) {
+        [JSONDict setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+    
+    return JSONDict.JSONString;
+}
+
+
+@end

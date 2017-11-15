@@ -1,0 +1,24 @@
+//
+//  IYCTag.m
+//  IYangCongReader
+//
+//  Created by haley on 4/1/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCTag.h"
+
+@implementation IYCTag
+
+@synthesize tagName = _name;
+@synthesize tagID;
+
+- (id) initWithJSONDictionary:(NSDictionary *)jsonDict
+{
+    if (self = [super init]) {
+        
+    }
+    return self;
+    
+}
+@end

@@ -1,0 +1,15 @@
+//
+//  IYCBookDownload.m
+//  IYangCongReader
+//
+//  Created by she-mac on 4/1/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCBookDownload.h"
+
+@implementation IYCBookDownload
+
+
+
+@end

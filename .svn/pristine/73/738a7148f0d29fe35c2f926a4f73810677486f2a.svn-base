@@ -1,0 +1,20 @@
+//
+//  IYCSecretKey.h
+//  IYangCongReader
+//
+//  Created by haley on 5/2/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCRequest.h"
+@interface IYCSecretKey : IYCRequest
+{
+    NSString *key;
+
+
+}
+@property (nonatomic,retain) NSString *key;
+- (NSString *)getJSONString ;
+- (id)initWithJSONDictionary: (NSDictionary*)jsonDic;
+@end

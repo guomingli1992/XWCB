@@ -1,0 +1,58 @@
+//
+//  IYCWordDBAction.h
+//  iyangcong
+//
+//  Created by mingli 郭 on 2017/4/7.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCWord.h"
+
+@class IYCWordState;
+@interface IYCWordDBAction : NSObject
+{
+    NSUserDefaults *userManager;
+}
+
++(IYCWordDBAction *)sharedDBWordAction;
+
+//
+//IYCWord
+//
+
+- (NSArray *)queryAllWord;
+- (IYCWord *)queryWordByID:(long)wordID;
+- (int)deleteWordByID:(long)wordID;
+-(int)deleteWordByWordString:(NSString *)wordString;
+-(int)deleteWord;
+- (int)updateWord:(IYCWord *)word;
+- (int)saveWord:(IYCWord *)word;
+- (NSMutableArray *)queryWords:(int)fromNum to:(int)toNum;
+- (int)queryWords;
+-(int)insertWord:(IYCWord *)word;
+- (NSMutableArray *)selectWordDictByWordId:(long)wordId;
+- (NSMutableArray *)selectWordDictByWordId:(long)wordId andwordString:(NSString *)wordString;
+- (NSMutableArray *)selectWordByUserId:(long)userId andStatus:(int)status andDeleteString:(NSString *)worddeletestring;
+-(int)dropTable;
+- (NSMutableArray *)selectWordByUserId:(long)userId andStatus:(int)status andLevel:(NSString *)level ;
+-(int)updateWordId:(long)WordId WordStatusName:(WORDSTATUES_TYPE )status;
+
+-(int)updateWordId:(long)WordId wordString:(NSString *)wordString newWordId:(int)wordIdd;
+-(int)deleteWordByWordString:(NSString *)wordString andWordDeleteString:(NSString *)worddeletestring;
+
+-(int)deleteWordByWordString:(NSString *)wordString andTime:(NSString *)timeString;
+
+-(int)updateWordId:(long)WordId WordFavoriteName:(int)favoriteString;
+-(NSMutableArray *)selectWordByUserId:(long)userId andWordFavoriteName:(int)favoriteString andWordDeleteString:(NSString *)deleteString;
+-(NSMutableArray *)selectWord;
+-(NSMutableArray *)selectWord1;
+-(int)updateWordString:(NSString *)wordString andTime:(NSString *)upTime;
+-(NSMutableArray *)selectWordDictByWordString:(NSString *)wordString andUserId:(int)userId;
+-(int)updateWordId:(long)WordId ForTime:(NSString *)uptime;
+-(int)updateWordString:(NSString *)wordString WordFavoriteName:(int)favoriteString;
+-(NSMutableArray *)selectWordDictByWordString:(NSString *)wordString;
+-(int)updateWordString:(NSString *)wordString WordStatusName:(WORDSTATUES_TYPE )status;
+-(NSMutableArray *)selectWordbyWordNotEqual:(int)wordId;
+-(int)updateWordStr:(NSString *)wordstring ForTime:(NSString *)uptime;
+@end

@@ -1,0 +1,28 @@
+//
+//  IYCCurrentBookState.m
+//  IYangCongReader
+//
+//  Created by she-mac on 5/19/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCCurrentBookState.h"
+
+@implementation IYCCurrentBookState
+@synthesize accountId;
+@synthesize bookId;
+@synthesize changeTimes;
+@synthesize chapterNo;
+@synthesize languageType;
+@synthesize lastOprationTime;
+@synthesize lastReadTime;
+@synthesize lineNo;
+@synthesize pageNumber;
+@synthesize paragraphNo;
+@synthesize readSchedule;
+@synthesize serverBookId;
+@synthesize paragraphSchedule;
+
+
+
+@end

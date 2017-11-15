@@ -1,0 +1,316 @@
+//
+//  QueryLocalWord.m
+//  iyangcong
+//
+//  Created by lxm on 2017/4/20.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "QueryLocalWord.h"
+#import "XMLDictionary.h"
+#import "NSXmlKit/NSXmlKit.h"
+
+@implementation QueryLocalWord
+
+-(NSMutableDictionary *)queryLocalWordDictionary:(NSString *)theWord {
+
+    NSMutableDictionary *dict=[[NSMutableDictionary alloc] initWithDictionary:@{}];
+    int strLen = (int)theWord.length;
+    if (strLen==0) {
+        return dict;
+    }
+    NSString *first = @"";
+    NSString *xmlName = @"";
+    if (strLen == 1) {
+        first=[[theWord substringWithRange:NSMakeRange(0,1)] uppercaseString];
+        if ([first isEqualToString:@"A"]) {
+            xmlName = @"AA";
+        } else if ([first isEqualToString:@"B"]) {
+            xmlName = @"BA";
+        } else if ([first isEqualToString:@"C"]) {
+            xmlName = @"CA";
+        } else if ([first isEqualToString:@"D"]) {
+            xmlName = @"DA";
+        } else if ([first isEqualToString:@"E"]) {
+            xmlName = @"EA";
+        } else if ([first isEqualToString:@"F"]) {
+            xmlName = @"FA";
+        } else if ([first isEqualToString:@"G"]) {
+            xmlName = @"GA";
+        } else if ([first isEqualToString:@"H"]) {
+            xmlName = @"HA";
+        } else if ([first isEqualToString:@"I"]) {
+            xmlName = @"IA";
+        } else if ([first isEqualToString:@"G"]) {
+            xmlName = @"JA";
+        } else if ([first isEqualToString:@"K"]) {
+            xmlName = @"KA";
+        } else if ([first isEqualToString:@"L"]) {
+            xmlName = @"LA";
+        } else if ([first isEqualToString:@"M"]) {
+            xmlName = @"MA";
+        } else if ([first isEqualToString:@"N"]) {
+            xmlName = @"NA";
+        } else if ([first isEqualToString:@"O"]) {
+            xmlName = @"OA";
+        } else if ([first isEqualToString:@"P"]) {
+            xmlName = @"PA";
+        } else if ([first isEqualToString:@"Q"]) {
+            xmlName = @"QA";
+        } else if ([first isEqualToString:@"R"]) {
+            xmlName = @"RA";
+        } else if ([first isEqualToString:@"S"]) {
+            xmlName = @"SA";
+        } else if ([first isEqualToString:@"T"]) {
+            xmlName = @"TA";
+        } else if ([first isEqualToString:@"U"]) {
+            xmlName = @"UA";
+        } else if ([first isEqualToString:@"V"]) {
+            xmlName = @"VA";
+        } else if ([first isEqualToString:@"W"]) {
+            xmlName = @"WA";
+        } else if ([first isEqualToString:@"X"]) {
+            xmlName = @"XA";
+        } else if ([first isEqualToString:@"Y"]) {
+            xmlName = @"YA";
+        } else if ([first isEqualToString:@"Z"]) {
+            xmlName = @"ZA";
+        }
+        
+    } else if (strLen >= 2) {
+        first=[[theWord substringWithRange:NSMakeRange(0,1)] uppercaseString];
+        char secondChar =[[[theWord substringWithRange:NSMakeRange(1,1)] uppercaseString] characterAtIndex:0];
+
+        if ([first isEqualToString:@"A"]) {
+            if (secondChar >= 'A' && secondChar < 'J') {
+                xmlName = @"AA";
+            } else if (secondChar >= 'J' && secondChar < 'P') {
+                xmlName = @"AJ";
+            } else if (secondChar >= 'P') {
+                xmlName = @"AP";
+            }
+        } else if ([first isEqualToString:@"B"]) {
+            if (secondChar >= 'A' && secondChar < 'B') {
+                xmlName = @"BA";
+            } else if (secondChar >= 'B' && secondChar < 'I') {
+                xmlName = @"BB";
+            } else if (secondChar >= 'I' && secondChar < 'O') {
+                xmlName = @"BI";
+            } else if (secondChar >= 'O' && secondChar < 'R') {
+                xmlName = @"BO";
+            } else if (secondChar >= 'R') {
+                xmlName = @"BR";
+            }
+        } else if ([first isEqualToString:@"C"]) {
+            if (secondChar >= 'A' && secondChar < 'B') {
+                xmlName = @"CA";
+            } else if (secondChar >= 'B' && secondChar < 'I') {
+                xmlName = @"CB";
+            } else if (secondChar >= 'I' && secondChar < 'O') {
+                xmlName = @"CI";
+            } else if (secondChar >= 'O' && secondChar < 'P') {
+                xmlName = @"CO";
+            } else if (secondChar >= 'P') {
+                xmlName = @"CP";
+            }
+        } else if ([first isEqualToString:@"D"]) {
+            if (secondChar >= 'A' && secondChar < 'E') {
+                xmlName = @"DA";
+            } else if (secondChar >= 'E' && secondChar < 'I') {
+                xmlName = @"DE";
+            } else if (secondChar >= 'I' && secondChar < 'J') {
+                xmlName = @"DI";
+            } else if (secondChar >= 'J' && secondChar < 'P') {
+                xmlName = @"DJ";
+            } else if (secondChar >= 'P') {
+                xmlName = @"DP";
+            }
+        } else if ([first isEqualToString:@"E"]) {
+            if (secondChar >= 'A' && secondChar < 'N') {
+                xmlName = @"EA";
+            } else if (secondChar >= 'N') {
+                xmlName = @"EN";
+            }
+        } else if ([first isEqualToString:@"F"]) {
+            if (secondChar >= 'A' && secondChar < 'L') {
+                xmlName = @"FA";
+            } else if (secondChar >= 'L') {
+                xmlName = @"FL";
+            }
+        } else if ([first isEqualToString:@"G"]) {
+            if (secondChar >= 'A' && secondChar < 'M') {
+                xmlName = @"GA";
+            } else if (secondChar >= 'M') {
+                xmlName = @"GM";
+            }
+        } else if ([first isEqualToString:@"H"]) {
+            if (secondChar >= 'A' && secondChar < 'F') {
+                xmlName = @"HA";
+            } else if (secondChar >= 'F') {
+                xmlName = @"HF";
+            }
+        } else if ([first isEqualToString:@"I"]) {
+            if (secondChar >= 'A' && secondChar < 'N') {
+                xmlName = @"IA";
+            } else if (secondChar >= 'N') {
+                xmlName = @"IN";
+            }
+        } else if ([first isEqualToString:@"J"]) {
+            xmlName = @"JA";
+        } else if ([first isEqualToString:@"K"]) {
+            xmlName = @"KA";
+        } else if ([first isEqualToString:@"L"]) {
+            if (secondChar >= 'A' && secondChar < 'I') {
+                xmlName = @"LA";
+            } else if (secondChar >= 'I') {
+                xmlName = @"LI";
+            }
+        } else if ([first isEqualToString:@"M"]) {
+            if (secondChar >= 'A' && secondChar < 'B') {
+                xmlName = @"MA";
+            } else if (secondChar >= 'B' && secondChar < 'K') {
+                xmlName = @"MB";
+            } else if (secondChar >= 'K') {
+                xmlName = @"MK";
+            }
+        } else if ([first isEqualToString:@"N"]) {
+            xmlName = @"NA";
+        } else if ([first isEqualToString:@"O"]) {
+            xmlName = @"OA";
+        } else if ([first isEqualToString:@"P"]) {
+            if (secondChar >= 'A' && secondChar < 'E') {
+                xmlName = @"PA";
+            } else if (secondChar >= 'E' && secondChar < 'G') {
+                xmlName = @"PE";
+            } else if (secondChar >= 'G' && secondChar < 'P') {
+                xmlName = @"PG";
+            } else if (secondChar >= 'P' && secondChar < 'R') {
+                xmlName = @"PP";
+            } else if (secondChar >= 'R' && secondChar < 'Y') {
+                xmlName = @"PR";
+            } else if (secondChar >= 'Y') {
+                xmlName = @"PY";
+            }
+        } else if ([first isEqualToString:@"Q"]) {
+            xmlName = @"QA";
+        } else if ([first isEqualToString:@"R"]) {
+            if (secondChar >= 'A' && secondChar < 'E') {
+                xmlName = @"RA";
+            } else if (secondChar >= 'E' && secondChar < 'H') {
+                xmlName = @"RE";
+            } else if (secondChar >= 'H' && secondChar < 'Y') {
+                xmlName = @"RH";
+            } else if (secondChar >= 'Y') {
+                xmlName = @"RY";
+            }
+        } else if ([first isEqualToString:@"S"]) {
+            if (secondChar >= 'A' && secondChar < 'E') {
+                xmlName = @"SA";
+            } else if (secondChar >= 'E' && secondChar < 'G') {
+                xmlName = @"SE";
+            } else if (secondChar >= 'G' && secondChar < 'O') {
+                xmlName = @"SG";
+            } else if (secondChar >= 'O' && secondChar < 'P') {
+                xmlName = @"SO";
+            } else if (secondChar >= 'P' && secondChar < 'T') {
+                xmlName = @"SP";
+            } else if (secondChar >= 'T' && secondChar < 'U') {
+                xmlName = @"ST";
+            } else if (secondChar >= 'U' && secondChar < 'Y') {
+                xmlName = @"SU";
+            } else if (secondChar >= 'Y') {
+                xmlName = @"SY";
+            }
+        } else if ([first isEqualToString:@"T"]) {
+            if (secondChar >= 'A' && secondChar < 'H') {
+                xmlName = @"TA";
+            } else if (secondChar >= 'H' && secondChar < 'I') {
+                xmlName = @"TH";
+            } else if (secondChar >= 'I' && secondChar < 'Z') {
+                xmlName = @"TI";
+            } else if (secondChar >= 'Z') {
+                xmlName = @"TZ";
+            }
+        } else if ([first isEqualToString:@"U"]) {
+            xmlName = @"UA";
+        } else if ([first isEqualToString:@"V"]) {
+            xmlName = @"VA";
+        } else if ([first isEqualToString:@"W"]) {
+            if (secondChar >= 'A' && secondChar < 'E') {
+                xmlName = @"WA";
+            } else if (secondChar >= 'E' && secondChar < 'H') {
+                xmlName = @"WE";
+            } else if (secondChar >= 'H' && secondChar < 'I') {
+                xmlName = @"WH";
+            } else if (secondChar >= 'I' && secondChar < 'K') {
+                xmlName = @"WI";
+            } else if (secondChar >= 'K' && secondChar < 'Y') {
+                xmlName = @"WK";
+            } else if (secondChar >= 'Y') {
+                xmlName = @"WY";
+            }
+        } else if ([first isEqualToString:@"X"]) {
+            xmlName = @"XA";
+        } else if ([first isEqualToString:@"Y"]) {
+            xmlName = @"YA";
+        } else if ([first isEqualToString:@"Z"]) {
+            xmlName = @"ZA";
+        }
+    }
+    
+    NSString *tmp=[[theWord substringWithRange:NSMakeRange(0, 1)] lowercaseString];
+    
+    NSString *imagePath = [[NSBundle mainBundle] pathForResource:tmp ofType:@"json"];
+    
+    NSData *jsonData =[[NSData alloc]initWithContentsOfFile:imagePath];
+    
+    NSError *err;
+    
+    NSDictionary *dic;
+    if (jsonData) {
+        dic = [NSJSONSerialization JSONObjectWithData:jsonData
+               
+                                              options:NSJSONReadingMutableContainers
+               
+                                                error:&err];
+    }
+    else
+        dic =[[NSDictionary alloc]init];
+
+    
+    
+    NSString *levelStr=[dic objectForKey:[theWord lowercaseString]]?[dic objectForKey:[theWord lowercaseString]]:@"";
+    
+    [dict setObject:levelStr forKey:@"WordLevel"];
+    
+    NSString *DictXmlPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.xml",xmlName]];
+    
+    NSString *xmlString =[[NSString alloc]initWithContentsOfFile:DictXmlPath encoding:NSUTF8StringEncoding error:NULL];
+    NSDictionary *xmlDoc = [NSDictionary dictionaryWithXMLString:xmlString];
+    
+    NSMutableArray *tmpArray=[xmlDoc objectForKey:@"entry"];
+    for (int i=0; i<tmpArray.count; i++) {
+        if ([[[[tmpArray objectAtIndex:i] objectForKey:@"head"] objectForKey:@"word"] isKindOfClass:[NSString class]]&&[[[[tmpArray objectAtIndex:i] objectForKey:@"head"] objectForKey:@"word"] isEqualToString:[theWord lowercaseString]]) {
+            dict=[[NSMutableDictionary alloc] initWithDictionary:[[tmpArray objectAtIndex:i] objectForKey:@"body"]];
+            break;
+        }
+        else if ([[[[tmpArray objectAtIndex:i] objectForKey:@"head"] objectForKey:@"word"] isKindOfClass:[NSDictionary class]]&&[[[[[tmpArray objectAtIndex:i] objectForKey:@"head"] objectForKey:@"word"] objectForKey:@"_text"] isEqualToString:[theWord lowercaseString]]){
+            dict=[[NSMutableDictionary alloc] initWithDictionary:[[tmpArray objectAtIndex:i] objectForKey:@"body"]];
+            break;
+        }
+        else if ([[[[tmpArray objectAtIndex:i] objectForKey:@"head"] objectForKey:@"word"] isKindOfClass:[NSDictionary class]]&&[[[[[tmpArray objectAtIndex:i] objectForKey:@"head"] objectForKey:@"word"] objectForKey:@"__text"] isEqualToString:[theWord lowercaseString]]){
+            dict=[[NSMutableDictionary alloc] initWithDictionary:[[tmpArray objectAtIndex:i] objectForKey:@"body"]];
+            break;
+        }
+        else if ([[[[tmpArray objectAtIndex:i] objectForKey:@"head"] objectForKey:@"word"] isKindOfClass:[NSArray class]]&&[[[[[[tmpArray objectAtIndex:i] objectForKey:@"head"] objectForKey:@"word"] objectAtIndex:0] lowercaseString] isEqualToString:[theWord lowercaseString]]){
+            dict=[[NSMutableDictionary alloc] initWithDictionary:[[tmpArray objectAtIndex:i] objectForKey:@"body"]];
+            break;
+        }
+
+    }
+    
+    [dict setObject:levelStr forKey:@"WordLevel"];
+
+    return dict;
+}
+@end

@@ -1,0 +1,21 @@
+//
+//  IYCUpdateUserInfo.h
+//  IYangCongReader
+//
+//  Created by haley on 4/26/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCRequest.h"
+@interface IYCUpdateUserInfo : IYCRequest
+{
+    NSString *accountId;
+    NSArray *bookListArray;
+
+}
+@property (nonatomic,retain)NSString *accountId;
+@property (nonatomic,retain)NSArray *bookListArray;
+- (NSString *)getJSONString;
+- (id)initWithJSONDictionary: (NSDictionary*)jsonDic;
+@end

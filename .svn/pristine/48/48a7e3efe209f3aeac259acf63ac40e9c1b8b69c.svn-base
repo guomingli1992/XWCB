@@ -1,0 +1,23 @@
+//
+//  IYCAccount.h
+//  IYangCongReader
+//
+//  Created by haley on 4/15/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCAccount : NSObject
+{
+    NSUserDefaults *userManager;
+}
+//@property (nonatomic,retain)NSArray *bookmark;
+@property (nonatomic,copy)NSString *accountID;
+@property (nonatomic)int fontSize;
+@property (nonatomic)float brightness;
+@property (nonatomic)int nightMode;
+@property (nonatomic) float readingProgress;
+@property (nonatomic, retain) NSDate *lastReadTime; // decide the sequence in My BookShelf page
+
+@end

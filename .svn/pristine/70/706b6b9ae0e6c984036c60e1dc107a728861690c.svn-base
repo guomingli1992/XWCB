@@ -1,0 +1,36 @@
+//
+//  SearchResultsViewController.h
+//  AePubReader
+//
+//  Created by Federico Frappi on 05/05/11.
+//  Copyright 2011 __MyCompanyName__. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "IYCBookEdition.h"
+#import "IYCSearchResult.h"
+@protocol IYCSearchResultsViewControllerDelegate <NSObject>
+
+@required
+
+- (void) loadSpine:(int)spineIndex atPageIndex:(int)pageIndex highlightSearchResult:(IYCSearchResult*)theResult;
+- (void) searchFinished:(int)result;
+@end
+
+@interface IYCSearchResultsViewController : UIViewController <UITableViewDataSource, UITableViewDelegate, UIWebViewDelegate> {
+    UITableView* resultsTableView;
+    NSMutableArray* results;
+//    IYCBookEdition* epubViewController;
+//    id <IYCSearchResultsViewControllerDelegate> delegate;
+    int currentChapterIndex;
+    NSString* currentQuery;
+}
+@property (nonatomic, assign)id <IYCSearchResultsViewControllerDelegate> delegate;
+@property (nonatomic, retain) IBOutlet UITableView* resultsTableView;
+@property (nonatomic, assign) IYCBookEdition* epubViewController;
+@property (nonatomic, retain) NSMutableArray* results;
+@property (nonatomic, retain) NSString* currentQuery;
+
+- (void) searchString:(NSString*)query;
+
+@end

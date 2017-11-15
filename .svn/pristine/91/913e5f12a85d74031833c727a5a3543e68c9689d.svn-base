@@ -1,0 +1,125 @@
+//
+//  IYCNoteService.m
+//  IYangCongReader
+//
+//  Created by 马腾 on 15/7/15.
+//  Copyright (c) 2015年 IYangCong. All rights reserved.
+//
+
+#import "IYCNoteService.h"
+#import "IYCSaveNoteResp.h"
+#import "IYCGetNoteResp.h"
+#import "IYCDeleteNoteResp.h"
+#import "IYCURLUtil.h"
+
+@implementation IYCNoteService
+
+- (void)setType:(IYCNOTESERVICE_TYPE)type
+{
+    m_type = type;
+}
+
+- (void)sendNote:(IYCSaveNoteReq *)request{
+    NSURL *url = [NSURL URLWithString:[IYCURLUtil saveNoteUrl]];
+    request.deviceType = [self getDeviceType:[self getPhoneModel]];
+    request.deviceToken = [self getDeviceToken];
+    DebugLog(@"request json: %@",[request getJSONString]);
+    [self initRequest:url withBody:[request getJSONString]];
+    
+    //ADD SESSION
+    NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+    NSString *sessionID = [NSString stringWithFormat:@"JSESSIONID=%@",[userdefaults objectForKey:KEY_SessionID]];
+    [self.request addRequestHeader:@"Cookie" value:sessionID];
+    
+    [self startAsynRequest];
+    
+}
+
+- (void)getNote:(IYCGetNoteReq *)request{
+    NSURL *url = [NSURL URLWithString:[IYCURLUtil getNoteUrl]];
+    request.deviceType = [self getDeviceType:[self getPhoneModel]];
+    request.deviceToken = [self getDeviceToken];
+    DebugLog(@"request json: %@",[request getJSONString]);
+    [self initRequest:url withBody:[request getJSONString]];
+    
+    //ADD SESSION
+    NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+    NSString *sessionID = [NSString stringWithFormat:@"JSESSIONID=%@",[userdefaults objectForKey:KEY_SessionID]];
+    [self.request addRequestHeader:@"Cookie" value:sessionID];
+    
+    [self startAsynRequest];
+    
+}
+- (void) deleteNote:(IYCDeleteNoteReq *)request
+{
+    NSURL *url = [NSURL URLWithString:[IYCURLUtil saveNoteUrl]];
+    request.deviceType = [self getDeviceType:[self getPhoneModel]];
+    request.deviceToken = [self getDeviceToken];
+    DebugLog(@"request json: %@",[request getJSONString]);
+    [self initRequest:url withBody:[request getJSONString]];
+    
+    //ADD SESSION
+    NSUserDefaults *userdefaults = [NSUserDefaults standardUserDefaults];
+    NSString *sessionID = [NSString stringWithFormat:@"JSESSIONID=%@",[userdefaults objectForKey:KEY_SessionID]];
+    [self.request addRequestHeader:@"Cookie" value:sessionID];
+    
+    [self startAsynRequest];
+ 
+}
+
+
+#pragma mark -
+#pragma mark ASIHTTPRequestDelegate method
+- (void)requestFinished:(ASIHTTPRequest *)requestParam {
+    NSString *jsonString = [requestParam responseString];
+    
+    DebugLog(@"response json:%@",jsonString);
+    NSString *classStr = nil;
+    
+    if (m_type == IYCNOTESERVICE_TYPE_SAVENOTE) {
+        classStr = NSStringFromClass([IYCSaveNoteResp class]);
+    }
+    if (m_type == IYCNOTESERVICE_TYPE_GETNOTE) {
+        classStr = NSStringFromClass([IYCGetNoteResp class]);
+    }
+    if (m_type == IYCNOTESERVICE_TYPE_DELETEONENOTE) {
+        classStr = NSStringFromClass([IYCDeleteNoteResp class]);
+
+    }
+    
+    IYCRequest *resp = [[[NSClassFromString(classStr) alloc] init] initWithJSONDictionary:[jsonString objectFromJSONString]];
+
+    if (resp.errorCode == ResponseErrorCode_Success)
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidSuccess:)]) {
+            [self.delegate requestDidSuccess:resp];
+        }
+        else
+        {
+            if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+                [self.delegate requestDidFailed:resp];
+            }
+        }
+    }
+    if (resp.errorCode == ResponseErrorCode_SessionExpired)
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+            [self.delegate requestDidFailed:resp];
+        }
+    }
+    
+    
+    
+}
+
+- (void)requestFailed:(ASIHTTPRequest *)requestParam {
+    IYCSaveNoteResp *resp = [[IYCSaveNoteResp alloc] init];
+    resp.errorCode = ResponseErrorCode_RequestAccessFailed;
+    
+    DebugLog(@"error Message: %@", resp.errorMessage);
+    if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+        [self.delegate requestDidFailed:resp];
+    }
+}
+
+@end

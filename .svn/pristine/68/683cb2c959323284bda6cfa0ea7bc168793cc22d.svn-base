@@ -1,0 +1,71 @@
+
+
+#import "IYCCheckNetwork.h"
+#import "Reachability.h"
+#import "IYCConfig.h"
+#import "IYCFileUtils.h"
+//static BOOL isAvailable = NO;
+
+@implementation IYCCheckNetwork
+
++(NetworkStatus)curNetworkStatus
+{
+    NetworkStatus currentStatus = [[Reachability reachabilityForInternetConnection]
+                                   currentReachabilityStatus];
+    return currentStatus;
+}
+
++(BOOL)isServiceAvailable {
+	BOOL isAvailable = NO;
+	Reachability *r = [Reachability reachabilityWithHostName:[IYCFileUtils getWebServiceHost]];
+    switch ([r currentReachabilityStatus]) {
+        case NotReachable:
+			isAvailable=FALSE;
+         //   DebugLog(@"没有网络");
+            break;
+        case ReachableViaWWAN:
+			isAvailable=TRUE;
+         //   DebugLog(@"正在使用3G网络");
+            break;
+        case ReachableViaWiFi:
+			isAvailable=TRUE;
+          //  DebugLog(@"正在使用wifi网络");        
+            break;
+    }
+    return isAvailable;
+}
+
++ (void)showNetworkStatusMessage:(NSString *)message inView:(UIView *)aView {
+    MBProgressHUD *HUD = [[MBProgressHUD alloc] initWithView:aView];
+    [HUD setOpacity:0.65f];
+    [aView addSubview:HUD];
+    
+    
+    UILabel *customerLabel = [[UILabel alloc] init];
+    customerLabel.text = message;
+    [customerLabel setBackgroundColor:[UIColor clearColor]];
+    [customerLabel setTextColor:[UIColor whiteColor]];
+    [customerLabel setFont:[UIFont systemFontOfSize:13]];
+    CGSize customerLabelSize = [customerLabel.text sizeWithFont:[UIFont systemFontOfSize:13]];
+    CGFloat labelWidth = customerLabelSize.width <= 200.0 ? customerLabelSize.width : 200.0;
+    int lines = ((int)customerLabelSize.width%(int)labelWidth == 0) ? customerLabelSize.width/labelWidth : customerLabelSize.width/labelWidth+1;
+    [customerLabel setNumberOfLines:lines];
+    CGFloat actualHeight = lines*customerLabelSize.height;
+    customerLabel.frame = CGRectMake(0, 0, labelWidth, actualHeight);
+    HUD.customView = customerLabel;
+    HUD.mode = MBProgressHUDModeCustomView;
+    [HUD show:YES];
+    
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults]; 
+    NSArray *languages = [defaults objectForKey:@"AppleLanguages"]; 
+    NSString *currentLanguage = [languages objectAtIndex:0];
+    if ([@"zh-Hans" isEqualToString:currentLanguage]) {
+        [HUD hide:YES afterDelay:3];
+    } else {
+        [HUD hide:YES afterDelay:5];
+    }
+}
+
+
+
+@end

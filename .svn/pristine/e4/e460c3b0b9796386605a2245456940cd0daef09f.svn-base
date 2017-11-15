@@ -1,0 +1,19 @@
+//
+//  IYCParseBook.h
+//  IYangCongReader
+//
+//  Created by she-mac on 6/24/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCParseBook : NSObject
+
+@property  int  parseId;
+@property  long bookId;
+@property  int  epubEdition; //0:chinese 1:english
+@property  float  fontSize;
+@property  int   isSaveFinished;  //0:false 1:true
+
+@end

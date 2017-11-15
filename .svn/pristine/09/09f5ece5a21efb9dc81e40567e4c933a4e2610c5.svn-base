@@ -1,0 +1,30 @@
+/**
+ * cmd: send command and parameters to Objective-C
+ */
+try {
+(function(window, $, undefined) {
+
+    // cmd
+    var cmd = window.cmd = function(command, parameters) {
+	var __location = encodeURI("cmd://" + command + "?" + $.param(parameters || {}));
+        window.location = __location;
+    };
+
+    cmd.didSelectText = function(atPointX, atPointY) {
+				cmd("didSelectText", {
+					"atPointX":atPointX,
+					"atPointY":atPointY
+				});
+			};
+ 
+	cmd.saveSelectedNodeInfo = function(node) {
+		cmd("saveSelectedNodeInfo", node);
+	}
+
+})(this, jQuery);
+
+}
+catch (error) {
+    alert("cmd.js error: " + error);
+}
+

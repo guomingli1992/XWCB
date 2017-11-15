@@ -1,0 +1,37 @@
+//
+//  IYCDeleteNoteResp.m
+//  IYangCongReader
+//
+//  Created by 马腾 on 15/7/22.
+//  Copyright (c) 2015年 IYangCong. All rights reserved.
+//
+
+#import "IYCDeleteNoteResp.h"
+#import "IYCNote.h"
+
+@implementation IYCDeleteNoteResp
+@synthesize minutes;
+
+//- (NSString *)getJSONString
+//{
+//
+//}
+
+- (id)initWithJSONDictionary:(NSDictionary *)jsonDic
+{
+    if (self = [super initWithJSONDictionary:jsonDic]) {
+        NSMutableArray *temp = [[NSMutableArray alloc] init];
+        NSArray *list = [jsonDic objectForKey:@"minutes"];
+        for (NSDictionary * dic in list) {
+            IYCNote *note = [[IYCNote  alloc] initWithDic:dic];
+            [temp addObject:note];
+            
+        }
+        self.minutes = temp;
+    }
+    return self;
+    
+}
+
+
+@end

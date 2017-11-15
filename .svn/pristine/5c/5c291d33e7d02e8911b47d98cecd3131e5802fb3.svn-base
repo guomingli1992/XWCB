@@ -1,0 +1,19 @@
+//
+//  IYCReactionToBook.h
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-8-15.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "IYCNavigationBar.h"
+#import "IYCBook.h"
+#import "IYCService.h"
+@interface IYCReactionToBook : UIView<UITableViewDataSource,UITableViewDelegate,IYCNavigationBarDelegate,IYCServiceDelegate>
+{
+    NSMutableArray * bookReviewArray;
+    IYCBook * readingBook;
+}
+- (id)initWithBookId:(long)bookId andFrame:(CGRect)frame;
+@end

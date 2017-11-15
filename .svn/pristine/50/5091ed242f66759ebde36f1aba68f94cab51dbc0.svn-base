@@ -1,0 +1,57 @@
+//
+//  IYCBookByIdService.m
+//  IYangCongReader
+//
+//  Created by Lolo on 13-5-17.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//  说明：请求服务器类（按照bookID获取书籍信息）
+
+#import "IYCBookByIdService.h"
+#import "IYCURLUtil.h"
+#import "IYCBookByIdRequest.h"
+@implementation IYCBookByIdService
+
+- (void)getBookById:(IYCBookByIdRequest *)request{
+    NSURL *url = [NSURL URLWithString:[IYCURLUtil getBookByIdUrl]];
+    DebugLog(@"url == %@",url);
+    request.deviceType = [self getDeviceType:[self getPhoneModel]];
+    request.deviceToken = [self getDeviceToken];
+    DebugLog(@"request json: %@",[request getJSONString]);
+    [self initRequest:url withBody:[request getJSONString]];
+    
+    [self startAsynRequest];
+}
+
+
+
+#pragma mark -
+#pragma mark ASIHTTPRequestDelegate method
+- (void)requestFinished:(ASIHTTPRequest *)requestParam {
+    NSString *jsonString = [requestParam responseString];
+    DebugLog(@"response json:%@",jsonString);
+    
+    IYCBookByIdRequest *book = [[IYCBookByIdRequest alloc] initWithJSONDictionary:[jsonString objectFromJSONString]];
+    
+    if (book.errorCode == ResponseErrorCode_Success) {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidSuccess:)]) {
+            [self.delegate requestDidSuccess:book];
+        }
+    }
+    else
+    {
+        if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+            [self.delegate requestDidFailed:book];
+        }
+    }
+}
+
+- (void)requestFailed:(ASIHTTPRequest *)requestParam {
+    NSString *jsonString = [requestParam responseString];
+    DebugLog(@"error Message:%@",jsonString);
+    IYCBookByIdRequest *book = [[IYCBookByIdRequest alloc] initWithJSONDictionary:[jsonString objectFromJSONString]];
+    if (self.delegate && [self.delegate respondsToSelector:@selector(requestDidFailed:)]) {
+        [self.delegate requestDidFailed:book];
+    }
+}
+
+@end

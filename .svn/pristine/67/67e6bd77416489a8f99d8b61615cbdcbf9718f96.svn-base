@@ -1,0 +1,29 @@
+//
+//  IYCPurchaseData.h
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-10-15.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+typedef enum _purchaseStatus
+{
+    PurchaseStatus_BuySuccess = 0,//购买成功
+    PurchaseStatus_PaySuccess = 1,//付款成功，但尚未获得服务器验证
+    PurchaseStatus_NotPaid = 2//付款失败
+    
+}purchaseStatus;
+
+@interface IYCPurchaseData : NSObject
+{
+
+}
+@property (nonatomic, assign) NSInteger purchaseDataId;
+@property (nonatomic, retain) NSString * orderId;//服务器保证其唯一性。
+@property (nonatomic, retain) NSString * receiptData;
+@property (nonatomic, assign) purchaseStatus status;
+@property (nonatomic, retain) NSString * accountId;
+@property (nonatomic, retain) NSString * productId;
+@end

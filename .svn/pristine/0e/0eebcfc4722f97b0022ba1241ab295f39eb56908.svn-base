@@ -1,0 +1,25 @@
+//
+//  IYCTranslationViewController.h
+//  IYangCongReader
+//
+//  Created by Lolo on 13-8-12.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "childSuperViewController.h"
+@interface IYCTranslationViewController : childSuperViewController<UIWebViewDelegate>
+{
+}
+@property (nonatomic,strong)NSString *ParaId;
+@property (nonatomic,strong)NSString *bookId;
+@property (nonatomic,strong)NSString *keyWordStr;
+@property (nonatomic,strong)NSString *readingRecordLogId;
+
+@property (nonatomic,strong)NSDictionary *youdaoInfoDict;
+- (void)setKeyWordStr:(NSString *)str;
+- (void)setKeyParaId:(NSString *)ParaId;
+- (void)setBookId:(NSString *)bookId;
+- (void)setreadingRecordLogId:(NSString *)readingRecordLogId;
+
+@end

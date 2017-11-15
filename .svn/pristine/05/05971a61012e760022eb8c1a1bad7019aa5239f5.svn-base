@@ -1,0 +1,14 @@
+//
+//  IYCLoginService.h
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//  说明：请求服务器类（用户登录）
+
+#import <Foundation/Foundation.h>
+#import "IYCService.h"
+@interface IYCLoginService : IYCService
+
+- (void)getLoginByEmail:(NSString *)email password:(NSString *)passwordNumber;
+@end

@@ -1,0 +1,42 @@
+//
+//  IYCCongradientUserInfo.m
+//  IYangCongReader
+//
+//  Created by haley on 4/30/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCCongradientUserInfo.h"
+
+@implementation IYCCongradientUserInfo
+@synthesize accountId;
+@synthesize maximumSize;
+@synthesize start;
+- (NSString *)getJSONString {
+    
+    NSMutableDictionary *JSONDict = [super getJSONString];
+    
+    if (self.start) {
+        [JSONDict setObject:self.start forKey:@"start"];
+    }
+    
+    if (self.maximumSize) {
+        [JSONDict setObject:self.maximumSize forKey:@"maximumSize"];
+    }
+    
+    if (self.deviceType) {
+        [JSONDict setObject:self.deviceType forKey:@"deviceType"];
+    }
+    
+    if (self.deviceToken) {
+        [JSONDict setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+    
+    if (self.accountId) {
+        [JSONDict setObject:self.accountId forKey:@"accountId"];
+    }
+    return JSONDict.JSONString;
+}
+
+
+@end

@@ -1,0 +1,170 @@
+//
+//  IYCSearchViewController.m
+//  IYangCongReader
+//
+//  Created by haley on 5/13/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCSearchReadingViewController.h"
+#import "IYCReadingViewController.h"
+
+@interface IYCSearchReadingViewController ()
+
+@end
+
+@implementation IYCSearchReadingViewController
+@synthesize currentBookEdition;
+@synthesize currentLang;
+@synthesize delegate;
+@synthesize bookTitle;
+@synthesize resultTitle;
+@synthesize resultLine;
+@synthesize mySearchBar;
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        searchResViewController = [[IYCSearchResultsViewController alloc] init];
+        searchResViewController.view.frame = CGRectMake(0, 135, WIDTH1, self.view.bounds.size.height-135);
+        [self.view addSubview:searchResViewController.view];
+        searchResViewController.delegate = self;
+        mySearchBar.tintColor = [UIColor colorWithRed:153/255.0 green:134/255.0 blue:117/255.0 alpha:1.0];
+        mySearchBar.backgroundColor = [UIColor clearColor];
+        [mySearchBar setBackgroundImage:[UIImage imageNamed:@"navigationBar"]];
+        // Custom initialization
+    }
+    return self;
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [[UIApplication sharedApplication] setStatusBarHidden:NO];
+}
+
+- (BOOL)prefersStatusBarHidden{
+    return YES;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+}
+
+- (void)showSearchReadingView
+{
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationCurve:UIViewAnimationCurveEaseInOut];
+    [UIView setAnimationDuration:0.5];
+    self.view.frame = CGRectMake(0, 0, WIDTH1, self.view.bounds.size.height);
+    [UIView commitAnimations];
+    
+}
+
+- (IBAction)hideSearchReadingView
+{
+
+    [mySearchBar resignFirstResponder];
+    
+    [self.readingVC refreshViews];
+    
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+- (void)setSearchText:(NSString *)text
+{
+    mySearchBar.text = text;
+    
+    self.resultTitle.hidden = YES;
+    self.resultLine.hidden = YES;
+    label.hidden = NO;
+    noResultView.hidden = YES;
+    if (text && [text isEqualToString:@""]) {
+        searchResViewController.resultsTableView.hidden = YES ;
+    } else {
+        searchResViewController.resultsTableView.hidden = NO ;
+        
+        [mySearchBar.delegate searchBarSearchButtonClicked:mySearchBar];
+    
+    }
+   
+
+
+
+}
+- (void)searchBarCancelButtonClicked:(UISearchBar *) searchBar
+{
+    DebugLog(@"?????");
+    [self dismissViewControllerAnimated:YES completion:nil];
+    
+    [searchBar resignFirstResponder];
+
+}
+
+- (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar{
+    
+    self.resultTitle.hidden = YES;
+    self.resultLine.hidden = YES;
+
+    searchResViewController.resultsTableView.hidden = NO;
+    noResultView.hidden = YES;
+    bgView = [[UIView alloc] initWithFrame:CGRectMake(0, 64, WIDTH1, [[UIScreen mainScreen] bounds].size.height-64)];
+    bgView.backgroundColor = [UIColor blackColor];
+    bgView.alpha = 0.6;
+    [self.view addSubview:bgView];
+    
+    
+    spinner = [[UIActivityIndicatorView alloc] initWithFrame:CGRectMake(150, 160,WIDTH1-300, 20)];
+    spinner.activityIndicatorViewStyle = UIActivityIndicatorViewStyleWhiteLarge;
+    [self.view addSubview:spinner];
+    [spinner startAnimating];
+    
+    waitingView = [[UILabel alloc] initWithFrame:CGRectMake(100, 200,WIDTH1-200, 20)];
+    waitingView.backgroundColor = [UIColor clearColor];
+    waitingView.textColor = [UIColor whiteColor];
+    waitingView.textAlignment = NSTextAlignmentCenter;
+    waitingView.font = [UIFont systemFontOfSize:12];
+    waitingView.text = @"努力搜寻中…";
+    [self.view addSubview:waitingView];
+    label.hidden = YES;
+    
+    [searchBar resignFirstResponder];
+    searchResViewController.epubViewController = self.currentBookEdition;
+    
+    [searchResViewController searchString:[searchBar text]];
+   
+}
+- (void) loadSpine:(int)spineIndex atPageIndex:(int)pageIndex highlightSearchResult:(IYCSearchResult*)theResult
+{
+    if (delegate && [delegate respondsToSelector:@selector(loadSpine: atPageIndex: highlightSearchResult:)]) {
+        [delegate loadSpine:spineIndex atPageIndex:pageIndex highlightSearchResult:theResult];
+    }
+
+
+
+}
+
+- (void) searchFinished:(int)result
+{
+    
+    if (result>0) {
+        self.resultTitle.text = [NSString stringWithFormat:@"已找到%d条结果",result];
+        self.resultTitle.hidden = NO;
+        self.resultLine.hidden = NO;
+    } else {
+    
+        noResultView.hidden = NO;
+    
+    }
+    label.hidden = YES;
+    waitingView.hidden = YES;
+    [spinner stopAnimating];
+    [spinner removeFromSuperview];
+    [bgView removeFromSuperview];
+
+}
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+@end

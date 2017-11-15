@@ -1,0 +1,116 @@
+//
+//  IYCBook.m
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCBook.h"
+#import "IYCBookEdition.h"
+@implementation IYCBook
+@synthesize bookId = _bookId;
+@synthesize bookServerId = _bookServerId;
+@synthesize bookType = _bookType;
+@synthesize bookSize = _bookSize;
+@synthesize bookCatalogId = _bookCatalogId;
+@synthesize bookPriceRMB = _bookPriceRMB;
+@synthesize bookPriceUSD = _bookPriceUSD;
+@synthesize bookChineseTitle = _bookChineseTitle;
+@synthesize bookEnglishTitle = _bookEnglishTitle;
+@synthesize bookChineseAuthor = _bookChineseAuthor;
+@synthesize bookEnglishAuthor = _bookEnglishAuthor;
+@synthesize bookChineseAbstract = _bookChineseAbstract;
+@synthesize bookEnglishAbstract = _bookEnglishAbstract;
+@synthesize bookPublisher = _bookPublisher;
+@synthesize bookThumbnailURL = _bookThumbnailURL;
+@synthesize bookURL = _bookURL;
+@synthesize bookCover = _bookCover;
+@synthesize discountType = _discountType;
+@synthesize discountPriceRMB = _discountPriceRMB;
+@synthesize discountPriceUSD = _discountPriceUSD;
+@synthesize transtor = _transtor;
+@synthesize readableVersion = _readableVersion;
+@synthesize bookDownload = _bookDownload;
+@synthesize bookAccount = _bookAccount;
+
+
+@synthesize chineseBookEdition = _chineseBookEdition;
+@synthesize englishBookEdition = _englishBookEdition;
+
+- (id)init {
+
+    if((self = [super init])){
+       _chineseBookEdition = [[IYCBookEdition alloc] initWithLanguageType:IYCLanguageChinese];
+       _englishBookEdition = [[IYCBookEdition alloc] initWithLanguageType:IYCLanguageEnglish];
+    }
+    
+    return self;
+}
+
+-(id)copyWithZone:(NSZone *)zone
+{
+    IYCBook  *copy = [[[self class]allocWithZone:zone]init];
+    copy.bookId = self.bookId;
+    copy.bookServerId = self.bookServerId;
+    copy.bookType = self.bookType;
+    copy.bookSize = self.bookSize;
+    copy.bookPriceRMB = self.bookPriceRMB;
+    copy.bookPriceUSD = self.bookPriceUSD;
+    copy.bookChineseTitle = self.bookChineseTitle;
+    copy.bookChineseAuthor = self.bookChineseAuthor;
+    copy.bookChineseAbstract = self.bookChineseAbstract;
+    copy.bookEnglishTitle = self.bookEnglishTitle;
+    copy.bookEnglishAuthor = self.bookEnglishAuthor;
+    copy.bookEnglishAbstract = self.bookEnglishAbstract;
+    copy.bookThumbnailURL = self.bookThumbnailURL;
+    copy.discountPriceUSD = self.discountPriceUSD;
+    copy.discountPriceRMB = self.discountPriceRMB;
+    copy.discountType = self.discountType;
+    IYCBookEdition *tempC = [self.chineseBookEdition copy];
+    copy.chineseBookEdition = tempC;
+    IYCBookEdition *tempE = [self.englishBookEdition copy];
+    copy.englishBookEdition = tempE;
+    return copy;
+}
+
+
+- (id) initWithJSONDictionary:(NSDictionary *)jsonDict
+{
+    if (self = [super init])
+    {
+        NSNumber *bookid = [jsonDict objectForKey:@"bookId"];
+        self.bookServerId = bookid.longValue;
+        self.bookChineseAuthor = [jsonDict objectForKey:@"author"];
+        self.bookChineseTitle = [jsonDict objectForKey:@"title"];
+        self.bookChineseAbstract = [jsonDict objectForKey:@"bookAbstract"];
+        NSString *url = [jsonDict objectForKey:@"bookThumbnailURL"];
+        self.bookThumbnailURL = [url stringByReplacingOccurrencesOfString:@" " withString:@"%20"];
+        self.bookEnglishAuthor = [jsonDict objectForKey:@"author"];
+        self.bookEnglishTitle = [jsonDict objectForKey:@"englishTitle"];
+        self.bookEnglishAbstract = [jsonDict objectForKey:@"englishAbstract"];
+        NSNumber *priceRMB = [jsonDict objectForKey:@"priceRMB"];
+        self.bookPriceRMB = priceRMB.doubleValue;
+        NSNumber *priceUSD = [jsonDict objectForKey:@"priceUSD"];
+        self.bookPriceUSD = priceUSD.doubleValue;
+        self.bookPublisher = [jsonDict objectForKey:@"publisher"];
+        self.transtor = [jsonDict objectForKey:@"translator"];
+        NSString *rv = [jsonDict objectForKey:@"readableVersion"];
+        rv = [rv stringByReplacingOccurrencesOfString:@"," withString:@"/"];
+        rv = [rv stringByReplacingOccurrencesOfString:@"1" withString:@"中文"];
+        rv = [rv stringByReplacingOccurrencesOfString:@"2" withString:@"英文"];
+        rv = [rv stringByReplacingOccurrencesOfString:@"3" withString:@"双语"];
+        rv = [rv stringByReplacingOccurrencesOfString:@"3" withString:@"双语(句对)"];
+        self.readableVersion = rv;
+        self.discountType = [[jsonDict objectForKey:@"discountType"] intValue];
+        NSNumber *discountRMB = [jsonDict objectForKey:@"discountPriceRMB"];
+        self.discountPriceRMB = discountRMB.doubleValue;
+        NSNumber *discountUSD = [jsonDict objectForKey:@"discountPriceUSD"];
+        self.discountPriceUSD = discountUSD.doubleValue;
+        
+    }
+    return self;
+}
+
+
+@end

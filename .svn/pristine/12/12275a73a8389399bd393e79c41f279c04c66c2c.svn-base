@@ -1,0 +1,70 @@
+//
+//  IYCReadingViewController.h
+//  IYangCongReader
+//
+//  Created by haley on 3/22/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import <QuartzCore/QuartzCore.h>
+#import "IYCContentViewController.h"
+#import "IYCBook.h"
+#import "IYCBookEdition.h"
+#import "IYCEPub.h"
+#import "IYCSearchReadingViewController.h"
+#import "IYCBottomViewController.h"
+#import "IYCBookMark.h"
+#import "IYCDBAction.h"
+#import "IYCChapter.h"
+#import "IYCWebView.h"
+#import "IYCLastView.h"
+#import "IYCReactionToBook.h"
+#import "IYCNoteInfo.h"
+#import "IYCExperienceService.h"
+#import "IYCExperienceReq.h"
+#import "IYCExperienceResp.h"
+#import "IYCCheckNetwork.h"
+
+@interface IYCReadingViewController : UIViewController<UIGestureRecognizerDelegate,UIWebViewDelegate,IYCSearchReadingViewControllerDelegate,IYCBottomViewDelegate, IYCChapterDelegate,IYCDataDelegate,IYCWebRefreshDelegate, UIAlertViewDelegate,IYCLastViewDelegate,IYCNoteInfoDelegate,IYCServiceDelegate,ASIHTTPRequestDelegate>{
+    int readingLong;
+}
+@property (nonatomic,retain) NSString *startTime;
+@property (nonatomic,retain) NSString *endTime;
+@property (nonatomic,retain) NSString *chineseEpubPath;
+@property (nonatomic,retain) NSString *englishEpubPath;
+@property (nonatomic,retain) IYCBook *readingBook;
+@property (nonatomic,retain) IYCBookEdition *currentBookEdition;
+@property (nonatomic,assign) int currentIndex;
+@property (nonatomic) int changeEditionTimes;
+@property (nonatomic) IYCLanguageType currentLang;
+@property (nonatomic, assign) IBOutlet UIImageView *segmentBgView;
+@property (weak, nonatomic) IBOutlet UIImageView *readingBannerImg;
+@property (weak, nonatomic) IBOutlet UIButton *buyBtn;
+
+@property (nonatomic) BOOL pushedToRight;
+@property (nonatomic) BOOL canChange;
+@property (nonatomic) BOOL isBack;
+@property (nonatomic,retain) NSString *paraId;
+@property (nonatomic,retain) NSTimer *timer;
+- (void)triggerMenu:(UITapGestureRecognizer *)gestureRecognizer;
+- (void)pushWebViewToRight:(NSNotification *)notification;
+- (IBAction)backAction:(id)sender;
+- (IBAction)searchAction:(id)sender;
+- (IBAction)segmentAction:(id)sender;
+
+- (IBAction)shareToAction:(id)sender;
+
+
+
+- (IBAction)buyNewBtn:(id)sender;
+- (long)calculateParaProgress;
+- (void)refreshViews;
+- (void)analyzeAnotherEdition:(IYCLanguageType)lang;
+- (void)StartTime;     //开始计时（阅历）
+- (void)StopTime;      //停止计时（阅历）
+- (void)UploadExperience;    //上传阅历
+
+- (void) saveReadingProgress;
+- (void)refreshByFont;
+@end

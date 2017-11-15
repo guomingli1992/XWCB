@@ -1,0 +1,141 @@
+//
+//  IYCConfig.h
+//  iyangcong
+//
+//  Created by lxm on 2017/2/9.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#ifndef IYCConfig_h
+#define IYCConfig_h
+#import "UIColor+Hex.h"
+#define NAV_BAR_BG_TAG  100000
+typedef enum _IYCDownloadStateType {
+    IYCDownloadStateNone = 0,
+    IYCDownloadStateWaiting = 1,
+    IYCDownloadStateDownloading = 2,
+    IYCDownloadStatePending = 3,
+    IYCDownloadStateFinished = 4,
+    IYCDownloadStateUnzipping = 5,
+    IYCDownloadStateUnziped = 6,
+    IYCDownloadStateFail = 7,
+    IYCDownloadStateUpload = 8,	// equire to IYCDownloadStateFinished . Just for Community Version.
+} IYCDownloadStateType;
+
+
+typedef enum _IYCADGroupType
+{
+    IYCADGroupType_None,
+    IYCADGroupType_HyperLink,
+    IYCADGroupType_Store
+}IYCADGroupType;
+
+
+typedef enum _ResponseErrorCode
+{
+    ResponseErrorCode_Success = 0,
+    ResponseErrorCode_DeviceVerifyFailed = 1,
+    ResponseErrorCode_UserVerifyFailed = 2,
+    ResponseErrorCode_SessionExpired = 3,
+    ResponseErrorCode_RequestVerifyFailed = 4,
+    ResponseErrorCode_ServerFailed = 5,
+    ResponseErrorCode_ParameterFailed = 6,
+    ResponseErrorCode_Register_NicknameUsed = 7,
+    ResponseErrorCode_Register_EmainlUsed = 8,
+    ResponseErrorCode_RequestAccessFailed = 10,
+    ResponseErrorCode_Purchase_BookAlreadyPaid = 11,
+    ResponseErrorCode_SoldOut_Political = 17,
+    ResponseErrorCode_SoldOut_ContentError = 18,
+    ResponseErrorCode_SoldOut_Copyright = 19,
+    ResponseErrorCode_SoldOut = 20
+}ResponseErrorCode;
+
+
+typedef enum _IYCBookType
+{
+    IYCBookType_OfficialVersion = 1,
+    IYCBookType_TrialVersion = 2
+}IYCBookType;
+
+typedef enum _IYCDiscountType
+{
+    IYCDiscountType_No = 0,
+    IYCDiscountType_LimitTime = 1,
+    IYCDiscountType_Always = 2
+}IYCDiscountType;
+
+typedef enum _IYCFontSize
+{
+    IYCFONTSIZE1 = 15,
+    IYCFONTSIZE2 = 17,
+    IYCFONTSIZE3 = 19,
+    IYCFONTSIZE4 = 21,
+    IYCFONTSIZE5 = 23,
+
+    
+}IYCFONTSIZE;
+
+extern int networkStatus;
+
+#define UIDeviceIdiomPhone ([[UIDevice currentDevice] respondsToSelector:@selector(userInterfaceIdiom)] && [[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
+
+#define UIDeviceIdiomPad ([[UIDevice currentDevice] respondsToSelector:@selector(userInterfaceIdiom)] && [[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad)
+
+//for nightMode
+#define NIGHT_COLOR_BACK ([UIColor colorWithRed: 38.0/255.0 green: 38.0/255.0 blue: 38.0/255.0 alpha:1.0])
+#define NIGHT_COLOR_TEXT ([UIColor colorWithRed: 77.0/255.0 green: 77.0/255.0 blue: 77.0/255.0 alpha:1.0])
+
+#define DAY_COLOR_BACK1   ([UIColor colorWithHexString:@"FAECD1"])
+#define DAY_COLOR_BACK2   ([UIColor colorWithHexString:@"F9E2DC"])
+#define DAY_COLOR_BACK3   ([UIColor colorWithHexString:@"E3F4F0"])
+#define DAY_COLOR_BACK4   ([UIColor colorWithHexString:@"E3EEF5"])
+#define DAY_COLOR_BACK5   ([UIColor colorWithHexString:@"DCDADB"])
+
+
+#define DAY_COLOR_TEXT   ([UIColor colorWithRed:165.0/255.0 green:151.0/255.0 blue:140.0/255.0 alpha:1.0])
+// for server request
+#define Request_Header_Platform  NSString *platform = nil; if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) { platform = @"iPhone"; } else { platform = @"iPad"; } [self.request addRequestHeader:@"appplatform" value:platform];
+
+#define TIMEOUTSECOND                                   2
+#define TIMEOUTSECOND_MULTIMEDIA                        30
+
+
+#define SYS_VERSION [[UIDevice currentDevice].systemVersion floatValue]
+
+
+#define kCurrentBookOrientation @"KCurrentBookOrientation"
+
+#define KEY_Token         @"token"
+#define KEY_IsFirst       @"isFirst"
+//#define KEY_AccountID     @"accountID"
+#define KEY_AccountName   @"accountName"
+#define KEY_Email         @"email"
+#define KEY_Password      @"password"
+#define KEY_SessionID     @"sessionID"
+#define KEY_AutoSyncReadSwitch @"autoSync"
+#define KEY_AutoPushMessage @"autoPush"
+#define KEY_GestureType   @"gestureType"
+
+#define EventName_ShowLoginView     @"ShowLoginViewEvent"
+
+
+#define DeleteLocalBookAlertTag						10000
+#define NetworkAlertTag										10001
+
+#define NOTIFICATION_FONTSIZECHANGED @"FONTSIZECHANGED"
+#define NOTIFICATION_STOPPAGING      @"STOPPAGING"
+#define NOTIFICATION_REFRESHWEBVIEW  @"REFRESHWEBVIEW"
+
+#define WEBVIEW_HEIGHT ([UIScreen mainScreen].bounds.size.height - 100)
+
+
+#define SHARE_SUFFIX @" (分享自@爱洋葱网 爱洋葱阅读-权威双语阅读软件)"
+#define SHARE_NOTE @"#爱洋葱笔记#"
+
+
+#define IYCREADER_SERVICE_NUMBER @"010-68477290"
+
+
+extern int networkStatus;
+
+#endif /* IYCConfig_h */

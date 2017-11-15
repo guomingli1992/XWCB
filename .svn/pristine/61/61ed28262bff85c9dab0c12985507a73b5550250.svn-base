@@ -1,0 +1,26 @@
+//
+//  IYCPage.h
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCPage : NSObject<NSCopying>
+{
+    int pageId;           //page number after pagination
+    int chapterId;        //page in which chapter
+    float pageOffset;     //the page start point in the html
+    float pageOffsetH;     //test
+    NSString *pageUrl;    //html url
+}
+
+@property (nonatomic,retain)NSString *pageUrl;
+@property (nonatomic)int pageId;
+@property (nonatomic)int chapterId;
+@property (nonatomic)float pageOffset,pageOffsetH;
+@property (nonatomic, retain) NSString * baseURL;
+
+@end

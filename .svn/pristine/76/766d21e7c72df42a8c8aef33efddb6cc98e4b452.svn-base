@@ -1,0 +1,45 @@
+//
+//  IYCBookState.m
+//  IYangCongReader
+//
+//  Created by haley on 4/30/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCBookState.h"
+
+@implementation IYCBookState
+@synthesize appSupport;
+@synthesize book;
+@synthesize chapterNo;
+@synthesize isBuy;
+@synthesize paragraphNo;
+@synthesize readSchedule;
+@synthesize timestamp;
+@synthesize languageType;
+- (id) initWithJSONDictionary:(NSDictionary *)jsonDict
+{
+    if (self = [super init])
+    {
+        NSDictionary *bookDic = [jsonDict objectForKey:@"book"];
+        IYCBook *temp = [[IYCBook alloc] initWithJSONDictionary:bookDic];
+        self.book = temp;
+        
+        self.chapterNo = [[jsonDict objectForKey:@"chapterNo"] intValue];
+        self.paragraphNo = [[jsonDict objectForKey:@"paragraphNo"] intValue];
+        self.readSchedule = [[jsonDict objectForKey:@"readSchedule"]floatValue];
+        if ([jsonDict objectForKey:@"timestamp"]) {
+             self.timestamp = [jsonDict objectForKey:@"timestamp"];
+        } else {
+            self.timestamp = @"0";
+        
+        }
+        self.isBuy = [[jsonDict objectForKey:@"isBuy"] boolValue];
+        self.appSupport = [jsonDict objectForKey:@"appSupport"];
+        self.languageType = [[jsonDict objectForKey:@"languagetype"] intValue];
+        
+    }
+    return self;
+}
+
+@end

@@ -1,0 +1,213 @@
+//
+//  EPub.m
+//
+//  Copyright 2013 IYangCong. All rights reserved.
+//
+
+#import "IYCEPub.h"
+#import "ZipArchive.h"
+#import "IYCChapter.h"
+#import "sys/utsname.h"
+#import "IYCDBAction.h"
+#import "IYCCommon.h"
+#import "AppDelegate.h"
+
+@interface IYCEPub()
+
+- (void) parseEpub;
+- (void) unzipAndSaveFileNamed:(NSString*)fileName;
+- (NSString*) applicationLibraryDirectory;
+- (NSString*) parseManifestFile;
+- (void) parseOPF:(NSString*)opfPath;
+
+@end
+
+@implementation IYCEPub
+@synthesize epubValid;
+@synthesize spineArray;
+
+- (id)copyWithZone:(NSZone *)zone {
+    IYCEPub *copy = [[[self class] allocWithZone:zone] init];
+    
+    NSMutableArray *array = [[NSMutableArray alloc] initWithArray:self.spineArray copyItems:YES];
+    
+    copy.spineArray = array;
+    
+    
+    return copy;
+}
+
+- (id) initWithEPubPath:(NSString *)path withLanguageType:(IYCLanguageType)laType withBookId: (int)bookid {
+	if((self=[super init])){
+        language = laType;   /////test Chinese version first
+		epubFilePath = path;
+		spineArray = [[NSMutableArray alloc] init];
+        bookId = bookid;
+		[self parseEpub];
+	}
+	return self;
+}
+
+- (void) parseEpub{
+	[self unzipAndSaveFileNamed:epubFilePath];
+    
+	NSString* opfPath = [self parseManifestFile];
+    
+    if (opfPath == nil) {
+        self.epubValid = NO;
+    } else {
+        self.epubValid = YES;
+        [self parseOPF:opfPath];
+    }
+}
+
+- (void)unzipAndSaveFileNamed:(NSString*)fileName{
+    
+    ZipArchive* za = [[ZipArchive alloc] init];
+    
+	if( [za UnzipOpenFile:epubFilePath]){
+		NSString *strPath = nil;
+        if (language == IYCLanguageChinese) {
+            strPath = [NSString stringWithFormat:@"%@/UnzippedChineseEpub",[self applicationLibraryDirectory]];
+        } else {
+            strPath = [NSString stringWithFormat:@"%@/UnzippedEnglishEpub",[self applicationLibraryDirectory]];
+        }
+        
+		NSFileManager *filemanager=[NSFileManager defaultManager];
+		if ([filemanager fileExistsAtPath:strPath]) {
+			NSError *error;
+			[filemanager removeItemAtPath:strPath error:&error];
+		}
+		//start unzip
+		BOOL ret = [za UnzipFileTo:[NSString stringWithFormat:@"%@/",strPath] overWrite:YES];
+		if( NO==ret ){
+			// error handler here
+			UIAlertView *alert=[[UIAlertView alloc] initWithTitle:@"Error"
+														  message:@"Error while unzipping the epub"
+														 delegate:self
+												cancelButtonTitle:@"OK"
+												otherButtonTitles:nil];
+			[alert show];
+			alert=nil;
+		}
+		[za UnzipCloseFile];
+	}
+}
+
+- (NSString *)applicationLibraryDirectory {
+    
+    NSString *string = [epubFilePath lastPathComponent];
+    return [epubFilePath substringToIndex:(epubFilePath.length - string.length - 1)];
+}
+
+- (NSString*) parseManifestFile{
+    NSString* manifestFilePath = nil;
+    
+    int indent = 0;
+    NSString *cssFilePath = self.applicationLibraryDirectory;
+    
+    if (language == IYCLanguageChinese) {
+        manifestFilePath = [NSString stringWithFormat:@"%@/UnzippedChineseEpub/META-INF/container.xml", [self applicationLibraryDirectory]];
+        indent = 2;
+        cssFilePath = [cssFilePath stringByAppendingPathComponent:@"/UnzippedChineseEpub/OEBPS/stylesheet.css"];
+    } else {
+        manifestFilePath = [NSString stringWithFormat:@"%@/UnzippedEnglishEpub/META-INF/container.xml", [self applicationLibraryDirectory]];
+        indent = 0;
+        cssFilePath = [cssFilePath stringByAppendingPathComponent:@"/UnzippedEnglishEpub/OEBPS/stylesheet.css"];
+    }
+    
+    float height = [UIScreen mainScreen].bounds.size.height - 100;
+    
+    IYCFONTSIZE fontSize = [IYCCommon fontSizeOfCurrentAccount];
+    
+     NSString * cssTring = [NSString stringWithFormat:@"html {padding:0px;height: %fpx;-webkit-column-gap:0px;-webkit-column-width:320px;}body{padding: 0;margin-top: 0;margin-bottom:0;margin-left: 20px;margin-right: 20px;text-align: justify;-webkit-text-size-adjust:100;font-size:%dpx;background-color:rgb(246,242,230);}div{padding:0px; text-align: justify;}p {text-indent: %iem;}  div:first-child>* {margin-top:0px;}div:last-child>* {margin-bottom:0px;} p img{max-width:200px;max-height:360px}highlight{background-color: yellow;}",height,fontSize,indent];
+    
+    NSData *cssData = [cssTring dataUsingEncoding:NSUTF8StringEncoding];
+    
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    
+    if ([fileManager fileExistsAtPath:cssFilePath]) {
+        [fileManager removeItemAtPath:cssFilePath error:nil];
+    }
+    
+    [fileManager createFileAtPath:cssFilePath contents:cssData attributes:nil];
+    
+	if ([fileManager fileExistsAtPath:manifestFilePath]) {
+		CXMLDocument* manifestFile = [[CXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:manifestFilePath] options:0 error:nil];
+		CXMLNode* opfPath = [manifestFile nodeForXPath:@"//@full-path[1]" error:nil];
+        
+        if (language == IYCLanguageEnglish) {
+            return [NSString stringWithFormat:@"%@/UnzippedEnglishEpub/%@", [self applicationLibraryDirectory], [opfPath stringValue]];
+        }
+        
+		return [NSString stringWithFormat:@"%@/UnzippedChineseEpub/%@", [self applicationLibraryDirectory], [opfPath stringValue]];
+	} else {
+		DebugLog(@"ERROR: ePub not Valid");
+		return nil;
+	}
+}
+
+- (void) parseOPF:(NSString*)opfPath{
+	CXMLDocument* opfFile = [[CXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:opfPath] options:0 error:nil];
+	NSArray* itemsArray = [opfFile nodesForXPath:@"//opf:item" namespaceMappings:[NSDictionary dictionaryWithObject:@"http://www.idpf.org/2007/opf" forKey:@"opf"] error:nil];
+    
+    NSString* ncxFileName = @"";
+	
+    NSMutableDictionary* itemDictionary = [[NSMutableDictionary alloc] init];
+	for (CXMLElement* element in itemsArray) {
+		[itemDictionary setValue:[[element attributeForName:@"href"] stringValue] forKey:[[element attributeForName:@"id"] stringValue]];
+        if([[[element attributeForName:@"media-type"] stringValue] isEqualToString:@"application/x-dtbncx+xml"]){
+            ncxFileName = [[element attributeForName:@"href"] stringValue];
+        }
+        
+	}
+	
+    int lastSlash = [opfPath rangeOfString:@"/" options:NSBackwardsSearch].location;
+	NSString* ebookBasePath = [opfPath substringToIndex:(lastSlash +1)];
+    CXMLDocument* ncxToc = [[CXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:[NSString stringWithFormat:@"%@%@", ebookBasePath, ncxFileName]] options:0 error:nil];
+    NSMutableDictionary* titleDictionary = [[NSMutableDictionary alloc] init];
+    for (CXMLElement* element in itemsArray) {
+        NSString* href = [[element attributeForName:@"href"] stringValue];
+        NSString* xpath = [NSString stringWithFormat:@"//ncx:content[@src='%@']/../ncx:navLabel/ncx:text", href];
+        NSArray* navPoints = [ncxToc nodesForXPath:xpath namespaceMappings:[NSDictionary dictionaryWithObject:@"http://www.daisy.org/z3986/2005/ncx/" forKey:@"ncx"] error:nil];
+        if([navPoints count]!=0){
+            CXMLElement* titleElement = [navPoints objectAtIndex:0];
+            [titleDictionary setValue:[titleElement stringValue] forKey:href];
+        }
+    }
+    
+	
+	NSArray* itemRefsArray = [opfFile nodesForXPath:@"//opf:itemref" namespaceMappings:[NSDictionary dictionaryWithObject:@"http://www.idpf.org/2007/opf" forKey:@"opf"] error:nil];
+	NSMutableArray* tmpArray = [[NSMutableArray alloc] init];
+    int count = 0;
+	for (CXMLElement* element in itemRefsArray) {
+        NSString* chapHref = [itemDictionary valueForKey:[[element attributeForName:@"idref"] stringValue]];
+        
+        IYCChapter* tmpChapter = [[IYCChapter alloc] initWithPath:[NSString stringWithFormat:@"%@%@", ebookBasePath, chapHref]
+                                                            title:[titleDictionary valueForKey:chapHref]
+                                                     chapterIndex:count++  withBookId:bookId];
+        NSString *basePath = self.applicationLibraryDirectory;
+        
+        if (language == IYCLanguageChinese)
+        {
+            tmpChapter.basePath = [basePath stringByAppendingPathComponent:@"/UnzippedChineseEpub/OEBPS/"];
+        }
+        else
+        {
+            tmpChapter.basePath = [basePath stringByAppendingPathComponent:@"/UnzippedEnglishEpub/OEBPS/"];
+        }
+		[tmpArray addObject:tmpChapter];
+		
+	}
+	
+	self.spineArray = [NSMutableArray arrayWithArray:tmpArray];
+    IYCChapter *firstCt = [self.spineArray objectAtIndex:0];
+   
+    AppDelegate *appdelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    appdelegate.noteFirstIndex = firstCt.serverChapterId;
+
+}
+
+
+
+@end

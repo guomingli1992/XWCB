@@ -1,0 +1,27 @@
+//
+//  IYCDataBase.h
+//  IYangCongReader
+//
+//  Created by Bella on 4/3/13.
+//  Copyright (c) 2013 Bella. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+//#import <PlausibleDatabase/PlausibleDatabase.h>
+
+
+@interface IYCDataBase : NSObject
+
++ (IYCDataBase *)share;
+
+- (void) close;
+
+//insert, update, delete
+- (int)updateDB:(NSString *)sql;
+//query db
+- (id)queryDB:(NSString*)sql;
+
+//operate dictionary sqlite
+- (id)queryDict:(NSString*)sql;
+
+@end

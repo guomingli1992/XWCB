@@ -1,0 +1,228 @@
+//
+//  IYCChapter.m
+
+//
+//
+
+#import "IYCChapter.h"
+#import "NSString+HTML.h"
+#import "IYCPage.h"
+#import "IYCBookEdition.h"
+#import "IYCParagraph.h"
+#import "IYCSecurityManager.h"
+#import "IYCCommon.h"
+@implementation IYCChapter
+
+@synthesize delegate, chapterIndex, title, pageCount, spinePath, text, fontPercentSize,serverChapterId;
+@synthesize pageArray, paragraphArray,paragraphEndDict,stringChangeEdition;
+@synthesize totalWordsInChapter;
+@synthesize changeChapterIndex;
+@synthesize lType;
+@synthesize isParseParagraph;
+@synthesize bookId;
+@synthesize chapterId,basePath;
+
+- (id)copyWithZone:(NSZone *)zone {
+   IYCChapter *copy = [[[self class] allocWithZone:zone] init];
+   
+   copy.delegate = self.delegate;
+   copy.chapterIndex = self.chapterIndex;
+   copy.serverChapterId = self.serverChapterId;
+   copy.title = self.title;
+   copy.pageArray = self.pageArray;
+   copy.pageCount = self.pageCount;
+   copy.spinePath = self.spinePath;
+   copy.text = self.text;
+   copy.fontPercentSize = self.fontPercentSize;
+   copy.paragraphArray = self.paragraphArray;
+   copy.paragraphEndDict = self.paragraphEndDict;
+   copy.stringChangeEdition = self.stringChangeEdition;
+   copy.changeChapterIndex = self.changeChapterIndex;
+   copy.lType = self.lType;
+    copy.totalWordsInChapter = self.totalWordsInChapter;
+    copy.isParseParagraph = self.isParseParagraph;
+    copy.isParsed = self.isParsed;
+    copy.bookId = self.bookId;
+    copy.chapterId = self.chapterId;
+    copy.basePath = self.basePath;
+    
+   return copy;
+}
+
+- (id) initWithPath:(NSString*)theSpinePath title:(NSString*)theTitle chapterIndex:(int) theIndex withBookId:(int)bookid {
+    if((self=[super init])){
+        self.spinePath = theSpinePath;
+        
+        NSArray *stringArray = [self.spinePath componentsSeparatedByString:@"/"];
+        NSString *string1 = [stringArray objectAtIndex:[stringArray count] - 1];
+        NSArray *string2 = [string1 componentsSeparatedByString:@"."];
+        self.serverChapterId = [[string2 objectAtIndex:1] intValue];
+        self.bookId = bookid;
+
+        self.title = theTitle;
+        self.chapterIndex = theIndex;
+        self.changeChapterIndex = -1;
+        self.stringChangeEdition = [NSString string];
+        self.isParseParagraph = NO;
+        self.isParsed = NO;
+        
+        NSString* html = nil;
+		if (self.bookId == 0)
+        {
+            html = [IYCCommon decodeBase64forFile:self.spinePath];
+        }
+        else
+        {
+            IYCSecurityManager *manager = [[IYCSecurityManager alloc] init];
+            html = [manager decryptWithFilePath:self.spinePath];
+        }
+		self.text = [html stringByConvertingHTMLToPlainText];
+        
+        self.totalWordsInChapter = self.text.length;
+    
+    }
+    return self;
+}
+
+- (void) loadChapterWithWindowSize:(CGRect)theWindowSize fontPercentSize:(int) theFontPercentSize withLanguageType:(IYCLanguageType)laType withChangeChapterIndex:(int)cIndex withString:(NSString *)string {
+
+//    [NSThread sleepForTimeInterval:0.2];
+//    DebugLog(@"start loading %@",self.spinePath);
+    self.paragraphArray = [NSMutableArray array];
+    self.pageArray = [NSMutableArray array];
+    self.paragraphEndDict = [NSMutableDictionary dictionary];
+
+    self.lType = laType;
+    self.fontPercentSize = theFontPercentSize;
+    
+    if (cIndex != -1) {
+       self.changeChapterIndex = cIndex;
+    }
+    
+    if (string != nil) {
+       self.stringChangeEdition = [NSString stringWithString:string];
+    }
+
+    if(webview == nil){
+        webview = [[UIWebView alloc] initWithFrame:theWindowSize];
+    }
+
+    [webview setDelegate:self];
+
+    NSString * htmlStr = nil;
+    if (self.bookId == 0)
+    {
+        htmlStr = [IYCCommon decodeBase64forFile:self.spinePath];
+    }
+    else
+    {
+        IYCSecurityManager *manager = [[IYCSecurityManager alloc] init];
+        htmlStr = [manager decryptWithFilePath:self.spinePath];
+    }
+    
+    [webview loadHTMLString:htmlStr baseURL:[NSURL fileURLWithPath:self.basePath isDirectory:YES]];
+    
+    
+}
+
+- (void) webViewDidFinishLoad:(UIWebView*)webView {
+
+    BOOL isExtraDiv = NO;
+    if (self.chapterIndex == self.changeChapterIndex) {
+       if (self.stringChangeEdition != nil)
+       [webView stringByEvaluatingJavaScriptFromString:self.stringChangeEdition];
+       isExtraDiv = YES;
+    }
+  
+    float pageHeight = webView.frame.size.height;
+    
+    float totalW = [[webView stringByEvaluatingJavaScriptFromString:@"document.documentElement.scrollWidth"] floatValue];
+
+
+    self.pageCount = (int)(totalW/(webView.bounds.size.width ));
+    
+    if (self.pageCount == 1) {
+        NSString * s = [webView stringByEvaluatingJavaScriptFromString:@"document.documentElement.innerHTML"];
+        NSLog(@"s = %@",s);
+    }
+    for (int i=0; i<self.pageCount; i++) {
+        IYCPage *page = [[IYCPage alloc] init];
+        page.pageId = i;
+        page.pageOffset = i * webView.bounds.size.width;
+        page.pageOffsetH = i * pageHeight;
+        page.pageUrl = self.spinePath;
+        page.chapterId = self.chapterIndex;
+        page.baseURL = self.basePath;
+        [self.pageArray addObject:page];
+    }
+    
+    if (self.isParseParagraph) {
+       int pCount = [[webView stringByEvaluatingJavaScriptFromString:@"document.body.children.length"] intValue];
+  
+    for (int i = 0; i<pCount; i++) {
+      if (i == 0 && isExtraDiv == YES) {
+         continue;
+      }
+      
+      IYCParagraph *paragraph = [[IYCParagraph alloc] init];
+      NSString *string1 = [NSString stringWithFormat:@"document.body.children[%d].id",i];
+      paragraph.paragraphId = [[webView stringByEvaluatingJavaScriptFromString:string1] intValue];
+      
+      NSString *string = [NSString stringWithFormat:@"document.body.children[%d].offsetTop",i];
+      paragraph.paragraphStartOffset = [[webView stringByEvaluatingJavaScriptFromString:string] floatValue] ;
+      
+      NSString *stringH = [NSString stringWithFormat:@"document.body.children[%d].offsetHeight",i];
+      paragraph.paragraphEndOffset = paragraph.paragraphStartOffset + [[webView stringByEvaluatingJavaScriptFromString:stringH] floatValue];
+      
+      NSString *stringPa = [NSString stringWithFormat:@"document.body.children[%d].innerText",i];
+      paragraph.paragString = [webView stringByEvaluatingJavaScriptFromString:stringPa];
+      
+      paragraph.stringCount = (int)paragraph.paragString.length;
+      
+      paragraph.paragraphURL = self.spinePath;
+      paragraph.langType = self.lType;
+      
+      [self.paragraphArray addObject:paragraph];
+      
+      }
+    
+    IYCParagraph *paragraphOlder1 = nil;
+    for (int i = 0; i < self.pageCount; i++) {
+
+        NSMutableArray *array2 = [NSMutableArray array];
+        
+        IYCPage *page = [pageArray objectAtIndex:i];
+        
+        if (isExtraDiv == YES) {
+            pCount --;
+        }
+        
+        for (int j = 0; j < pCount; j++) {
+           IYCParagraph *paragraph = [self.paragraphArray objectAtIndex:j];
+           
+           if ((paragraph.paragraphStartOffset > page.pageOffsetH - 1) && (paragraph.paragraphStartOffset < page.pageOffsetH + pageHeight) ) {
+              paragraphOlder1 = paragraph;
+              paragraph.paragraphStartPage = i;
+           }
+           
+           if ((paragraph.paragraphEndOffset > page.pageOffsetH) && (paragraph.paragraphEndOffset < page.pageOffsetH + pageHeight + 1)) {
+               paragraph.paragraphEndPage = i;
+               [array2 addObject:[NSNumber numberWithInt:paragraph.paragraphId]];
+            }
+        }
+        
+        if (array2.count == 0) {
+            [array2 addObject:[NSNumber numberWithInt:paragraphOlder1.paragraphId]];
+        }
+        
+        [self.paragraphEndDict setObject:array2 forKey:[NSString stringWithFormat:@"%d",page.pageId]];
+
+  }
+         }
+  
+  [self.delegate chapterDidFinishLoad:self];
+   self.isParsed = YES;
+}
+
+
+@end

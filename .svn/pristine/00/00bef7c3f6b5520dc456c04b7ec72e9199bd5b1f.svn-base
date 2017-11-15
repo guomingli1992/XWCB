@@ -1,0 +1,148 @@
+//
+//  ManuscriptViewController.m
+//  iyangcong
+//
+//  Created by mingli 郭 on 2017/7/11.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "ManuscriptViewController.h"
+#import "ManuscriptListViewController.h"
+
+@interface ManuscriptViewController ()
+{
+    UIView*line;
+    
+    UIView *view2;
+
+}
+@end
+
+@implementation ManuscriptViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.navigationItem.title = @"稿件";
+    [self setUpAllChildController];
+    
+    [self setUpTitleEffect:^(UIColor *__autoreleasing *titleScrollViewColor, UIColor *__autoreleasing *norColor, UIColor *__autoreleasing *selColor, UIFont *__autoreleasing *titleFont, CGFloat *titleHeight, CGFloat *titleWidth) {
+        *norColor = [UIColor lightGrayColor];
+        *selColor = [UIColor blackColor];
+        *titleWidth = [UIScreen mainScreen].bounds.size.width / 4;
+    }];
+    //underLineColor 设置滑块颜色
+    //标题渐变
+    [self setUpTitleGradient:^(YZTitleColorGradientStyle *titleColorGradientStyle, UIColor *__autoreleasing *norColor, UIColor *__autoreleasing *selColor) {
+        
+    }];
+    [self setUpUnderLineEffect:^(BOOL *isUnderLineDelayScroll, CGFloat *underLineH, UIColor *__autoreleasing *underLineColor,BOOL *isUnderLineEqualTitleWidth) {
+        //        *isUnderLineDelayScroll = YES;
+        *isUnderLineEqualTitleWidth = YES;
+    }];
+
+    [self loadbuttonItem];
+    
+    UIImage *imageDraftBank = [[UIImage imageNamed:@"filter"] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithImage:imageDraftBank style:UIBarButtonItemStylePlain target:self action:@selector(DraftBankClick:)];
+    UIImage *imageSearch = [[UIImage imageNamed:@"sousuo"] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithImage:imageSearch style:UIBarButtonItemStylePlain target:self action:@selector(searchClick:)];
+}
+- (void)setUpAllChildController{
+    ManuscriptListViewController *vc1 = [[ManuscriptListViewController alloc] init];
+    vc1.title = @"111";
+    [self addChildViewController:vc1];
+    ManuscriptListViewController *vc2 = [[ManuscriptListViewController alloc] init];
+    vc2.title = @"44444444";
+    [self addChildViewController:vc2];
+    ManuscriptListViewController *vc3 = [[ManuscriptListViewController alloc] init];
+    vc3.title = @"9273921";
+    [self addChildViewController:vc3];
+    ManuscriptListViewController *vc4 = [[ManuscriptListViewController alloc] init];
+    vc4.title = @"111000";
+    [self addChildViewController:vc4];
+    ManuscriptListViewController *vc5 = [[ManuscriptListViewController alloc] init];
+    vc5.title = @"7";
+    [self addChildViewController:vc5];
+    ManuscriptListViewController *vc6 = [[ManuscriptListViewController alloc] init];
+    vc6.title = @"00000";
+    [self addChildViewController:vc6];
+}
+-(void)loadbuttonItem
+{
+    view2=[[UIView alloc]initWithFrame:CGRectMake(0, HEIGHT-50, WIDTH1, 50)];
+    view2.backgroundColor=[UIColor whiteColor];
+    [self.view addSubview:view2];
+    
+    line=[[UIView alloc] initWithFrame:CGRectMake(0, 0, WIDTH1, 0.5)];
+    line.backgroundColor=[UIColor colorWithRed:180.0/255 green:180.0/255 blue:180.0/255 alpha:1];
+    [view2 addSubview:line];
+    
+    NSArray *img=[[NSArray alloc] initWithObjects:@"homepage_normal",@"manuscript_press",@"plusmanuscript_normal",@"find_normal",@"mine_normal", nil];
+    NSArray *text=[[NSArray alloc] initWithObjects:@"主页",@"稿件",@"",@"发现",@"我的", nil];
+    for (int i=0; i<5; i++) {
+        
+        UIButton*btn=[[UIButton alloc] init];
+        btn.frame=CGRectMake(i*WIDTH1/5, 0.5, WIDTH1/5, 35);
+        btn.tag=100+i;
+        UIImageView *image1=[self createImageViewFrame:CGRectMake(WIDTH1/10-10, 7, 20, 20) imageName:[img objectAtIndex:i]];
+        [btn addSubview:image1];
+        btn.backgroundColor=[UIColor whiteColor];
+        [btn addTarget:self action:@selector(selectbtn:) forControlEvents:UIControlEventTouchUpInside];
+        [view2 addSubview:btn];
+        
+        UILabel *lab=[self createLabelFrame:CGRectMake(i*WIDTH1/5, 33, WIDTH1/5, 10) text:[text objectAtIndex:i] textColor:[UIColor colorWithHexString:textMainColor] textFont:[UIFont systemFontOfSize:10] textAlignment:NSTextAlignmentCenter numberOfLines:0];
+        [view2 addSubview:lab];
+        
+        if (i==1) {
+            lab.textColor=[UIColor colorWithHexString:mainColor];
+        }
+    }
+}
+- (void)DraftBankClick:(id)sender{
+    NSLog(@"left");
+}
+- (void)searchClick:(id)sender{
+    NSLog(@"right");
+}
+- (void)selectbtn:(UIButton*)btn//TAB按钮切换的监听
+{
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"CHANGEMAINPAGE" object:[NSString stringWithFormat:@"%ld",(long)btn.tag]];
+}
+- (UILabel *)createLabelFrame:(CGRect)frame text:(NSString *)text textColor:(UIColor *)textColor textFont:(UIFont *)textFont textAlignment:(NSTextAlignment)textAlignment numberOfLines:(NSInteger)numberOfLines {
+    NSString *str=[text isEqual:[NSNull null]]?@"":text;
+    UILabel *label = [[UILabel alloc] initWithFrame:frame];
+    label.text = str;
+    label.textAlignment = textAlignment;
+    label.font=textFont;
+    label.textColor = textColor;
+    label.numberOfLines = numberOfLines;
+    return label;
+}
+
+- (UIButton *)createBtnFrame:(CGRect)frame title:(NSString *)title bgImageName:(NSString *)bgImageName target:(id)target action:(SEL)action {
+    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn.frame = frame;
+    [btn setTitle:title forState:UIControlStateNormal];
+    [btn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [btn setBackgroundImage:[UIImage imageNamed:bgImageName] forState:UIControlStateNormal];
+    [btn addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
+    return btn;
+}
+
+- (UIImageView *)createImageViewFrame:(CGRect)frame imageName:(NSString *)imageName {
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
+    imageView.image = [UIImage imageNamed:imageName];
+    return imageView;
+}
+
+- (UIImageView *)createURLImageViewFrame:(CGRect)frame imageURLStr:(NSString *)imageURLStr placeholderImage:(UIImage *)placeholderImage {
+    if (imageURLStr==nil||[imageURLStr isEqual:[NSNull null]]) {
+        imageURLStr=@"";
+    }
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
+    NSURL *url=[[NSURL alloc] initWithString:[imageURLStr stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+    [imageView sd_setImageWithURL:url placeholderImage:placeholderImage];
+    return imageView;
+}
+
+@end

@@ -1,0 +1,21 @@
+#import <Foundation/Foundation.h>
+
+
+@interface IYCFileUtils : NSObject {
+	
+}
+
++ (NSString *)getTecentOAuthConsumerSecret;
++ (NSString *)getTecentOAuthConsumerKey;
++ (NSString *)getSinaOAuthConsumerSecret;
++ (NSString *)getSinaOAuthConsumerKey;
++ (NSString *)appDocumentsDir;
++ (NSString *)createOrGetDirWithName:(NSString *)dirPathName;
++ (NSString *)getBundleResourcePath: (NSString *)picName;
++ (NSString *)getBundleIdentifier;
++ (NSString *)getVersion;
++ (BOOL)isValideUrl: (NSURL *)url;
++ (NSString *)getWebServiceHost;
+//+ (NSString *)get_bookThumbnail:(NSString *)picName;
++ (NSString *)getAppUrl;
+@end

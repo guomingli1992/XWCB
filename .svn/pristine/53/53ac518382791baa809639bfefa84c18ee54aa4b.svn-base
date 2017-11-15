@@ -1,0 +1,27 @@
+//
+//  LoginViewController.m
+//  iyangcong
+//
+//  Created by lxm on 2016/12/1.
+//  Copyright © 2016年 FLTRP. All rights reserved.
+//
+
+#import "LoginViewController.h"
+
+
+@interface LoginViewController (){
+    
+}
+
+@end
+
+@implementation LoginViewController
+
+- (void)viewWillAppear:(BOOL)animated {
+    self.navigationController.interactivePopGestureRecognizer.enabled = NO;
+    [self.navigationController setNavigationBarHidden:YES];
+}
+
+
+
+@end

@@ -1,0 +1,36 @@
+//
+//  IYCGetNoteReq.m
+//  IYangCongReader
+//
+//  Created by 马腾 on 15/7/15.
+//  Copyright (c) 2015年 IYangCong. All rights reserved.
+//
+
+#import "IYCGetNoteReq.h"
+
+@implementation IYCGetNoteReq
+@synthesize bookId,acountId;
+
+- (NSString *)getJSONString {
+    NSMutableDictionary * dic = [super getJSONString];
+    
+    if (self.deviceToken) {
+        [dic setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+    if (self.acountId) {
+        [dic setObject:self.acountId forKey:@"accountId"];
+    }
+    
+    if (self.deviceType) {
+        [dic setObject:self.deviceType forKey:@"deviceType"];
+    }
+    
+    if (self.bookId) {
+        [dic setObject:self.bookId forKey:@"bookId"];
+    }
+    
+    return dic.JSONString;
+}
+
+
+@end

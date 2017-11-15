@@ -1,0 +1,13 @@
+//
+//  LoginViewController.h
+//  iyangcong
+//
+//  Created by lxm on 2016/12/1.
+//  Copyright © 2016年 FLTRP. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "childSuperViewController.h"
+@interface LoginViewController : childSuperViewController
+
+@end

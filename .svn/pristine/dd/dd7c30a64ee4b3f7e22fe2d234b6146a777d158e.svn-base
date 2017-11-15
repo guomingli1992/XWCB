@@ -1,0 +1,41 @@
+//
+//  IYCDataModel.h
+//  iyangcong
+//
+//  Created by lxm on 2017/2/15.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCDataModel : NSObject
+
+@end
+
+@interface UserInfo : NSObject
+@property(strong,nonatomic)NSString *birth;
+@property(strong,nonatomic)NSString *detail;
+@property(strong,nonatomic)NSString *gkNumber;
+
+@end
+
+@interface BookInfo : NSObject
+
+@property(nonatomic) NSString *book_Id;                 //
+@property(strong,nonatomic) NSString *book_Name;        //
+@property(nonatomic) NSString *book_State;              //图书状态（0：未下载，1：正在下载，2：已下载）
+@property(nonatomic) NSString *book_Buy;                //图书购买状态（0：未购买，1：已购买）
+@property(strong,nonatomic) NSString *book_Url;         //图书封面URL
+@property(strong,nonatomic) NSString *book_Progress;    //图书阅读（下载）进度
+@property(nonatomic) NSString *book_Groupid;            //默认为0
+@property(nonatomic) NSString *book_Time;               //图书最后打开时间
+
+@end
+
+
+@interface GroupInfo : NSObject
+
+@property(strong,nonatomic) NSString *group_Name;       //
+@property(nonatomic) NSString *group_Id;                //
+
+@end

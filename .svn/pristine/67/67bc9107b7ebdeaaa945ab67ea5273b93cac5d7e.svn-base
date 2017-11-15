@@ -1,0 +1,16 @@
+//
+//  IYCSecretKey.h
+//  IYangCongReader
+//
+//  Created by haley on 5/2/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//  说明：请求服务器类（获取秘钥）
+
+#import <Foundation/Foundation.h>
+#import "IYCService.h"
+@interface IYCSecretKeyService : IYCService
+{
+
+}
+- (void)getSecretKey;
+@end

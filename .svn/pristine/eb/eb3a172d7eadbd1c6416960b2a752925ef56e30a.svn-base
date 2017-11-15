@@ -1,0 +1,18 @@
+//
+//  IYCBookReviewByIdRequest.h
+//  IYangCongReader
+//
+//  Created by Lolo on 13-6-20.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCRequest.h"
+#import "IYCBookReview.h"
+@interface IYCBookReviewByIdRequest : IYCRequest
+
+@property (nonatomic, copy) NSString *accountId;
+@property (nonatomic, retain) NSNumber *bookId;
+@property (nonatomic, retain) IYCBookReview *bookReview;
+
+- (NSString *)getJSONString;
+@end

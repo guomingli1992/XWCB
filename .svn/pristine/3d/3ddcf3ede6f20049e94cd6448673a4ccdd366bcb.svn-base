@@ -1,0 +1,23 @@
+//
+//  IYCNoteViewController.h
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-7-22.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "IYCDBAction.h"
+#import "AppDelegate.h"
+@interface IYCNoteViewController : UIViewController
+{
+    BOOL isCreateNote;
+    IYCNote * editingNote;
+}
+
+@property (nonatomic,strong)NSString *bookNameTitle;
+
+//isCreate 为 YES 插入一条新的note, isCreate 为 NO 更新note;
+- (void)editingNote:(IYCNote *)note isCreateNote:(BOOL)isCreate bookNameTitle:(NSString *)str;
+
+@end

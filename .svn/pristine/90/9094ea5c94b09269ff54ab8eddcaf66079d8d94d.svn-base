@@ -1,0 +1,44 @@
+//
+//  IYCBookReviewByIdRequest.m
+//  IYangCongReader
+//
+//  Created by Lolo on 13-6-20.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCBookReviewByIdRequest.h"
+
+@implementation IYCBookReviewByIdRequest
+@synthesize accountId = _accountId;
+@synthesize bookId = _bookId;
+@synthesize bookReview = _bookReview;
+
+- (NSString *)getJSONString {
+    
+    NSMutableDictionary *JSONDict = [super getJSONString];
+    
+    if (self.accountId) {
+        [JSONDict setObject:self.accountId forKey:@"accountId"];
+    }
+    
+    if (self.bookId) {
+        [JSONDict setObject:self.bookId forKey:@"bookId"];
+    }
+
+    if (self.deviceType) {
+        [JSONDict setObject:self.deviceType forKey:@"deviceType"];
+    }
+    
+    if (self.deviceToken) {
+        [JSONDict setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+    
+    if (self.bookReview) {
+        NSMutableDictionary *bookReview = [NSMutableDictionary dictionary];
+        bookReview = [self.bookReview getJSONDictinary];
+        [JSONDict setObject:bookReview forKey:@"bookReview"];
+    }
+    
+    return JSONDict.JSONString;
+}
+@end

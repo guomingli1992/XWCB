@@ -1,0 +1,114 @@
+//
+//  IYCWordDataBase.m
+//  iyangcong
+//
+//  Created by mingli 郭 on 2017/4/7.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import "IYCWordDataBase.h"
+#import <sqlite3.h>
+
+#define IYCDBWordName @"IYangCong.sqlite"
+#define IYCDictionary @"dictionary.sqlite"
+
+static inline NSString *toto(const char *pStr){
+    if (pStr == nil) {
+        return nil;
+    }
+    return [NSString stringWithUTF8String:pStr];
+}
+
+@implementation IYCWordDataBase
+{
+    sqlite3 *database;
+    NSString *realPath;
+}
++(IYCWordDataBase *)share{
+    static IYCWordDataBase *base = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        base = [[IYCWordDataBase alloc] init];
+    });
+    return base;
+    
+}
+
+-(instancetype)init{
+    if ([super init]) {
+        NSString *documentPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+        realPath = [documentPath stringByAppendingString:IYCDBWordName];
+        NSString *dbNameFronter =[[IYCDBWordName componentsSeparatedByString:@"."] objectAtIndex:0];
+        NSString *sourcePath =[[NSBundle mainBundle] pathForResource:dbNameFronter ofType:@"sqlite"];
+        
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        if (![fileManager fileExistsAtPath:realPath]) {
+            NSError *error ;
+            if (![fileManager copyItemAtPath:sourcePath toPath:realPath error:&error]) {
+                
+            }
+        }
+    }
+    if (sqlite3_open([realPath UTF8String], &database) != SQLITE_OK) {
+        sqlite3_close(database);
+        NSLog(@"数据库打开失败");
+    }
+    return self;
+}
+-(void)open{
+    sqlite3_open([realPath UTF8String], &database);
+    
+}
+-(void)close{
+    sqlite3_close(database);
+    
+}
+-(int)updateDB:(NSString *)sql{
+    int result = sqlite3_exec(database, sql.UTF8String, NULL, NULL, NULL);
+    return result == SQLITE_OK;
+}
+-(NSMutableArray *)queryDB:(NSString *)sql{
+    sqlite3_stmt *statement = NULL;
+    sqlite3_prepare(database, sql.UTF8String, (int)sql.length, &statement, NULL);
+    NSMutableArray *resultList = [[NSMutableArray alloc] init];
+    while (sqlite3_step(statement) == SQLITE_ROW) {
+        NSInteger columnCount = sqlite3_column_count(statement);
+        NSMutableDictionary *dic = [[NSMutableDictionary alloc] init];
+        
+        for (NSInteger index = 0; index < columnCount; index ++) {
+            NSString *value = toto((const char *)sqlite3_column_text(statement, (int)index));
+            NSString *key = toto((const char *)sqlite3_column_name(statement, (int)index));
+            if (value && key) {
+                [dic setObject:value forKey:key];
+            }
+        }
+        [resultList addObject:dic];
+    }
+    sqlite3_finalize(statement);
+    
+    return resultList;
+    
+}
+-(id)queryDict:(NSString *)sql{
+    sqlite3_stmt *statement = NULL;
+    sqlite3_prepare(database, sql.UTF8String, (int)sql.length, &statement, NULL);
+    NSMutableArray *resultList = [[NSMutableArray alloc] init];
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+    while (sqlite3_step(statement) == SQLITE_ROW) {
+        NSInteger columnCount =  sqlite3_column_count(statement);
+        for (NSInteger index = 0; index < columnCount; index ++) {
+            NSString *value = toto((const char *)sqlite3_column_text(statement, (int)index));
+            NSString *key = toto((const char *)sqlite3_column_name(statement, (int)index));
+           
+            if (value && key) {
+                [dict setObject:value forKey:key];
+            }
+          
+        }
+        [resultList addObject:dict];
+    }
+    sqlite3_finalize(statement);
+    return resultList;
+
+}
+@end

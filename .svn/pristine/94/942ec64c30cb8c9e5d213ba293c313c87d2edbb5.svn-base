@@ -1,0 +1,15 @@
+//
+//  APPUtils.h
+//  iyangcong
+//
+//  Created by lxm on 2017/3/24.
+//  Copyright © 2017年 FLTRP. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface APPUtils : NSObject
+//AppUtils类方法，验证成功，移除存储的receipt
++ (void)removeIapFailedPath:(NSString *)plistPath;
++(NSString *)getUUIDString;
+@end

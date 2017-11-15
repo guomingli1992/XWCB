@@ -1,0 +1,28 @@
+//
+//  IYCDataMerge.h
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-7-16.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCDBAction.h"
+#import "IYCAppConfig.h"
+
+#import "IYCPurchaseData.h"
+
+@interface IYCDBAction (DataMerge)
+
+- (void)startMergeData;
+
+
+- (NSArray *)selectPurchaseDataWithProduct:(NSString *)productId andAccount:(NSString *)account;
+- (NSArray *)selectPurchaseDataWithOrder:(NSString *)order andAccount:(NSString *)account;
+- (NSArray *)selectAllPurchaseData:(NSString *)account;
+- (NSArray *)selectPurchaseDataWithStatus:(NSInteger)status andAccount:(NSString *)account;
+- (int)updatePurchaseData:(IYCPurchaseData *)purchase;
+- (int)deletePurchaseData:(IYCPurchaseData *)purchase;
+- (int)insertPurchaseData:(IYCPurchaseData *)purchase;
+-(int)creatWordNumberTable;
+@end

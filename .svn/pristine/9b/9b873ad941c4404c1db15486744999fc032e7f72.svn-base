@@ -1,0 +1,564 @@
+//
+//  IYCNoteViewController.m
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-7-22.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCNoteViewController.h"
+#import "IYCCommon.h"
+#import "ShareSelectView.h"
+#import <TencentOpenAPI/QQApiInterface.h>
+#define DOUBAN_SHARE_TAG 1001
+#import <TencentOpenAPI/TencentOAuth.h>
+#import <TencentOpenAPI/TencentApiInterface.h>
+#import "LewPopupViewAnimationFade.h"
+
+#define SCREENBOUNDS  [UIScreen mainScreen].bounds
+
+
+@interface IYCNoteViewController ()<TencentSessionDelegate>
+{
+    TencentOAuth *_tencentOAuth;
+    UILabel * _selectText;
+    UITextView * _noteText;
+    UIButton * _doneBtn;
+    UIButton * _tencentBtn;
+//    UIButton * _sinaBtn;
+    NSMutableArray *arrays;
+    
+    IYCNote *theTempNote;
+    NSString *tmpStr;   //标识选择分享
+    int tagOfShare;
+    UISwitch *openSwitch;
+    
+    
+    int chapterindex;
+}
+@end
+
+@implementation IYCNoteViewController
+
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+    }
+    return self;
+}
+- (id)init
+{
+    if (self = [super init])
+    {
+        editingNote = nil;
+        
+        arrays = [[NSMutableArray alloc] init];
+        
+        NSMutableArray *tempArray = [[NSUserDefaults standardUserDefaults] objectForKey:@"notes"];
+        
+        [arrays addObjectsFromArray:tempArray];
+        
+        self.view.backgroundColor = [UIColor colorWithRed:255.0/255 green:251.0/255 blue:230.0/255 alpha:1.0f];
+        
+
+//        UIToolbar * toolBar = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 0, SCREENBOUNDS.size.width, 44)];
+//        [toolBar setBackgroundImage:[UIImage imageNamed:@"titleBar.png"]
+//                 forToolbarPosition:UIToolbarPositionAny
+//                         barMetrics:UIBarMetricsDefault];
+        
+        UIImageView * toolBar = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"navigationBar"]];
+        toolBar.frame = CGRectMake(0, 0, WIDTH1, 64);
+        toolBar.userInteractionEnabled = YES;
+        
+        UIButton *backBtn=[self createBtnFrame:CGRectMake(0, 20, 50, 44) title:@"" bgImageName:@"" target:self action:@selector(backAction)];
+        [toolBar addSubview:backBtn];
+        
+        UIImageView *btnView=[self createImageViewFrame:CGRectMake(20, 11.25f, 11.5f, 21.5f) imageName:@"goback"];
+        [backBtn addSubview:btnView];
+        tagOfShare=0;
+        UILabel * title = [[UILabel alloc] initWithFrame:CGRectMake(110, 33, WIDTH1-220 , 18)];
+        [title setText:@"笔记"];
+        title.textColor = [UIColor whiteColor];
+        title.backgroundColor = [UIColor clearColor];
+        [title setFont:[UIFont boldSystemFontOfSize:18.0]];
+        title.textAlignment = NSTextAlignmentCenter;
+        [toolBar addSubview:title];
+        
+        
+//        UIButton * backBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+//        [backBtn setTitle:@"返回" forState:UIControlStateNormal];
+//        [backBtn setTitleColor:[UIColor colorWithRed:30.0/255 green:30.0/255 blue:30.0/255 alpha:1.0f] forState:UIControlStateNormal];
+//        backBtn.titleLabel.font = [UIFont boldSystemFontOfSize:12];
+//        backBtn.frame = CGRectMake(5, 29, 50, 25);
+//        [backBtn addTarget:self action:@selector(backAction) forControlEvents:UIControlEventTouchUpInside];
+//        [backBtn setBackgroundImage:[UIImage imageNamed:@"settingBack.png"] forState:UIControlStateNormal];
+//        [toolBar addSubview:backBtn];
+//        
+        [self.view addSubview:toolBar];
+        
+        _selectText = [[UILabel alloc] initWithFrame:CGRectMake(10, 70, SCREENBOUNDS.size.width-20, 60)];
+        _selectText.lineBreakMode = NSLineBreakByTruncatingTail;
+        _selectText.backgroundColor = [UIColor clearColor];
+        _selectText.textColor = [UIColor colorWithRed:177.0/255 green:155.0/255 blue:113.0/255 alpha:1.0f];
+        _selectText.numberOfLines = 3;
+        _selectText.font = [UIFont systemFontOfSize:14];
+        [self.view addSubview:_selectText];
+        
+        
+        UIImageView * noteBgView = [[UIImageView alloc] initWithFrame:CGRectMake(10,
+                                                                                 _selectText.frame.origin.y+_selectText.frame.size.height+3,
+                                                                                 SCREENBOUNDS.size.width-20,
+                                                                                 150)];
+        noteBgView.image = [[UIImage imageNamed:@"input-frame.png"] stretchableImageWithLeftCapWidth:10 topCapHeight:10];
+        noteBgView.userInteractionEnabled = YES;
+        [self.view addSubview:noteBgView];
+        
+        _noteText = [[UITextView alloc] initWithFrame:CGRectMake(10,
+                                                                 _selectText.frame.origin.y+_selectText.frame.size.height+3,
+                                                                 SCREENBOUNDS.size.width-20,
+                                                                 150)];
+        [_noteText setBackgroundColor:[UIColor clearColor]];
+        _noteText.bounces = YES;
+        [self.view addSubview:_noteText];
+        
+        _doneBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        _doneBtn.frame = CGRectMake(WIDTH1-65, 29, 50, 25);
+        _doneBtn.titleLabel.font = [UIFont boldSystemFontOfSize:12];
+        [_doneBtn setBackgroundImage:[UIImage imageNamed:@"logout.png"] forState:UIControlStateNormal];
+        [_doneBtn setTitleColor:[UIColor colorWithRed:48.0/255 green:39.0/255 blue:25.0/255 alpha:1.0f] forState:UIControlStateNormal];
+        [_doneBtn setTitle:@"完成" forState:UIControlStateNormal];
+        [_doneBtn addTarget:self action:@selector(saveNote) forControlEvents:UIControlEventTouchUpInside];
+        [self.view addSubview:_doneBtn];
+        
+        AppDelegate *delegate= (AppDelegate *)[[UIApplication sharedApplication]delegate];
+        
+        if (![delegate.userId isEqualToString:@"0"]) {
+        
+            UILabel *lab=[[UILabel alloc]initWithFrame:CGRectMake(20,_noteText.frame.origin.y+_noteText.frame.size.height+15,100, 31)];
+            lab.text=@"公开笔记";
+            lab.textColor=[UIColor colorWithHexString:textMainColor];
+            lab.textAlignment=NSTextAlignmentLeft;
+            lab.font=[UIFont systemFontOfSize:16.0];
+            [self.view addSubview:lab];
+            lab.hidden=YES;
+
+            openSwitch = [[UISwitch alloc]initWithFrame:CGRectMake(WIDTH-71,_noteText.frame.origin.y+_noteText.frame.size.height+15, 51, 31.0f)];
+            
+            openSwitch.on = YES;
+            openSwitch.hidden=YES;
+            [self.view addSubview:openSwitch];
+        
+        }
+//        _tencentBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+//        _tencentBtn.frame = CGRectMake(30,
+//                                       _noteText.frame.origin.y+_noteText.frame.size.height+15,
+//                                       WIDTH1-60,
+//                                       40);
+//        [_tencentBtn.layer setMasksToBounds:YES];
+//        _tencentBtn.layer.cornerRadius = 20;//2.0是圆角的弧度，根据需求自己更改
+//
+//        [_tencentBtn setBackgroundImage:[self imageWithColor:[UIColor colorWithHexString:mainColor] size:_tencentBtn.frame.size] forState:UIControlStateNormal];
+//        [_tencentBtn setTitleColor:[UIColor colorWithRed:48.0/255 green:39.0/255 blue:25.0/255 alpha:1.0f] forState:UIControlStateNormal];
+//        [_tencentBtn addTarget:self action:@selector(saveAndShare) forControlEvents:UIControlEventTouchUpInside];
+//        [_tencentBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+//        [_tencentBtn setTitle:@"保存并分享" forState:UIControlStateNormal];
+//        [self.view addSubview:_tencentBtn];
+    }
+    return self;
+}
+
+- (UIImage *)imageWithColor:(UIColor *)color size:(CGSize)size {
+    CGRect rect = CGRectMake(0, 0, size.width, size.height);
+    UIGraphicsBeginImageContext(rect.size);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, [color CGColor]);
+    CGContextFillRect(context, rect);
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return image;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+}
+-(void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBar.hidden = YES;
+    [[UIApplication sharedApplication] setStatusBarHidden:NO];
+
+}
+
+- (UIImageView *)createImageViewFrame:(CGRect)frame imageName:(NSString *)imageName {
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
+    imageView.image = [UIImage imageNamed:imageName];
+    return imageView;
+}
+
+- (UIButton *)createBtnFrame:(CGRect)frame title:(NSString *)title bgImageName:(NSString *)bgImageName target:(id)target action:(SEL)action {
+    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn.frame = frame;
+    [btn setTitle:title forState:UIControlStateNormal];
+    [btn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [btn setBackgroundImage:[UIImage imageNamed:bgImageName] forState:UIControlStateNormal];
+    [btn addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
+    return btn;
+}
+
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    [_noteText resignFirstResponder];
+}
+
+- (void)editingNote:(IYCNote *)note isCreateNote:(BOOL)isCreate bookNameTitle:(NSString *)str
+{
+    editingNote = note;
+    isCreateNote = isCreate;
+    _bookNameTitle=str;
+    
+    _selectText.text = [NSString stringWithFormat:@"\"%@\"",editingNote.selectString];
+    
+    if (!isCreateNote) {
+        _noteText.text = editingNote.noteContent;
+    }
+    
+}
+- (void)saveAndShare
+{
+    tagOfShare=1;
+    
+    NSString *temp = [_noteText.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+    
+    if (!_noteText.text || _noteText.text.length==0 || temp.length == 0) {
+        UIAlertView * alert = [[UIAlertView alloc] initWithTitle:@"提示"
+                                                         message:@"请输入笔记内容。"
+                                                        delegate:nil
+                                               cancelButtonTitle:@"好的"
+                                               otherButtonTitles:nil, nil];
+        [alert show];
+        return;
+    }
+    
+    ShareSelectView *view = [ShareSelectView defaultPopupView];
+    view.parentVC = self;
+    
+    [self lew_presentPopupView:view animation:[LewPopupViewAnimationFade new] dismissed:^{
+        if (![view.selectShareType isEqualToString:@""]) {
+            tmpStr=view.selectShareType;
+            [self saveNoteToDataBase];
+            [self dismissViewControllerAnimated:YES completion:^{
+            }];
+        }
+    }];
+}
+
+- (void)backAction
+{
+    [self dismissViewControllerAnimated:YES completion:^{
+        
+    }];
+}
+- (void)saveNoteToDataBase
+{
+    NSString *temp = [_noteText.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+    
+    if (!_noteText.text || _noteText.text.length==0 || temp.length == 0) {
+        UIAlertView * alert = [[UIAlertView alloc] initWithTitle:@"提示"
+                                                         message:@"请输入笔记内容。"
+                                                        delegate:nil
+                                               cancelButtonTitle:@"好的"
+                                               otherButtonTitles:nil, nil];
+        [alert show];
+        return;
+    }
+    
+    NSString * editeText = _noteText.text;
+    editeText = [editeText stringByReplacingOccurrencesOfString:@"'" withString:@" "];
+    
+    IYCNote * tmpNote = [[IYCNote alloc] init];
+    if (!isCreateNote)
+    {
+        tmpNote.noteID = editingNote.noteID;
+        tmpNote.noteContent = editeText;
+        tmpNote.modifyTime = [IYCCommon currentTimeStr];
+        
+        [[IYCDBAction sharedDBAction] updateNote:tmpNote];
+    }
+    else
+    {
+        //合并多个批注。
+        NSArray * notes = [[IYCDBAction sharedDBAction] selectNotesByBookID:editingNote.bookID
+                                                                   AccountId:editingNote.accountID
+                                                                ChapterIndex:editingNote.chapterIndex
+                                                                    language:editingNote.language];
+
+        int startOffset = editingNote.startOffset;
+        int endOffset = editingNote.endOffset;
+        NSString * selectString = editingNote.selectString;
+        NSString * noteContent = editeText;
+        NSMutableArray * notesToDel = [[NSMutableArray alloc] init];
+        for (IYCNote * note in notes)
+        {
+            if (note.startParagraphId==editingNote.startParagraphId && startOffset<=note.endOffset && endOffset>=note.startOffset)
+            {
+                [notesToDel addObject:note];
+                
+                NSString * formerStr = nil;
+                NSString * middleStr = nil;
+                NSString * lastStr = nil;
+                if (startOffset<note.startOffset && endOffset<note.endOffset)
+                {
+                    formerStr = [selectString substringWithRange:NSMakeRange(0, note.startOffset-startOffset)];
+                    middleStr = [selectString substringWithRange:NSMakeRange(note.startOffset-startOffset, endOffset-note.startOffset)];
+                    lastStr = [note.selectString substringWithRange:NSMakeRange(endOffset-note.startOffset, note.endOffset-endOffset)];
+                    selectString = [NSString stringWithFormat:@"%@%@%@",formerStr,middleStr,lastStr];
+                }
+                else if(startOffset<note.startOffset && endOffset>=note.endOffset)
+                {
+                    selectString = selectString;
+                }
+                else if(startOffset>=note.startOffset && endOffset>=note.endOffset)
+                {
+                    formerStr = [note.selectString substringWithRange:NSMakeRange(0, startOffset-note.startOffset)];
+                    middleStr = [note.selectString substringWithRange:NSMakeRange(startOffset-note.startOffset, note.endOffset-startOffset)];
+                    lastStr = [selectString substringWithRange:NSMakeRange(note.endOffset-startOffset, endOffset-note.endOffset)];
+                    selectString = [NSString stringWithFormat:@"%@%@%@",formerStr,middleStr,lastStr];
+                }
+                
+                startOffset = startOffset<note.startOffset?startOffset:note.startOffset;
+                endOffset = endOffset>note.endOffset?endOffset:note.endOffset;
+                noteContent = [NSString stringWithFormat:@"%@\n%@", note.noteContent,noteContent];
+            }
+        }
+        
+        tmpNote.bookID = editingNote.bookID;
+        tmpNote.accountID = editingNote.accountID;
+        tmpNote.chapterID = editingNote.chapterID;
+        tmpNote.startParagraphId = editingNote.startParagraphId;
+        tmpNote.endParagraphId = editingNote.endParagraphId;
+        tmpNote.selectString = selectString;
+       
+        tmpNote.status = 1; //默认是有用的
+        tmpNote.noteStatus = NOTESTATUES_TYPE_UNUPLOADED;//默认是没有上传
+
+//        tmpNote.noteContent = noteContent;
+        tmpNote.noteContent = editeText;
+
+
+        tmpNote.modifyTime = [IYCCommon currentTimeStr];
+        tmpNote.startOffset = startOffset;
+        tmpNote.endOffset = endOffset;
+        tmpNote.chapterIndex = editingNote.chapterIndex;
+        tmpNote.language = editingNote.language;
+       
+        
+        [[IYCDBAction sharedDBAction] insertNote:tmpNote];
+        
+        theTempNote=tmpNote;
+        
+        AppDelegate *delegate= (AppDelegate *)[[UIApplication sharedApplication]delegate];
+
+        if (openSwitch.on&&![delegate.userId isEqualToString:@"0"]) {
+            if ([IYCCheckNetwork isServiceAvailable]) {//学生用户
+                
+                NSDictionary *dict=@{@"bookid":[NSNumber numberWithLong:tmpNote.bookID],@"languagetype":[NSNumber numberWithInt:tmpNote.language],@"chapterid":[NSNumber numberWithInt:tmpNote.chapterIndex],@"commentedcontent":tmpNote.selectString,@"type":@"1",@"segmentid":[NSNumber numberWithLong:tmpNote.startParagraphId],@"startoffset":[NSNumber numberWithInt:tmpNote.startOffset],@"endoffset":[NSNumber numberWithInt:tmpNote.endOffset],@"chapter_index":[NSNumber numberWithInt:tmpNote.chapterIndex]};
+                
+                [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/commentscontroller/findCommentedcontentOrInsert" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+                    if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+                        chapterindex = tmpNote.chapterIndex;
+                        [self addNotePart2:[[dic objectForKey:@"data"] objectForKey:@"commentedcontentid"] andContent:tmpNote.noteContent];
+                    }
+                } WithFailurBlock:^(NSError *error) {
+                }];
+            }
+//            else if ([IYCCheckNetwork isServiceAvailable]&&[delegate.readingrecordlogid isEqualToString:@"0"]) {// 普通用户
+//                NSDictionary *dict=@{@"userid":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"bookid":[NSNumber numberWithLong:tmpNote.bookID],@"languagetype":[NSNumber numberWithInt:tmpNote.language],@"chapterid":[NSNumber numberWithInt:tmpNote.chapterIndex],@"commentedcontent":tmpNote.selectString,@"type":@"1",@"segmentid":[NSNumber numberWithLong:tmpNote.startParagraphId],@"startoffset":[NSNumber numberWithInt:tmpNote.startOffset],@"endoffset":[NSNumber numberWithInt:tmpNote.endOffset],@"terminal":@"2",@"note":tmpNote.noteContent,@"chapterIndex":[NSNumber numberWithInt:tmpNote.chapterIndex]};
+//                
+//                [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/commentscontroller/booknote" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+//                    if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+//                        theTempNote.noteServerID=[[[dic objectForKey:@"data"] objectForKey:@"commentid"] intValue];
+//                        theTempNote.noteStatus=NOTESTATUES_TYPE_UPLOADED;
+//                        theTempNote.modifyTime=[IYCCommon currentTimeStr];
+//                        [[IYCDBAction sharedDBAction] updateNote:theTempNote];
+//                        if (tagOfShare==1) {
+//                            [self shareToOther:tmpStr];
+//                        }
+//                    }
+//                } WithFailurBlock:^(NSError *error) {
+//                }];
+//            }
+        }
+        
+    }
+    [[NSNotificationCenter defaultCenter] postNotificationName:NOTIFICATION_REFRESHWEBVIEW object:nil];
+}
+
+- (void)addNotePart2:(NSString *)str andContent:(NSString *)content {
+    AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+//    if ([delegate.studentUserId isEqualToString:@"1"]&&[IYCCheckNetwork isServiceAvailable]&&![delegate.readingrecordlogid isEqualToString:@"0"]) {
+    
+        NSDictionary *dict=@{@"userid":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"commentedcontentid":str,@"readingrecordlogid":delegate.readingrecordlogid,@"content":content,@"chapterIndex":[NSNumber numberWithInt:chapterindex]};
+        
+//        NSDictionary *dict=@{@"userid":@"323235",@"commentedcontentid":str,@"readingrecordlogid":delegate.readingrecordlogid,@"content":content};
+
+        
+        [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/commentscontroller/add" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+            if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+//                theTempNote.noteServerID=[[[dic objectForKey:@"data"] objectForKey:@"commentid"] intValue];
+//                theTempNote.noteStatus=NOTESTATUES_TYPE_UPLOADED;
+//                theTempNote.modifyTime=[IYCCommon currentTimeStr];
+//                [[IYCDBAction sharedDBAction] updateNote:theTempNote];
+                [self addNotePart3];
+            }
+        } WithFailurBlock:^(NSError *error) {
+        }];
+//    }
+}
+
+- (void)addNotePart3{
+    NSDictionary *dict=@{@"userid":[[NSUserDefaults standardUserDefaults] objectForKey:@"userId"],@"bookid":[NSNumber numberWithLong:theTempNote.bookID],@"languagetype":[NSNumber numberWithInt:theTempNote.language],@"chapterid":[NSNumber numberWithInt:theTempNote.chapterIndex],@"commentedcontent":theTempNote.selectString,@"type":@"1",@"segmentid":[NSNumber numberWithLong:theTempNote.startParagraphId],@"startoffset":[NSNumber numberWithInt:theTempNote.startOffset],@"endoffset":[NSNumber numberWithInt:theTempNote.endOffset],@"terminal":@"2",@"note":theTempNote.noteContent,@"chapterIndex":[NSNumber numberWithInt:theTempNote.chapterIndex]};
+    
+    [[IYCNetSetting sharedManager] requestWithMethod:POST1 WithPath:@"app/commentscontroller/booknote" WithParams:dict WithSuccessBlock:^(NSDictionary *dic) {
+        if ([[dic objectForKey:@"statusCode"] intValue]==0) {
+            theTempNote.noteServerID=[[[dic objectForKey:@"data"] objectForKey:@"commentid"] intValue];
+            theTempNote.noteStatus=NOTESTATUES_TYPE_UPLOADED;
+            theTempNote.modifyTime=[IYCCommon currentTimeStr];
+            [[IYCDBAction sharedDBAction] updateNote:theTempNote];
+
+        }
+    } WithFailurBlock:^(NSError *error) {
+    }];
+}
+
+
+
+- (void)saveNote
+{
+    tagOfShare=0;
+
+    [self saveNoteToDataBase];
+    
+    NSString *temp = [_noteText.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+    
+    if (!_noteText.text || _noteText.text.length==0 || temp.length == 0) {
+        UIAlertView * alert = [[UIAlertView alloc] initWithTitle:@"提示"
+                                                         message:@"请输入笔记内容。"
+                                                        delegate:nil
+                                               cancelButtonTitle:@"好的"
+                                               otherButtonTitles:nil, nil];
+        [alert show];
+        return;
+    }
+    
+    [self dismissViewControllerAnimated:YES completion:^{
+        
+    }];
+}
+
+- (void)shareToOther:(NSString *)shareType {
+    
+    if ([shareType isEqualToString:@"1"]) {
+        SendMessageToWXReq *req=[[SendMessageToWXReq alloc]init];
+        req.bText=YES;
+        req.text=[NSString stringWithFormat:@"\"%@\" #%@#",_noteText.text, _bookNameTitle];
+        req.scene=WXSceneSession;
+        [WXApi sendReq:req];
+    }
+    else if ([shareType isEqualToString:@"2"]) {
+        SendMessageToWXReq *req=[[SendMessageToWXReq alloc]init];
+        req.bText=YES;
+        req.text=[NSString stringWithFormat:@"\"%@\" #%@#",_noteText.text, _bookNameTitle];
+        req.scene=WXSceneTimeline;
+        [WXApi sendReq:req];
+    }
+    else if ([shareType isEqualToString:@"3"]) {
+        AppDelegate *delegate=(AppDelegate *)[[UIApplication sharedApplication] delegate];
+        delegate.loginType=@"2";
+        
+        _tencentOAuth = [[TencentOAuth alloc] initWithAppId:QQAPP_ID
+                                                andDelegate:self];
+        QQApiNewsObject *newsObj = [QQApiNewsObject
+                                    objectWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@%@%li",webAddress,@"iycong_web/html/book_store/book_detail.html?bookid=",theTempNote.bookID]]
+                                    title:_bookNameTitle
+                                    description:[NSString stringWithFormat:@"\"%@\" #%@#",_noteText.text, _bookNameTitle] previewImageURL:[NSURL URLWithString:@""]];
+        SendMessageToQQReq *req = [SendMessageToQQReq reqWithContent:newsObj];
+        
+        [QQApiInterface sendReq:req];
+
+    }
+    else if ([shareType isEqualToString:@"4"]) {
+        WBMessageObject *message = [WBMessageObject message];
+        message.text = [NSString stringWithFormat:@"#爱洋葱阅读# \"%@\" #%@#",_noteText.text, _bookNameTitle];
+        
+        AppDelegate *myDelegate =(AppDelegate*)[[UIApplication sharedApplication] delegate];
+        
+        WBAuthorizeRequest *authRequest = [WBAuthorizeRequest request];
+        authRequest.redirectURI = kRedirectURI;
+        authRequest.scope = @"all";
+        
+        WBSendMessageToWeiboRequest *request = [WBSendMessageToWeiboRequest requestWithMessage:message authInfo:authRequest access_token:myDelegate.wbtoken];
+        request.userInfo = @{@"ShareMessageFrom": @"SendMessageToWeiboViewController",
+                             @"Other_Info_1": [NSNumber numberWithInt:123],
+                             @"Other_Info_2": @[@"obj1", @"obj2"],
+                             @"Other_Info_3": @{@"key1": @"obj1", @"key2": @"obj2"}};
+        //    request.shouldOpenWeiboAppInstallPageIfNotInstalled = NO;
+        [WeiboSDK sendRequest:request];
+    }
+    else if ([shareType isEqualToString:@"5"]) {
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"doubanaccess_token"]) {
+            
+            UIAlertView *alertview=[[UIAlertView alloc] initWithTitle:@"分享至豆瓣" message:@"" delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"确定", nil];
+            [alertview setAlertViewStyle:UIAlertViewStylePlainTextInput];
+            UITextField *nameField = [alertview textFieldAtIndex:0];
+            nameField.text=[NSString stringWithFormat:@"#爱洋葱阅读# \"%@\" #%@#",_noteText.text, _bookNameTitle];
+            nameField.placeholder = @"";
+            nameField.returnKeyType=UIReturnKeyDone;
+            alertview.tag=DOUBAN_SHARE_TAG;
+            [alertview performSelectorOnMainThread: @selector(show)
+                                        withObject: nil
+                                     waitUntilDone: YES];
+        }
+        else {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"" message:@"您还未绑定豆瓣~" delegate:nil cancelButtonTitle:nil otherButtonTitles:nil, nil];
+            [alert show];
+            [self performSelector:@selector(dimissAlert:)withObject:alert afterDelay:1.5];
+        }
+    }
+}
+
+- (void) dimissAlert:(UIAlertView *)alert {
+    if(alert){
+        [alert dismissWithClickedButtonIndex:[alert cancelButtonIndex] animated:YES];
+    }
+}
+
+#pragma mark -- TencentSessionDelegate
+//登陆完成调用
+- (void)tencentDidLogin
+{
+    
+}
+
+//非网络错误导致登录失败：
+-(void)tencentDidNotLogin:(BOOL)cancelled
+{
+    
+}
+// 网络错误导致登录失败：
+-(void)tencentDidNotNetWork
+{
+    
+}
+
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+@end

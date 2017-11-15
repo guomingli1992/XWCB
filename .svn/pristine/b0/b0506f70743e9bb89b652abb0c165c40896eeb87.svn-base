@@ -1,0 +1,48 @@
+//
+//  QPURLUtil.h
+//  Reader
+//
+//  Created by Ian on 13-3-8.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface IYCURLUtil : NSObject
+
+
+
++ (NSString *)getDownloadUrl;
++ (NSString *)getLoginUrl;
++ (NSString *)getBookListUrl;
++ (NSString *)getRecommendBookList; //新首页图书列表 2014.02.17
++ (NSString *)getSpecialBookList;   //专题节点下图书列表  2014.02.21
++ (NSString *)getBookReviewUrl;
++ (NSString *)getBannerUrl;
++ (NSString *)getCatalogUrl;
++ (NSString *)getCongradientUrl;
++ (NSString *)getTagUrl;
++ (NSString *)getHotKeyUrl;
++ (NSString *)getUploadadUserInfoUrl;
++ (NSString *)getSecretKey;
++ (NSString *)getRegisterUrl;
++ (NSString *)getBookByIdUrl;
++ (NSString *)getBookBuyUrl;
++ (NSString *)getUploadadBookReviewUrl;
++ (NSString *)getVersion;
++ (NSString *)getApnsToken;
++ (NSString *)getIosProductUrl;
++ (NSString *)getOrderUrl;
++ (NSString *)getIosPayResultUrl;
++ (NSString *)getIosRestoreUrl;
++ (NSString *)getBookByProductIdUrl;
++ (NSString *)getSearchKeyWords;
++ (NSString *)getThirdPartLoginUrl;
++ (NSString *)SendExperienceDataUrl;
++ (NSString *)getExperienceInfoUrl;
++ (NSString *)getQqAppID;
++ (NSString *)saveNoteUrl;
++ (NSString *)getNoteUrl;
++ (NSString *)deleteOneNoteUrl;
++ (NSString *)deleteNoteByOffsetUrl;
+@end

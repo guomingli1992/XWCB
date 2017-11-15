@@ -1,0 +1,24 @@
+//
+//  IYCParagraph.h
+//  IYangCongReader
+//
+//  Created by haley on 3/28/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+#import "IYCBookEdition.h"
+@interface IYCParagraph : NSObject
+
+@property (nonatomic) int paragraphId;
+@property (nonatomic) double paragraphStartOffset;   //the paragraph start point in the html
+@property (nonatomic) int paragraphStartPage;
+@property (nonatomic) float paragraphEndOffset;
+@property (nonatomic) int paragraphEndPage;
+@property (nonatomic, retain) NSString *paragraphURL;  //html url
+@property (nonatomic) IYCLanguageType langType;
+@property (nonatomic, retain) NSString *paragString;
+@property (nonatomic) int stringCount;
+
+@end

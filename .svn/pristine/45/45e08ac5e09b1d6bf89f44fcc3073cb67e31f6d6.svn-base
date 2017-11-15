@@ -1,0 +1,69 @@
+//
+//  IYCExperienceReq.m
+//  IYangCongReader
+//
+//  Created by MaTeng on 14-6-10.
+//  Copyright (c) 2014年 IYangCong. All rights reserved.
+//
+
+#import "IYCExperienceReq.h"
+
+@implementation IYCExperienceReq
+@synthesize startTime,endTime;
+@synthesize language,acountId;
+@synthesize bookId,readingLong;
+@synthesize experiences;
+
+- (NSString *)getJSONString {
+    NSMutableDictionary * dic = [super getJSONString];
+//    NSMutableDictionary *json = [[[NSMutableDictionary alloc]init]autorelease];
+    
+//    if (self.startTime) {
+//        [json setObject:self.startTime forKey:@"startTime"];
+//    }
+//    
+//    if (self.endTime) {
+//        [json setObject:self.endTime forKey:@"endTime"];
+//    }
+//    if (self.readingLong) {
+//        [json setObject:self.readingLong forKey:@"readingLong"];
+//    }
+//    
+//    if (self.language) {
+//        [json setObject:self.language forKey:@"language"];
+//    }
+//       if (self.bookId) {
+//        [json setObject:self.bookId forKey:@"bookId"];
+//    }
+    if (self.deviceToken) {
+        [dic setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+    if (self.acountId) {
+        [dic setObject:self.acountId forKey:@"accountId"];
+    }
+
+    if (self.deviceType) {
+        [dic setObject:self.deviceType forKey:@"deviceType"];
+    }
+    
+    if (self.experiences) {
+        [dic setObject:self.experiences forKey:@"experiences"];
+    }
+    
+    return dic.JSONString;
+}
+
+//- (id)initWithJSONDictionary:(NSDictionary *)jsonDic
+//{
+//    if (self = [super initWithJSONDictionary:jsonDic]) {
+////        self.acountId = [jsonDic objectForKey:@"accountId"];
+////        self.accountName = [jsonDic objectForKey:@"accountName"];
+////        self.sessionId = [jsonDic objectForKey:@"sessionId"];
+//    }
+//    return self;
+//}
+
+
+
+
+@end

@@ -1,0 +1,44 @@
+//
+//  IYCWebView.h
+//  IYangCongReader
+//
+//  Created by haley on 4/22/13.
+//  Copyright (c) 2013 IYangCong. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "IYCPage.h"
+#import "IYCBookEdition.h"
+#import "IYCBook.h"
+#import "IYCData.h"
+
+@protocol IYCWebRefreshDelegate <NSObject>
+- (void)refreshFinished;
+@optional
+- (void)tapSpan:(int)spanId offsetToLeft:(int)offsetLeft offsetToTop:(int)offsetTop;
+
+- (void)revertTapGesture:(CGPoint )tmpTapPoint;
+@end
+
+@class IYCChapter;
+@interface IYCWebView : UIWebView<UIWebViewDelegate>
+{
+    UIMenuController *menuController;
+    UIView *fakeView;
+    
+}
+@property (nonatomic) IYCLanguageType langType;
+@property (nonatomic, assign) IYCChapter *nChapter; //go a new chapter
+@property (nonatomic) int changeChapterIndex;
+@property (nonatomic) float changeChapterOffset;
+@property (nonatomic, retain) IYCPage *page;
+@property (nonatomic) int  pageNum;
+@property (nonatomic, retain) UIMenuController *menuController;
+@property (nonatomic, assign) id <IYCWebRefreshDelegate> myDelegate;
+@property (nonatomic, retain)IYCBook * readingBook;
+
+- (void)holdTapGesture:(CGPoint)tapPoint;
+
+
+- (void)loadHTMLString:(NSString *)string baseURL:(NSURL *)baseURL;
+@end

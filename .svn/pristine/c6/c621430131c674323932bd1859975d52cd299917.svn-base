@@ -1,0 +1,15 @@
+
+
+#import <Foundation/Foundation.h>
+#import "MBProgressHUD.h"
+#import "Reachability.h"
+
+@interface IYCCheckNetwork : NSObject {
+	
+}
+
++ (BOOL)isServiceAvailable;
++ (void)showNetworkStatusMessage:(NSString *)message inView:(UIView *)aView;
++ (NetworkStatus)curNetworkStatus;
+
+@end

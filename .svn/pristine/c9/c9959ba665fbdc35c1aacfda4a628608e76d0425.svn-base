@@ -1,0 +1,149 @@
+//
+//  ChildSuperView.m
+//  iyangcong
+//
+//  Created by lxm on 2016/12/13.
+//  Copyright © 2016年 FLTRP. All rights reserved.
+//
+
+#import "ChildSuperView.h"
+
+@implementation ChildSuperView
+
+- (UILabel *)createLabelFrame:(CGRect)frame text:(NSString *)text textColor:(UIColor *)textColor textFont:(UIFont *)textFont textAlignment:(NSTextAlignment)textAlignment numberOfLines:(NSInteger)numberOfLines {
+    NSString *str=[text isEqual:[NSNull null]]?@"":text;
+    UILabel *label = [[UILabel alloc] initWithFrame:frame];
+    label.text = str;
+    label.textAlignment = textAlignment;
+    label.font=textFont;
+    label.textColor = textColor;
+    label.numberOfLines = numberOfLines;
+    return label;
+}
+
+- (NSString *)deleteChapterMark:(NSString *)str {
+    NSString *str1=@"</p>";
+    NSRange range=[str rangeOfString:str1 options:NSBackwardsSearch];
+    NSString *str2;
+    if (range.location != NSNotFound) {
+        str2 =[str stringByReplacingCharactersInRange:range withString:@""];
+    }
+    else
+        str2=str;
+    return [[str2 stringByReplacingOccurrencesOfString:@"<p>" withString:@""] stringByReplacingOccurrencesOfString:str1 withString:@"\n"];
+}
+
+- (UIButton *)createBtnFrame:(CGRect)frame title:(NSString *)title bgImageName:(NSString *)bgImageName target:(id)target action:(SEL)action {
+    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn.frame = frame;
+    [btn setTitle:title forState:UIControlStateNormal];
+    [btn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [btn setBackgroundImage:[UIImage imageNamed:bgImageName] forState:UIControlStateNormal];
+    [btn addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
+    return btn;
+}
+
+- (UIImageView *)createImageViewFrame:(CGRect)frame imageName:(NSString *)imageName {
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
+    imageView.image = [UIImage imageNamed:imageName];
+    return imageView;
+}
+
+- (void) dimissAlert:(UIAlertView *)alert {
+    if(alert){
+        [alert dismissWithClickedButtonIndex:[alert cancelButtonIndex] animated:YES];
+    }
+}
+- (UIImageView *)createURLImageViewFrame:(CGRect)frame imageURLStr:(NSString *)imageURLStr placeholderImage:(UIImage *)placeholderImage {
+    if (imageURLStr==nil||[imageURLStr isEqual:[NSNull null]]) {
+        imageURLStr=@"";
+    }
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:frame];
+    NSURL *url=[[NSURL alloc] initWithString:[imageURLStr stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+    [imageView sd_setImageWithURL:url placeholderImage:placeholderImage];
+    return imageView;
+}
+
+- (UIView *)createStarView:(CGPoint)point starSize:(CGFloat)starSize starNumber:(int)starNumber starLevel:(int)starLevel {
+    UIView *imageView = [[UIView alloc] initWithFrame:CGRectMake(point.x, point.y, starSize*starNumber, starSize)];
+    for (int i=0; i<starNumber; i++) {
+        UIImageView *img=[[UIImageView alloc]initWithFrame:CGRectMake(starSize*i, 0, starSize, starSize)];
+        if (i<starLevel) {
+            [img setImage:[UIImage imageNamed:@"star_on"]];
+            [imageView addSubview:img];
+        }
+        else {
+            [img setImage:[UIImage imageNamed:@"star_off"]];
+            [imageView addSubview:img];
+        }
+    }
+    return imageView;
+}
+
+
+- (UIImage *)imageWithColor:(UIColor *)color size:(CGSize)size {
+    CGRect rect = CGRectMake(0, 0, size.width, size.height);
+    UIGraphicsBeginImageContext(rect.size);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, [color CGColor]);
+    CGContextFillRect(context, rect);
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return image;
+}
+- (UIImage*)imageWithImageSimple:(UIImage*)image scaledToSize:(CGSize)newSize
+{
+    if([[UIScreen mainScreen] scale] == 2.0){
+        UIGraphicsBeginImageContextWithOptions(newSize, NO, 2.0);
+    }else{
+        UIGraphicsBeginImageContext(newSize);
+    }
+    [image drawInRect:CGRectMake(0,0,newSize.width,newSize.height)];
+    UIImage* newImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return newImage;
+}
+
+-(void)setLabelSpace:(UILabel*)label1 withValue:(NSString*)str withFont:(UIFont*)font {
+    if (str==nil) {
+        str=@"";
+    }
+    NSMutableParagraphStyle *paraStyle = [[NSMutableParagraphStyle alloc] init];
+    paraStyle.lineBreakMode = NSLineBreakByTruncatingTail;
+    paraStyle.alignment = NSTextAlignmentLeft;
+    paraStyle.lineSpacing = 6; //设置行间距
+    paraStyle.hyphenationFactor = 0.0;
+    paraStyle.firstLineHeadIndent = 0.0;
+    paraStyle.paragraphSpacingBefore = 0.0;
+    paraStyle.headIndent = 0;
+    paraStyle.tailIndent = 0;
+    //设置字间距 NSKernAttributeName:@1.5f
+    NSDictionary *dic = @{NSFontAttributeName:font, NSParagraphStyleAttributeName:paraStyle, NSKernAttributeName:@0.0f
+                          };
+    
+    NSAttributedString *attributeStr = [[NSAttributedString alloc] initWithString:str attributes:dic];
+    label1.attributedText = attributeStr;
+}
+
+//计算UILabel的高度(带有行间距的情况)
+
+-(CGFloat)getSpaceLabelHeight:(NSString*)str withFont:(UIFont*)font withWidth:(CGFloat)width {
+    if (str==nil) {
+        str=@"";
+    }
+    NSMutableParagraphStyle *paraStyle = [[NSMutableParagraphStyle alloc] init];
+    paraStyle.lineBreakMode = NSLineBreakByCharWrapping;
+    paraStyle.alignment = NSTextAlignmentLeft;
+    paraStyle.lineSpacing = 6;
+    paraStyle.hyphenationFactor = 0.0;
+    paraStyle.firstLineHeadIndent = 0.0;
+    paraStyle.paragraphSpacingBefore = 0.0;
+    paraStyle.headIndent = 0;
+    paraStyle.tailIndent = 0;
+    NSDictionary *dic = @{NSFontAttributeName:font, NSParagraphStyleAttributeName:paraStyle, NSKernAttributeName:@0.0f
+                          };
+    CGSize size = [str boundingRectWithSize:CGSizeMake(width, HEIGHT) options:NSStringDrawingUsesLineFragmentOrigin attributes:dic context:nil].size;
+    return size.height;
+}
+
+@end

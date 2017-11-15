@@ -1,0 +1,39 @@
+//
+//  IYCData.h
+//  iyangcong
+//
+//  Created by lxm on 2016/12/7.
+//  Copyright © 2016年 FLTRP. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+#import "IYCChapter.h"
+#import "IYCEPub.h"
+#import "IYCBookEdition.h"
+
+@protocol IYCDataDelegate <NSObject>
+@optional
+- (void) chapterPaginationFinished:(IYCChapter *)chapter andLocation:(NSString *)location;
+@required
+- (void) openBook:(NSMutableArray *)spinArray withLanguageType:(IYCLanguageType)lang;
+@end
+
+
+@interface IYCData : NSObject<IYCChapterDelegate>
+@property (nonatomic, assign) id delegate;
+@property (nonatomic, retain) IYCEPub* loadedEpub;
+@property (nonatomic, retain) NSMutableArray *pageArray;
+@property (nonatomic, retain) NSMutableArray *totalPageArray;
+@property (nonatomic) IYCLanguageType lType;
+@property (nonatomic) int fChapterId; //first go chapter id (=serverChapterID)
+@property (nonatomic) int bookId;
+
+- (BOOL) loadEpub:(NSURL*) epubURL withLanguageType:(IYCLanguageType)laType withFontSize:(int)fontSize withChapterIndex:(int)index;
+- (void)initProperties: (int)fontSize withLanguageType:(IYCLanguageType)laType;
+
+- (void)stopPaging;
+@end
+
+
+

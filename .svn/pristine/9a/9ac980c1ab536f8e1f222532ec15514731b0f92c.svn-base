@@ -1,0 +1,45 @@
+//
+//  IYCBookByIdRequest.m
+//  IYangCongReader
+//
+//  Created by Lolo on 13-5-17.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "IYCBookByIdRequest.h"
+#import "IYCBook.h"
+@implementation IYCBookByIdRequest
+@synthesize bookId, book;
+
+- (id) initWithJSONDictionary:(NSDictionary *)jsonDic
+{
+    if (self = [super initWithJSONDictionary:jsonDic])
+    {
+        if (self.errorCode == ResponseErrorCode_Success)
+        {
+            NSDictionary *bookJson = [jsonDic objectForKey:@"book"];
+           book = [[IYCBook alloc] initWithJSONDictionary:bookJson];
+        }
+    }
+	return self;
+}
+
+- (NSString *)getJSONString {
+    NSMutableDictionary *JSONDict = [super getJSONString];
+    if (self.bookId) {
+        [JSONDict setObject:self.bookId forKey:@"bookId"];
+    }
+
+    if (self.deviceType) {
+        [JSONDict setObject:self.deviceType forKey:@"deviceType"];
+    }
+    
+    if (self.deviceToken) {
+        [JSONDict setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+    
+    return JSONDict.JSONString;
+}
+
+@end

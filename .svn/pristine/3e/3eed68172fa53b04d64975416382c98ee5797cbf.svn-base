@@ -1,0 +1,16 @@
+//
+//  IYCBookByIdService.h
+//  IYangCongReader
+//
+//  Created by Lolo on 13-5-17.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//  说明：请求服务器类（按照bookID获取书籍信息）
+
+#import <Foundation/Foundation.h>
+#import "IYCService.h"
+#import "IYCBookByIdRequest.h"
+@interface IYCBookByIdService : IYCService
+{
+}
+- (void)getBookById:(IYCBookByIdRequest *)request;
+@end

@@ -1,0 +1,35 @@
+//
+//  IYCDeleteNoteReq.m
+//  IYangCongReader
+//
+//  Created by 马腾 on 15/7/22.
+//  Copyright (c) 2015年 IYangCong. All rights reserved.
+//
+
+#import "IYCDeleteNoteReq.h"
+
+@implementation IYCDeleteNoteReq
+@synthesize minutes,acountId;
+
+- (NSString *)getJSONString {
+    NSMutableDictionary * dic = [super getJSONString];
+    
+    if (self.deviceToken) {
+        [dic setObject:self.deviceToken forKey:@"deviceToken"];
+    }
+    if (self.acountId) {
+        [dic setObject:self.acountId forKey:@"accountId"];
+    }
+    
+    if (self.deviceType) {
+        [dic setObject:self.deviceType forKey:@"deviceType"];
+    }
+    
+    if (self.minutes) {
+        [dic setObject:self.minutes forKey:@"minutes"];
+    }
+    
+    return dic.JSONString;
+}
+
+@end

@@ -1,0 +1,17 @@
+//
+//  IYCNoteReq.h
+//  IYangCongReader
+//
+//  Created by 马腾 on 15/7/15.
+//  Copyright (c) 2015年 IYangCong. All rights reserved.
+//
+
+#import "IYCRequest.h"
+
+//上传笔记
+@interface IYCSaveNoteReq : IYCRequest
+@property (nonatomic, strong) NSNumber *acountId;
+@property (nonatomic, strong) NSArray *minutes;
+
+- (NSString *)getJSONString;
+@end

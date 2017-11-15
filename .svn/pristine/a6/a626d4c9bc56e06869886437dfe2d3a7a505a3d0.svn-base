@@ -1,0 +1,99 @@
+//
+//  IYCLastView.m
+//  IYangCongReader
+//
+//  Created by 苏志宏 on 13-8-12.
+//  Copyright (c) 2013年 IYangCong. All rights reserved.
+//
+
+#import "IYCLastView.h"
+
+@interface IYCLastView()
+{
+    UIImageView * btnReaction;
+    UIImageView * btnBack;
+}
+
+@end
+
+@implementation IYCLastView
+@synthesize delegate;
+
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = [UIColor colorWithRed:172.0/255 green:169.0/255 blue:161.0/255 alpha:0.5f];
+        
+        float width = [UIScreen mainScreen].bounds.size.width;
+        float height = [UIScreen mainScreen].bounds.size.height;
+        UIImageView * contents = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"lastPageContents.png"]];
+        contents.frame = CGRectMake((width-290)/2, (height-195)*0.42, 290, 195);
+        contents.userInteractionEnabled = YES;
+        [self addSubview:contents];
+        
+//        btnReaction = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"reaction.png"]];
+//        btnReaction.frame = CGRectMake(32, 158, 114, 23);
+//        btnReaction.userInteractionEnabled = YES;
+//        btnReaction.backgroundColor = [UIColor clearColor];
+//        [contents addSubview:btnReaction];
+//        
+//        btnBack = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"backtobookshelf.png"]];
+//        btnBack.frame = CGRectMake(178, 158, 75, 23);
+//        btnBack.userInteractionEnabled = YES;
+//        btnBack.backgroundColor = [UIColor clearColor];
+//        [contents addSubview:btnBack];
+        
+    }
+    return self;
+}
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    UITouch * touche = [touches anyObject];
+    if (touche.view == btnReaction) {
+        btnReaction.frame = CGRectMake(32, 160, 114, 23);
+        if (delegate && [delegate respondsToSelector:@selector(reactionAfterReading)]) {
+            [delegate reactionAfterReading];
+        }
+    }
+    if (touche.view == btnBack) {
+        btnBack.frame = CGRectMake(178, 160, 75, 23);
+        if (delegate && [delegate respondsToSelector:@selector(backToShelf)]) {
+            [delegate backToShelf];
+        }
+    }
+}
+-(void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
+{
+
+}
+-(void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    btnReaction.frame = CGRectMake(32, 158, 114, 23);
+    btnBack.frame = CGRectMake(178, 158, 75, 23);
+    
+    UITouch * touch = [touches anyObject];
+    if (![touch.view isKindOfClass:[UIImageView class]]) {
+        [self removeFromSuperview];
+        if (delegate && [delegate respondsToSelector:@selector(lastViewDidDisappear)]) {
+            [delegate lastViewDidDisappear];
+        }
+        
+    }
+}
+-(void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    btnReaction.frame = CGRectMake(32, 158, 114, 23);
+    btnBack.frame = CGRectMake(178, 158, 75, 23);
+}
+
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect
+{
+    // Drawing code
+}
+*/
+
+@end
